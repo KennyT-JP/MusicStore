@@ -107,17 +107,20 @@ read-only@example.com    鈴木（Read Only）
   "projects": {
     "default": "music-storage-dev",
     "staging": "music-storage-dev",
-    "prod": "music-storage"
+    "prod": "music-storage-d79b2"
   }
 }
 ```
 
-> **プロジェクト ID を必ず確認してください。**
-> Firebase のプロジェクト ID は小文字です。コンソールの表示名が `Music-Storage` でも
-> ID は `music-storage` になり、その名前が既に使われていた場合は末尾にランダムな
-> 文字列が付きます（例 `music-storage-a1b2c`）。
-> コンソールの「プロジェクトの設定 → プロジェクト ID」で実際の値を確認し、
-> 違っていれば `.firebaserc` を直してください。
+| 環境 | コンソールの表示名 | プロジェクト ID |
+| --- | --- | --- |
+| 本番 | `Music-Storage` | `music-storage-d79b2` |
+| 検証 | `Music-Storage-dev` | `music-storage-dev` |
+
+> **本番の ID は表示名と一致しません。** Firebase のプロジェクト ID は小文字で、
+> 同じ名前が既に使われている場合は末尾にランダムな文字列が付きます。
+> 本番はこれに該当し、`music-storage` ではなく `music-storage-d79b2` になっています。
+> コマンドで `--project` を指定するときは ID のほうを使ってください。
 
 続いて、Flutter 側の接続設定を生成します。
 
@@ -130,7 +133,7 @@ flutterfire configure \
 
 # 本番環境
 flutterfire configure \
-  --project=music-storage \
+  --project=music-storage-d79b2 \
   --out=lib/env/firebase_options_prod.dart \
   --platforms=web,android,ios
 ```
