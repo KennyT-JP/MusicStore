@@ -13,6 +13,7 @@
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
+import { hostname } from 'node:os';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -63,7 +64,9 @@ function portInUse(port) {
   });
 }
 
-console.log('音楽リスト共有アプリ — 開発環境の診断\n');
+console.log('音楽リスト共有アプリ — 開発環境の診断');
+console.log(`実行しているマシン: ${hostname()}`);
+console.log('（この診断は「いま実行しているマシン」の状態だけを見ます）\n');
 
 // -------------------------------------------------------------------------
 section('1. 必要なコマンド');
@@ -143,8 +146,14 @@ for (const { port, name } of ports) {
 if (running.length === 0) {
   warn(
     'エミュレータが起動していません',
-    'scripts/dev-emulators.sh を実行してから、もう一度この診断を動かしてください。',
+    'このマシンでは、どのエミュレータも待ち受けていません。',
   );
+  console.log('      ./scripts/dev-emulators.sh を実行してから、もう一度この診断を動かしてください。');
+  console.log('');
+  console.log('      なお 127.0.0.1 は「いま自分が使っているマシン」を指します。');
+  console.log('      別のマシン（WSL / Dev Container / SSH 先など）で起動した場合は、');
+  console.log('      そのままではブラウザから開けません。ポート転送が必要です。');
+  console.log('      詳しくは docs/SETUP.md の「エミュレータに繋がらないとき」を参照してください。');
 } else if (running.length < ports.length) {
   warn(
     `一部だけ起動しています（${running.join(' / ')}）`,

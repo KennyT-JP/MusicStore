@@ -23,6 +23,14 @@
 
 **Firebase プロジェクトを作らなくても、ローカルのエミュレータですぐ動かせます。**
 
+以下は**ご自身のパソコンで**実行してください。エミュレータはコマンドを実行した
+マシンの中だけで動くもので、`127.0.0.1` は「いま自分が使っているマシン」を指します。
+
+```sh
+git clone https://github.com/KennyT-JP/MusicStore.git
+cd MusicStore
+```
+
 ```sh
 # ターミナル 1：エミュレータ
 ./scripts/dev-emulators.sh
@@ -35,7 +43,11 @@ flutter pub get
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
 
+エミュレータの管理画面は、**起動したマシンのブラウザ**から <http://127.0.0.1:4000> で開けます。
+
 繋がらないときは `node scripts/doctor.mjs` で原因を切り分けられます。
+WSL・Dev Container・SSH 先で起動した場合はポート転送が必要です
+（[docs/SETUP.md](docs/SETUP.md) 参照）。
 
 ログインは `site-admin@example.com` / `password` などで行えます（詳細は [docs/SETUP.md](docs/SETUP.md)）。
 
