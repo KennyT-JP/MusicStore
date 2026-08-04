@@ -76,9 +76,9 @@ read-only@example.com    鈴木（Read Only）
 
 **本番と検証（ステージング）を別々のプロジェクトとして作成します。** Firestore のデータ・Storage のファイル・認証ユーザーがプロジェクト単位で完全に独立するため、検証作業が本番データを壊す事故を構造的に防げます。
 
-1. [Firebase コンソール](https://console.firebase.google.com/)で 2 つのプロジェクトを作成する。
-   - 本番用（例：`musiclist-prod`）
-   - 検証用（例：`musiclist-staging`）
+1. [Firebase コンソール](https://console.firebase.google.com/)で 2 つのプロジェクトを作成する。**作成済み。**
+   - 本番用：`Music-Storage`
+   - 検証用：`Music-Storage-dev`
 2. **両方を Blaze プラン（従量課金）に切り替える。** Cloud Functions を使うため Spark プランでは要件を満たせません（仕様書 12.1）。
 3. 各プロジェクトで次を有効化する。
    - Authentication（Google／メールとパスワード）
@@ -100,30 +100,37 @@ read-only@example.com    鈴木（Read Only）
 
 ## 4. 接続設定の生成
 
-`.firebaserc` のプロジェクト ID を、作成した実際の ID に差し替えます。
+`.firebaserc` には次を設定済みです。
 
 ```json
 {
   "projects": {
-    "default": "musiclist-staging",
-    "staging": "musiclist-staging",
-    "prod": "musiclist-prod"
+    "default": "music-storage-dev",
+    "staging": "music-storage-dev",
+    "prod": "music-storage"
   }
 }
 ```
+
+> **プロジェクト ID を必ず確認してください。**
+> Firebase のプロジェクト ID は小文字です。コンソールの表示名が `Music-Storage` でも
+> ID は `music-storage` になり、その名前が既に使われていた場合は末尾にランダムな
+> 文字列が付きます（例 `music-storage-a1b2c`）。
+> コンソールの「プロジェクトの設定 → プロジェクト ID」で実際の値を確認し、
+> 違っていれば `.firebaserc` を直してください。
 
 続いて、Flutter 側の接続設定を生成します。
 
 ```sh
 # 検証環境
 flutterfire configure \
-  --project=musiclist-staging \
+  --project=music-storage-dev \
   --out=lib/env/firebase_options_staging.dart \
   --platforms=web,android,ios
 
 # 本番環境
 flutterfire configure \
-  --project=musiclist-prod \
+  --project=music-storage \
   --out=lib/env/firebase_options_prod.dart \
   --platforms=web,android,ios
 ```
@@ -153,12 +160,24 @@ static FirebaseOptions get current {
 ## 5. セキュリティルールとインデックスの配置
 
 ```sh
+cd functions && npm install && cd ..
+
 firebase use staging
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage,functions
 
 firebase use prod
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage,functions
 ```
+
+> **Cloud Functions のリージョンは `asia-northeast1`（東京）にしています。**
+> Firestore を別のロケーション（`us-central` など）で作成した場合は、
+> `functions/src/config.ts` の `REGION` と `lib/env/firebase_emulators.dart` の
+> `kFunctionsRegion` を合わせて変更してください。リージョンが違うと、
+> トリガーのたびにリージョン間の通信が発生して遅延と費用が増えます。
+
+> **`purgeDeletedFiles` は Cloud Scheduler を使います。** 初回のデプロイ時に
+> Cloud Scheduler API の有効化を求められることがあります。Blaze プランなら
+> 追加設定なしで使えます（毎日 4:00 JST に実行）。
 
 ---
 
@@ -176,7 +195,7 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 cd scripts && npm install && cd ..
 
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-node scripts/grant-site-admin.js <あなたの UID> --project musiclist-staging
+node scripts/grant-site-admin.js <あなたの UID> --project music-storage-dev
 ```
 
 このスクリプトは次を行います。
@@ -210,11 +229,18 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 144 件
+flutter test      # 158 件
 flutter analyze
+
+cd functions && npm test   # 25 件（サーバー側のドメインロジック）
 ```
 
 権限判定・容量上限・連番・招待 URL・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
+
+> **権限と容量の規則は Dart と TypeScript の両方に持っています。**
+> Flutter 側（`lib/domain/`）は画面の出し分けに、Cloud Functions 側
+> （`functions/src/domain/`）はサーバー側の判定に使います。
+> 同じ内容のテストを両方に置いてあるので、**片方を変えたらもう片方も直してください。**
 
 ### セキュリティルールのテスト
 
@@ -238,6 +264,25 @@ Firestore ルールは 66 件すべて検証できます。
 >
 > なお「拒否される」ことを確認するテストは、エミュレータではすべてが拒否されるため
 > 通ってしまいます。合格しても保証にはならないので、これらも手動確認の対象です。
+
+### Cloud Functions の統合テスト
+
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（18 件）。
+
+```sh
+# ターミナル 1
+cd functions && npm run serve
+
+# ターミナル 2
+cd functions && npm run test:integration
+```
+
+検証する内容：リスト作成の申請と承認、リスト名の重複、招待 URL の発行・受諾・
+ワンタイム性、参加申請の承認と役割の付与、メンバー数の集計、
+最後のサイト管理者の降格ブロック。
+
+> **実行するとエミュレータの Auth と Firestore を初期化します。** 前回のサイト管理者が
+> 残っていると「最後の 1 人」の判定が変わってしまうためです。
 
 ### 手動確認
 

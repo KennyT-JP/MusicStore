@@ -5,6 +5,7 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,8 +14,10 @@ import '../data/models/app_user.dart';
 import '../data/models/list_item.dart';
 import '../data/models/music_list.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/functions_repository.dart';
 import '../data/repositories/item_repository.dart';
 import '../data/repositories/list_repository.dart';
+import '../env/firebase_emulators.dart';
 import '../domain/display_name.dart';
 import '../domain/role.dart';
 import '../ui/app_router.dart';
@@ -35,6 +38,10 @@ final firebaseStorageProvider = Provider<FirebaseStorage>(
   (ref) => FirebaseStorage.instance,
 );
 
+final firebaseFunctionsProvider = Provider<FirebaseFunctions>(
+  (ref) => FirebaseFunctions.instanceFor(region: kFunctionsRegion),
+);
+
 // ---------------------------------------------------------------------------
 // リポジトリ
 // ---------------------------------------------------------------------------
@@ -48,6 +55,10 @@ final authRepositoryProvider = Provider<AuthRepository>(
 
 final listRepositoryProvider = Provider<ListRepository>(
   (ref) => ListRepository(ref.watch(firestoreProvider)),
+);
+
+final functionsRepositoryProvider = Provider<FunctionsRepository>(
+  (ref) => FunctionsRepository(ref.watch(firebaseFunctionsProvider)),
 );
 
 final itemRepositoryProvider = Provider<ItemRepository>(

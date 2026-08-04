@@ -89,6 +89,12 @@ lib/
     widgets/               画面をまたいで使う部品
   l10n/                    日本語・英語の文言（2 章）
 
+functions/               Cloud Functions（TypeScript／仕様書 13.4）
+  src/domain/            権限・容量の規則（Flutter 側と同じ内容）
+  src/triggers/          Firestore / Storage のトリガー
+  src/callable/          申請の承認・招待・サイト管理者の操作
+  src/scheduled/         定期実行（削除ファイルの掃除）
+
 test/                    Flutter の単体テスト
 rules-test/              セキュリティルールのテスト（エミュレータ上で実行）
 scripts/                 運用スクリプト（サイト管理者の登録・エミュレータへの投入）
@@ -116,9 +122,15 @@ docs/                    仕様書・セットアップ手順
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test              # 158 件
-cd rules-test && npm test # 71 件（Firestore ルール 66 件を含む）
+flutter test                        # 158 件
+cd rules-test && npm test           # 71 件（Firestore ルール 66 件を含む）
+cd functions && npm test            # 25 件（サーバー側のドメインロジック）
+cd functions && npm run test:integration  # 18 件（要エミュレータ）
 ```
+
+**権限と容量の規則は Dart と TypeScript の両方にあります。** 画面の出し分けは Flutter 側、
+サーバー側の判定は Functions 側が使います。同じ内容のテストを両方に置いてあるので、
+片方を変えたらもう片方も直してください。
 
 **Storage ルールの一部は自動テストで検証できません。** `storage.rules` はメンバー判定に Firestore を参照しますが、Storage エミュレータがこれに対応していないためです（本番では動きます）。該当箇所はステージング環境での手動確認で補います。確認項目は [docs/SETUP.md](docs/SETUP.md) にチェックリストとしてまとめてあります。
 
@@ -145,8 +157,23 @@ cd rules-test && npm test # 71 件（Firestore ルール 66 件を含む）
 メンバー管理、参加申請の承認、リスト設定、サイト管理の 4 画面。
 ルーティングは通っており、画面上に未実装であることを明示しています。
 
+### 実装済みの Cloud Functions（仕様書 13.4）
+
+| 契機 | 処理 |
+| --- | --- |
+| Storage への保存・削除 | 使用容量の加減算と 80%／90% 通知 |
+| 項目の作成 | リスト管理者・サイト管理者へ通知 |
+| コメントの作成 | 管理者＋親コメント／項目の投稿者へ通知 |
+| メンバーの増減 | memberCount / adminCount の更新 |
+| リストの削除 | 配下のデータ・ファイル・名前予約の削除 |
+| リスト作成申請 | 申請・承認・却下 |
+| 参加申請 | 申請・承認・却下 |
+| 招待 URL | 発行・受諾（ワンタイム）・取消 |
+| サイト管理者 | 昇格・降格（最後の 1 人はブロック） |
+| 退会 | 投稿を残して isWithdrawn を立てる |
+| 定期実行（毎日 4:00 JST） | 猶予期間切れファイルと孤児ファイルの削除 |
+
 ### そのほか残っていること
 
-- クラウドの Firebase プロジェクト作成と接続（手順は [docs/SETUP.md](docs/SETUP.md)）
-- Cloud Functions（通知配信・容量集計・申請の承認・招待の受諾・定期削除）
+- クラウドの Firebase プロジェクトへの接続（手順は [docs/SETUP.md](docs/SETUP.md)）
 - 項目編集時のファイル差し替え（旧ファイルの猶予期間つき削除が必要なため、Functions と合わせて実装）

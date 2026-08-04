@@ -28,6 +28,9 @@ import 'app_environment.dart';
 /// Android の実機・エミュレータから繋ぐ場合は `10.0.2.2` などに変える必要がある。
 const String kEmulatorHost = '127.0.0.1';
 
+/// Cloud Functions のリージョン（functions/src/config.ts の REGION と揃える）。
+const String kFunctionsRegion = 'asia-northeast1';
+
 /// firebase.json の emulators セクションと揃えること。
 const int kAuthEmulatorPort = 9099;
 const int kFirestoreEmulatorPort = 8080;
@@ -58,8 +61,10 @@ Future<void> connectToFirebaseEmulators() async {
     kEmulatorHost,
     kStorageEmulatorPort,
   );
-  FirebaseFunctions.instance.useFunctionsEmulator(
-    kEmulatorHost,
-    kFunctionsEmulatorPort,
-  );
+  // リージョンを指定したインスタンスに向ける。
+  // FirebaseFunctions.instance（既定リージョン）とは別物なので、
+  // アプリが実際に使う instanceFor と同じものを設定する必要がある。
+  FirebaseFunctions.instanceFor(
+    region: kFunctionsRegion,
+  ).useFunctionsEmulator(kEmulatorHost, kFunctionsEmulatorPort);
 }

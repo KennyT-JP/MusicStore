@@ -1,8 +1,9 @@
 {
-  "//": "本番と検証を別プロジェクトに分ける（仕様書 12.2）。プロジェクトを作成したら ID を差し替えてください。切り替えは firebase use staging / firebase use prod。",
+  "//": "本番と検証を別プロジェクトに分ける（仕様書 12.2）。切り替えは firebase use staging / firebase use prod。",
+  "//projectId": "Firebase のプロジェクト ID は小文字です。コンソールの表示名が Music-Storage でも、ID は music-storage のように小文字になり、名前が既に使われていた場合は末尾にランダムな文字列が付きます（例 music-storage-a1b2c）。コンソールの「プロジェクトの設定 → プロジェクト ID」で実際の値を確認し、違っていればここを直してください。",
   "projects": {
-    "default": "REPLACE_ME-staging",
-    "staging": "REPLACE_ME-staging",
-    "prod": "REPLACE_ME-prod"
+    "default": "music-storage-dev",
+    "staging": "music-storage-dev",
+    "prod": "music-storage"
   }
 }
