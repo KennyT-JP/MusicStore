@@ -92,6 +92,21 @@ GoRouter buildAppRouter({
         builder: (context, state) => const ResetPasswordScreen(),
       ),
 
+      // 項目の追加・編集は、ナビゲーションを出さない全画面のフォームにする
+      // （仕様書 14.4）。上部バーが二重にならないよう ShellRoute の外に置く。
+      GoRoute(
+        path: AppRoutes.addItemPattern,
+        builder: (context, state) =>
+            ItemFormScreen(listId: state.pathParameters['listId']!),
+      ),
+      GoRoute(
+        path: AppRoutes.editItemPattern,
+        builder: (context, state) => ItemFormScreen(
+          listId: state.pathParameters['listId']!,
+          itemId: state.pathParameters['itemId']!,
+        ),
+      ),
+
       // --- ナビゲーションを備えた画面 ---
       ShellRoute(
         builder: (context, state, child) {
@@ -133,20 +148,8 @@ GoRouter buildAppRouter({
                 ListDetailScreen(listId: state.pathParameters['listId']!),
           ),
           GoRoute(
-            path: AppRoutes.addItemPattern,
-            builder: (context, state) =>
-                ItemFormScreen(listId: state.pathParameters['listId']!),
-          ),
-          GoRoute(
             path: AppRoutes.itemPattern,
             builder: (context, state) => ItemDetailScreen(
-              listId: state.pathParameters['listId']!,
-              itemId: state.pathParameters['itemId']!,
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.editItemPattern,
-            builder: (context, state) => ItemFormScreen(
               listId: state.pathParameters['listId']!,
               itemId: state.pathParameters['itemId']!,
             ),

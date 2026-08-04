@@ -1,0 +1,77 @@
+/// ログイン画面のスモークテスト（仕様書 3.1 / 14.2）
+///
+/// 画面が例外で真っ白になる類の事故をここで捕まえる。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:music_list_app/data/repositories/auth_repository.dart';
+import 'package:music_list_app/l10n/app_localizations.dart';
+import 'package:music_list_app/providers/app_providers.dart';
+import 'package:music_list_app/ui/screens/auth/sign_in_screen.dart';
+
+class _FakeAuthRepository extends Mock implements AuthRepository {}
+
+void main() {
+  late _FakeAuthRepository auth;
+
+  setUp(() {
+    auth = _FakeAuthRepository();
+    when(() => auth.signInWithGoogle()).thenAnswer((_) async {});
+    when(() => auth.signInWithEmail(any(), any())).thenAnswer((_) async {});
+  });
+
+  Widget wrap(Widget child) => ProviderScope(
+    overrides: [authRepositoryProvider.overrideWithValue(auth)],
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppL10n.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppL10n.supportedLocales,
+      locale: const Locale('ja'),
+      home: child,
+    ),
+  );
+
+  testWidgets('例外を出さずに描画される', (tester) async {
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // Google ログインとメール入力欄が出ている。
+    expect(find.text('Google でログイン'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+  });
+
+  testWidgets('メールとパスワードを入れてログインできる', (tester) async {
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'user@example.com',
+    );
+    await tester.enterText(find.byType(TextFormField).last, 'password');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'ログイン'));
+    await tester.pumpAndSettle();
+
+    verify(() => auth.signInWithEmail('user@example.com', 'password')).called(1);
+  });
+
+  testWidgets('未入力なら送信しない', (tester) async {
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'ログイン'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => auth.signInWithEmail(any(), any()));
+  });
+}

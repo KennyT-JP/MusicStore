@@ -175,6 +175,36 @@ abstract class AppL10n {
   /// **'パスワード'**
   String get passwordLabel;
 
+  /// No description provided for @emailRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスを入力してください'**
+  String get emailRequired;
+
+  /// No description provided for @passwordRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードを入力してください'**
+  String get passwordRequired;
+
+  /// No description provided for @passwordTooShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードは 6 文字以上で入力してください'**
+  String get passwordTooShort;
+
+  /// No description provided for @urlRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'URL を入力してください'**
+  String get urlRequired;
+
+  /// No description provided for @fileRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを選択してください'**
+  String get fileRequired;
+
   /// No description provided for @forgotPassword.
   ///
   /// In ja, this message translates to:

@@ -48,6 +48,21 @@ class AppL10nEn extends AppL10n {
   String get passwordLabel => 'Password';
 
   @override
+  String get emailRequired => 'Please enter your email address';
+
+  @override
+  String get passwordRequired => 'Please enter your password';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 6 characters';
+
+  @override
+  String get urlRequired => 'Please enter a URL';
+
+  @override
+  String get fileRequired => 'Please choose a file';
+
+  @override
   String get forgotPassword => 'Forgot your password?';
 
   @override

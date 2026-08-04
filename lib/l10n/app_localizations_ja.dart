@@ -48,6 +48,21 @@ class AppL10nJa extends AppL10n {
   String get passwordLabel => 'パスワード';
 
   @override
+  String get emailRequired => 'メールアドレスを入力してください';
+
+  @override
+  String get passwordRequired => 'パスワードを入力してください';
+
+  @override
+  String get passwordTooShort => 'パスワードは 6 文字以上で入力してください';
+
+  @override
+  String get urlRequired => 'URL を入力してください';
+
+  @override
+  String get fileRequired => 'ファイルを選択してください';
+
+  @override
   String get forgotPassword => 'パスワードをお忘れですか';
 
   @override

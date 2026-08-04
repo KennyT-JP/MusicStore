@@ -1,0 +1,143 @@
+/// リストとメンバー（仕様書 5 章 / 13.3）
+library;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../firestore_paths.dart';
+import '../models/app_user.dart';
+import '../models/music_list.dart';
+
+/// リストとメンバーの読み書き。
+class ListRepository {
+  ListRepository(this._db);
+
+  final FirebaseFirestore _db;
+
+  /// 自分が参加しているリストの ID と役割（仕様書 13.3）。
+  ///
+  /// `members` に対する collectionGroup クエリで、ドキュメント ID が
+  /// 自分の uid のものを集める。
+  Stream<List<({String listId, ListMember member})>> watchMyMemberships(
+    String uid,
+  ) {
+    return _db
+        .collectionGroup(FirestorePaths.members)
+        .where(FieldPath.documentId, isEqualTo: uid)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => (
+                  // lists/{listId}/members/{uid} → listId を取り出す
+                  listId: doc.reference.parent.parent!.id,
+                  member: ListMember.fromDoc(doc),
+                ),
+              )
+              .toList(),
+        );
+  }
+
+  Stream<MusicList?> watchList(String listId) => _db
+      .doc(FirestorePaths.list(listId))
+      .snapshots()
+      .map((doc) => doc.exists ? MusicList.fromDoc(doc) : null);
+
+  Future<MusicList?> fetchList(String listId) async {
+    final doc = await _db.doc(FirestorePaths.list(listId)).get();
+    return doc.exists ? MusicList.fromDoc(doc) : null;
+  }
+
+  /// 容量・連番などの内部情報。メンバーでなければ読めない（仕様書 13.5）。
+  Stream<ListStats?> watchStats(String listId) => _db
+      .doc(FirestorePaths.listStats(listId))
+      .snapshots()
+      .map((doc) => doc.exists ? ListStats.fromDoc(doc) : null);
+
+  Stream<List<ListMember>> watchMembers(String listId) => _db
+      .collection(FirestorePaths.listMembers(listId))
+      .snapshots()
+      .map((s) => s.docs.map(ListMember.fromDoc).toList());
+
+  /// 自分のメンバー情報。参加していなければ null。
+  Stream<ListMember?> watchMyMembership(String listId, String uid) => _db
+      .doc(FirestorePaths.listMember(listId, uid))
+      .snapshots()
+      .map((doc) => doc.exists ? ListMember.fromDoc(doc) : null);
+
+  /// 表示名の解決に使うユーザー情報をまとめて引く（仕様書 13.3）。
+  ///
+  /// 項目・コメントには uid のみを持たせているため、表示時にここで解決する。
+  Future<Map<String, AppUser>> fetchUsers(Iterable<String> uids) async {
+    final unique = uids.where((u) => u.isNotEmpty).toSet().toList();
+    if (unique.isEmpty) return const {};
+
+    final result = <String, AppUser>{};
+    // whereIn は 1 回あたり 30 件までなので分割する。
+    for (var i = 0; i < unique.length; i += 30) {
+      final chunk = unique.sublist(
+        i,
+        i + 30 > unique.length ? unique.length : i + 30,
+      );
+      final snapshot = await _db
+          .collection(FirestorePaths.users)
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      for (final doc in snapshot.docs) {
+        result[doc.id] = AppUser.fromDoc(doc);
+      }
+    }
+    return result;
+  }
+
+  Stream<AppUser?> watchUser(String uid) => _db
+      .doc(FirestorePaths.user(uid))
+      .snapshots()
+      .map((doc) => doc.exists ? AppUser.fromDoc(doc) : null);
+
+  /// 表示名を変更する（仕様書 3.4）。
+  Future<void> updateDisplayName(String uid, String displayName) =>
+      _db.doc(FirestorePaths.user(uid)).update({
+        'displayName': displayName.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  /// 表示言語を変更する（仕様書 2 章）。
+  Future<void> updateLocale(String uid, String locale) =>
+      _db.doc(FirestorePaths.user(uid)).update({
+        'locale': locale,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  /// 通知設定を保存する（仕様書 10.3）。
+  Future<void> updateNotificationSettings(
+    String uid,
+    NotificationSettings settings,
+  ) => _db.doc(FirestorePaths.user(uid)).update({
+    'notificationSettings': settings.toMap(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
+
+  /// メンバーの役割を変更する（仕様書 4.3）。
+  Future<void> updateMemberRole(String listId, String uid, String role) =>
+      _db.doc(FirestorePaths.listMember(listId, uid)).update({'role': role});
+
+  /// メンバーを外す／自分から抜ける（仕様書 5.4）。
+  Future<void> removeMember(String listId, String uid) =>
+      _db.doc(FirestorePaths.listMember(listId, uid)).delete();
+
+  /// リストを削除する（仕様書 5.5）。
+  ///
+  /// 配下の項目・コメント・ファイルの削除は Cloud Functions が行う。
+  /// クライアントから全件を消すと、途中で失敗したときに中途半端な状態が残る。
+  Future<void> deleteList(String listId) =>
+      _db.doc(FirestorePaths.list(listId)).delete();
+
+  /// リスト名が既に使われているか調べる（仕様書 5.1）。
+  ///
+  /// ドキュメント ID の存在確認だけで行う。`lists` を名前で検索すると
+  /// 未参加者が全リスト名を列挙できてしまうため（仕様書 5.3）。
+  Future<bool> isListNameTaken(String name) async {
+    final doc = await _db.doc(FirestorePaths.listName(normalizeListName(name))).get();
+    return doc.exists;
+  }
+}
