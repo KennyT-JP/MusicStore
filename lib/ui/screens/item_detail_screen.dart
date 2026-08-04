@@ -116,11 +116,7 @@ class _ItemHeader extends ConsumerWidget {
                   label: Text(l10n.restoreItem),
                   onPressed: () => ref
                       .read(itemRepositoryProvider)
-                      .restoreItem(
-                        listId: listId,
-                        itemId: item.id,
-                        uid: uid,
-                      ),
+                      .restoreItem(listId: listId, itemId: item.id, uid: uid),
                 ),
             ],
           ),
@@ -322,9 +318,9 @@ class _MediaAction extends ConsumerWidget {
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppL10n.of(context).errorGeneric)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).errorGeneric)));
     }
   }
 }
@@ -520,7 +516,10 @@ class _CommentTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           border: depth > 0
               ? Border(
-                  left: BorderSide(color: theme.colorScheme.outlineVariant, width: 2),
+                  left: BorderSide(
+                    color: theme.colorScheme.outlineVariant,
+                    width: 2,
+                  ),
                 )
               : null,
         ),

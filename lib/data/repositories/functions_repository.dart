@@ -9,6 +9,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../domain/invite.dart';
 import '../../domain/role.dart';
+import '../models/requests.dart';
 
 /// Functions の呼び出しが失敗したときに投げる。
 ///
@@ -146,6 +147,32 @@ class FunctionsRepository {
   /// サイト管理者から外す。最後の 1 人は外せない（仕様書 4.5）。
   Future<void> revokeSiteAdmin(String uid) =>
       _call('revokeSiteAdmin', {'uid': uid});
+
+  // -------------------------------------------------------------------
+  // サイト管理画面（仕様書 11.1 / 7.2 / 5.6）
+  // -------------------------------------------------------------------
+
+  /// ユーザーの一覧を取得する（サイト管理者のみ）。
+  ///
+  /// サイト管理者かどうかは Auth のカスタムクレームにしかないため、
+  /// クライアントから直接は分からない（仕様書 13.5）。
+  Future<List<SiteUser>> listSiteUsers() async {
+    final result = await _call('listSiteUsers', const {});
+    final users = result['users'] as List<dynamic>? ?? const [];
+    return users
+        .map((e) => SiteUser.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// リストの容量上限を設定する（仕様書 7.2）。
+  Future<void> setListQuota({
+    required String listId,
+    required int quotaBytes,
+  }) => _call('setListQuota', {'listId': listId, 'quotaBytes': quotaBytes});
+
+  /// 管理者不在のリストにリスト管理者を指名する（仕様書 5.6）。
+  Future<void> assignListAdmin({required String listId, required String uid}) =>
+      _call('assignListAdmin', {'listId': listId, 'uid': uid});
 
   /// 退会する（仕様書 3.5）。
   ///

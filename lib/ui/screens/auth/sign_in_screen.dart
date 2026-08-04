@@ -103,9 +103,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     labelText: l10n.passwordLabel,
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? l10n.passwordRequired
-                      : null,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? l10n.passwordRequired : null,
                   onFieldSubmitted: (_) => _submit(auth),
                 ),
                 const SizedBox(height: 16),
@@ -118,17 +117,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: _busy
-                ? null
-                : () => context.go(AppRoutes.resetPassword),
+            onPressed: _busy ? null : () => context.go(AppRoutes.resetPassword),
             child: Text(l10n.forgotPassword),
           ),
           TextButton(
             onPressed: _busy
                 ? null
-                : () => context.go(
-                    _withRedirect(AppRoutes.signUp),
-                  ),
+                : () => context.go(_withRedirect(AppRoutes.signUp)),
             child: Text(l10n.signUp),
           ),
         ],

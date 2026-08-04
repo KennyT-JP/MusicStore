@@ -9,7 +9,15 @@ import {
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 import {
   COMMENT_ID,
@@ -53,6 +61,30 @@ describe('未ログイン（3.1.1）', () => {
   test('招待も読めない', async () => {
     const anon = db(asAnonymous(env));
     await assertFails(getDoc(doc(anon, 'invites/secret-invite-id')));
+  });
+});
+
+describe('リストの列挙（5.3）', () => {
+  test('一般ユーザーは全リストを列挙できない', async () => {
+    // 列挙できると未参加者が全リスト名を知れてしまい、
+    // 「全リストの一覧を公開する画面は作らない」に反する。
+    const outsider = db(asUser(env, UID.outsider));
+    await assertFails(getDocs(collection(outsider, 'lists')));
+  });
+
+  test('メンバーでも全リストは列挙できない', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await assertFails(getDocs(collection(listAdmin, 'lists')));
+  });
+
+  test('サイト管理者だけが全リストを列挙できる（11.1）', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await assertSucceeds(getDocs(collection(siteAdmin, 'lists')));
+  });
+
+  test('ID を知っていれば取得できる（共有 URL の経路）', async () => {
+    const outsider = db(asUser(env, UID.outsider));
+    await assertSucceeds(getDoc(doc(outsider, `lists/${LIST_ID}`)));
   });
 });
 

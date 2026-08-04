@@ -54,14 +54,12 @@ class FirestorePaths {
 
   static String user(String uid) => '$users/$uid';
 
-  static String userNotifications(String uid) =>
-      '${user(uid)}/$notifications';
+  static String userNotifications(String uid) => '${user(uid)}/$notifications';
 
   static String list(String listId) => '$lists/$listId';
 
   /// 容量・連番などの内部情報（メンバーのみ読める）。
-  static String listStats(String listId) =>
-      '${list(listId)}/$meta/$statsDoc';
+  static String listStats(String listId) => '${list(listId)}/$meta/$statsDoc';
 
   static String listMembers(String listId) => '${list(listId)}/$members';
 

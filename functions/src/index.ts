@@ -13,6 +13,7 @@
  * | 参加申請の提出・承認・却下 | submitJoinRequest / approveJoinRequest / rejectJoinRequest |
  * | 招待 URL の発行・受諾・取消 | createInvite / acceptInvite / revokeInvite |
  * | サイト管理者の昇格・降格 | grantSiteAdmin / revokeSiteAdmin |
+ * | ユーザー一覧・容量上限・管理者の指名 | listSiteUsers / setListQuota / assignListAdmin |
  * | 退会 | withdrawAccount |
  * | 定期実行（1 日 1 回） | purgeDeletedFiles |
  *
@@ -54,6 +55,11 @@ export {
   revokeSiteAdmin,
   withdrawAccount,
 } from './callable/site_admin';
+export {
+  listSiteUsers,
+  setListQuota,
+  assignListAdmin,
+} from './callable/site_management';
 
 // --- 定期実行 ---
 export { purgeDeletedFiles } from './scheduled/purge';

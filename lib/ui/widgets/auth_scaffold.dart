@@ -46,7 +46,8 @@ class AuthScaffold extends StatelessWidget {
                           alignment: Alignment.center,
                           child: Chip(
                             label: Text(l10n.environmentBannerStaging),
-                            backgroundColor: theme.colorScheme.tertiaryContainer,
+                            backgroundColor:
+                                theme.colorScheme.tertiaryContainer,
                           ),
                         ),
                         const SizedBox(height: 16),

@@ -180,10 +180,7 @@ void main() {
         sameRegistrant,
         const ItemQuery(sortKey: ItemSortKey.registrant),
       );
-      expect(
-        result.map((i) => i.registrantDisplayName),
-        ['佐藤', '田中', '田中'],
-      );
+      expect(result.map((i) => i.registrantDisplayName), ['佐藤', '田中', '田中']);
       expect(seqsOf(result), [2, 1, 3]);
     });
 
@@ -212,10 +209,11 @@ void main() {
         alphabetic,
         const ItemQuery(sortKey: ItemSortKey.registrant),
       );
-      expect(
-        result.map((i) => i.registrantDisplayName),
-        ['Sato', 'Suzuki', 'Tanaka'],
-      );
+      expect(result.map((i) => i.registrantDisplayName), [
+        'Sato',
+        'Suzuki',
+        'Tanaka',
+      ]);
     });
 
     test('降順にできる', () {

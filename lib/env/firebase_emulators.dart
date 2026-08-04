@@ -49,10 +49,7 @@ bool get useFirebaseEmulators {
 ///
 /// `Firebase.initializeApp()` のあと、最初の読み書きより前に呼ぶ。
 Future<void> connectToFirebaseEmulators() async {
-  await FirebaseAuth.instance.useAuthEmulator(
-    kEmulatorHost,
-    kAuthEmulatorPort,
-  );
+  await FirebaseAuth.instance.useAuthEmulator(kEmulatorHost, kAuthEmulatorPort);
   FirebaseFirestore.instance.useFirestoreEmulator(
     kEmulatorHost,
     kFirestoreEmulatorPort,

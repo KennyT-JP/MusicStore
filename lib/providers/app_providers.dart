@@ -13,6 +13,7 @@ import '../data/firestore_paths.dart';
 import '../data/models/app_user.dart';
 import '../data/models/list_item.dart';
 import '../data/models/music_list.dart';
+import '../data/models/requests.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/functions_repository.dart';
 import '../data/repositories/item_repository.dart';
@@ -133,11 +134,7 @@ final myMembershipsProvider =
 
 /// ホームに並べるリストの 1 行分。
 class MyListEntry {
-  const MyListEntry({
-    required this.list,
-    required this.role,
-    this.stats,
-  });
+  const MyListEntry({required this.list, required this.role, this.stats});
 
   final MusicList list;
   final ListRole role;
@@ -161,8 +158,9 @@ final myListsProvider = StreamProvider<List<MyListEntry>>((ref) {
         return MyListEntry(list: list, role: m.member.role);
       }),
     ).then(
-      (entries) => entries.whereType<MyListEntry>().toList()
-        ..sort((a, b) => a.list.name.compareTo(b.list.name)),
+      (entries) =>
+          entries.whereType<MyListEntry>().toList()
+            ..sort((a, b) => a.list.name.compareTo(b.list.name)),
     ),
   );
 });
@@ -212,8 +210,11 @@ final listItemsProvider = StreamProvider.family<List<ListItem>, String>((
   final listRepo = ref.watch(listRepositoryProvider);
 
   await for (final items in repo.watchItems(listId)) {
-    final memberUids =
-        ref.watch(listMembersProvider(listId)).value?.map((m) => m.uid).toSet();
+    final memberUids = ref
+        .watch(listMembersProvider(listId))
+        .value
+        ?.map((m) => m.uid)
+        .toSet();
     final users = await listRepo.fetchUsers(items.map((i) => i.createdBy));
     yield items
         .map(
@@ -237,9 +238,8 @@ final listItemsProvider = StreamProvider.family<List<ListItem>, String>((
 
 final itemProvider =
     StreamProvider.family<ListItem?, ({String listId, String itemId})>(
-      (ref, args) => ref
-          .watch(itemRepositoryProvider)
-          .watchItem(args.listId, args.itemId),
+      (ref, args) =>
+          ref.watch(itemRepositoryProvider).watchItem(args.listId, args.itemId),
     );
 
 final itemCommentsProvider =
@@ -274,11 +274,114 @@ final siteConfigProvider = StreamProvider<SiteConfig>(
       .map((doc) {
         final data = doc.data() ?? const {};
         return SiteConfig(
-          inviteExpiryHours:
-              (data['inviteExpiryHours'] as num?)?.toInt() ?? 24,
+          inviteExpiryHours: (data['inviteExpiryHours'] as num?)?.toInt() ?? 24,
           itemPurgeGraceDays:
               (data['itemPurgeGraceDays'] as num?)?.toInt() ?? 30,
           siteAdminCount: (data['siteAdminCount'] as num?)?.toInt() ?? 1,
         );
       }),
 );
+
+// ---------------------------------------------------------------------------
+// 通知（仕様書 10 / 14.2）
+// ---------------------------------------------------------------------------
+
+/// 自分の通知を新しい順に監視する。
+final myNotificationsProvider = StreamProvider<List<AppNotification>>((ref) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref
+      .watch(firestoreProvider)
+      .collection(FirestorePaths.userNotifications(user.uid))
+      .orderBy('createdAt', descending: true)
+      .limit(200)
+      .snapshots()
+      .map((s) => s.docs.map(AppNotification.fromDoc).toList());
+});
+
+// ---------------------------------------------------------------------------
+// 申請（仕様書 5.1 / 5.2 / 5.2.1）
+// ---------------------------------------------------------------------------
+
+/// 自分が出したリスト作成申請（仕様書 5.2.1）。
+final myListRequestsProvider = StreamProvider<List<ListRequest>>((ref) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref
+      .watch(firestoreProvider)
+      .collection(FirestorePaths.listRequests)
+      .where('requestedBy', isEqualTo: user.uid)
+      .orderBy('requestedAt', descending: true)
+      .snapshots()
+      .map((s) => s.docs.map(ListRequest.fromDoc).toList());
+});
+
+/// 保留中のリスト作成申請（サイト管理者向け／仕様書 5.1）。
+final pendingListRequestsProvider = StreamProvider<List<ListRequest>>((ref) {
+  final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
+  if (!isSiteAdmin) return Stream.value(const []);
+  return ref
+      .watch(firestoreProvider)
+      .collection(FirestorePaths.listRequests)
+      .where('status', isEqualTo: 'pending')
+      .orderBy('requestedAt')
+      .snapshots()
+      .map((s) => s.docs.map(ListRequest.fromDoc).toList());
+});
+
+/// リストの保留中の参加申請（リスト管理者向け／仕様書 5.2）。
+final pendingJoinRequestsProvider =
+    StreamProvider.family<List<JoinRequest>, String>((ref, listId) {
+      return ref
+          .watch(firestoreProvider)
+          .collection(FirestorePaths.listJoinRequests(listId))
+          .where('status', isEqualTo: 'pending')
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map((doc) => JoinRequest.fromDoc(doc, listId: listId))
+                .toList(),
+          );
+    });
+
+/// このリストへの自分の参加申請（仕様書 5.3 / 5.2.1）。
+final myJoinRequestProvider = StreamProvider.family<JoinRequest?, String>((
+  ref,
+  listId,
+) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref
+      .watch(firestoreProvider)
+      .doc(FirestorePaths.listJoinRequest(listId, user.uid))
+      .snapshots()
+      .map(
+        (doc) => doc.exists ? JoinRequest.fromDoc(doc, listId: listId) : null,
+      );
+});
+
+// ---------------------------------------------------------------------------
+// サイト管理（仕様書 11.1）
+// ---------------------------------------------------------------------------
+
+/// 全リスト（サイト管理者のみ列挙できる／仕様書 5.3 / 13.5）。
+final allListsProvider = StreamProvider<List<MusicList>>((ref) {
+  final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
+  if (!isSiteAdmin) return Stream.value(const []);
+  return ref
+      .watch(firestoreProvider)
+      .collection(FirestorePaths.lists)
+      .orderBy('name')
+      .snapshots()
+      .map((s) => s.docs.map(MusicList.fromDoc).toList());
+});
+
+/// ユーザーの一覧（サイト管理者のみ）。
+///
+/// サイト管理者かどうかは Auth のカスタムクレームにしかないため、
+/// Cloud Functions 経由で取得する（仕様書 13.5）。
+final siteUsersProvider = FutureProvider<List<SiteUser>>((ref) async {
+  final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
+  if (!isSiteAdmin) return const [];
+  return ref.watch(functionsRepositoryProvider).listSiteUsers();
+});

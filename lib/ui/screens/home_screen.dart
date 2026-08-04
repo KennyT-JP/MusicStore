@@ -120,10 +120,7 @@ class _ListCard extends ConsumerWidget {
                   Text(
                     // 削除済みは件数に含めない。
                     l10n.itemCount(
-                      items.value
-                              ?.where((i) => !i.isDeleted)
-                              .length ??
-                          0,
+                      items.value?.where((i) => !i.isDeleted).length ?? 0,
                     ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

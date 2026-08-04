@@ -163,9 +163,8 @@ GoRouter buildAppRouter({
           ),
           GoRoute(
             path: AppRoutes.listJoinRequestsPattern,
-            builder: (context, state) => ListJoinRequestsScreen(
-              listId: state.pathParameters['listId']!,
-            ),
+            builder: (context, state) =>
+                ListJoinRequestsScreen(listId: state.pathParameters['listId']!),
           ),
           GoRoute(
             path: AppRoutes.listSettingsPattern,

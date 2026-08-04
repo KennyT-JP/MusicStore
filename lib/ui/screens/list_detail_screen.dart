@@ -67,10 +67,7 @@ class ListDetailScreen extends ConsumerWidget {
         value: list,
         builder: (musicList) {
           if (musicList == null) {
-            return EmptyState(
-              icon: Icons.search_off,
-              title: l10n.notFound,
-            );
+            return EmptyState(icon: Icons.search_off, title: l10n.notFound);
           }
           return Column(
             children: [
@@ -258,9 +255,7 @@ class _ItemList extends ConsumerWidget {
             icon: query.keyword.isEmpty
                 ? Icons.library_music_outlined
                 : Icons.search_off,
-            title: query.keyword.isEmpty
-                ? 'まだ項目がありません。'
-                : '該当する項目が見つかりませんでした。',
+            title: query.keyword.isEmpty ? 'まだ項目がありません。' : '該当する項目が見つかりませんでした。',
             description: query.keyword.isEmpty && Permissions.canAddItem(access)
                 ? '右下の「${l10n.addItem}」から音源や URL を登録できます。'
                 : null,
@@ -275,11 +270,8 @@ class _ItemList extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 96),
           itemCount: filtered.length,
           separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) => _ItemRow(
-            listId: listId,
-            item: filtered[index],
-            isWide: isWide,
-          ),
+          itemBuilder: (context, index) =>
+              _ItemRow(listId: listId, item: filtered[index], isWide: isWide),
         );
       },
     );

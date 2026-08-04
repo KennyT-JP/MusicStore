@@ -72,8 +72,7 @@ class ListStats {
     return ListStats(
       nextSeq: (data['nextSeq'] as num?)?.toInt() ?? 1,
       usedBytes: (data['usedBytes'] as num?)?.toInt() ?? 0,
-      quotaBytes:
-          (data['quotaBytes'] as num?)?.toInt() ?? kDefaultQuotaBytes,
+      quotaBytes: (data['quotaBytes'] as num?)?.toInt() ?? kDefaultQuotaBytes,
       notifiedNotice80: data['notifiedNotice80'] as bool? ?? false,
       notifiedWarning90: data['notifiedWarning90'] as bool? ?? false,
     );

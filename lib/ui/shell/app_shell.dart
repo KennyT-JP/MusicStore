@@ -67,8 +67,7 @@ class AppShell extends StatelessWidget {
     final l10n = AppL10n.of(context);
     final destinations = _destinations(l10n);
     final selectedIndex = _selectedIndex(destinations);
-    final isWide =
-        MediaQuery.sizeOf(context).width >= kWideLayoutBreakpoint;
+    final isWide = MediaQuery.sizeOf(context).width >= kWideLayoutBreakpoint;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,8 +110,10 @@ class AppShell extends StatelessWidget {
                 for (final d in destinations)
                   NavigationDestination(
                     icon: _maybeBadge(Icon(d.icon), d.badgeCount),
-                    selectedIcon:
-                        _maybeBadge(Icon(d.selectedIcon), d.badgeCount),
+                    selectedIcon: _maybeBadge(
+                      Icon(d.selectedIcon),
+                      d.badgeCount,
+                    ),
                     label: d.label,
                   ),
               ],
@@ -198,8 +199,10 @@ class _SideNavigation extends StatelessWidget {
         for (final d in destinations)
           NavigationRailDestination(
             icon: AppShell._maybeBadge(Icon(d.icon), d.badgeCount),
-            selectedIcon:
-                AppShell._maybeBadge(Icon(d.selectedIcon), d.badgeCount),
+            selectedIcon: AppShell._maybeBadge(
+              Icon(d.selectedIcon),
+              d.badgeCount,
+            ),
             label: Text(d.label),
           ),
       ],
@@ -228,7 +231,8 @@ class _NotificationBell extends StatelessWidget {
 }
 
 /// 検証環境で作業していることを見失わないためのバナー（12.2）。
-class _EnvironmentBanner extends StatelessWidget implements PreferredSizeWidget {
+class _EnvironmentBanner extends StatelessWidget
+    implements PreferredSizeWidget {
   const _EnvironmentBanner({required this.label});
 
   final String label;
@@ -246,9 +250,9 @@ class _EnvironmentBanner extends StatelessWidget implements PreferredSizeWidget 
       color: scheme.tertiaryContainer,
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: scheme.onTertiaryContainer,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: scheme.onTertiaryContainer),
       ),
     );
   }

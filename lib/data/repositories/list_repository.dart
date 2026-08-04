@@ -102,11 +102,9 @@ class ListRepository {
       });
 
   /// 表示言語を変更する（仕様書 2 章）。
-  Future<void> updateLocale(String uid, String locale) =>
-      _db.doc(FirestorePaths.user(uid)).update({
-        'locale': locale,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> updateLocale(String uid, String locale) => _db
+      .doc(FirestorePaths.user(uid))
+      .update({'locale': locale, 'updatedAt': FieldValue.serverTimestamp()});
 
   /// 通知設定を保存する（仕様書 10.3）。
   Future<void> updateNotificationSettings(
@@ -137,7 +135,9 @@ class ListRepository {
   /// ドキュメント ID の存在確認だけで行う。`lists` を名前で検索すると
   /// 未参加者が全リスト名を列挙できてしまうため（仕様書 5.3）。
   Future<bool> isListNameTaken(String name) async {
-    final doc = await _db.doc(FirestorePaths.listName(normalizeListName(name))).get();
+    final doc = await _db
+        .doc(FirestorePaths.listName(normalizeListName(name)))
+        .get();
     return doc.exists;
   }
 }

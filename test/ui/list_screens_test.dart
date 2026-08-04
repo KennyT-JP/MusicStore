@@ -49,9 +49,25 @@ ListItem _item({
 
 final _items = [
   _item(seq: 1, title: 'サザンオールスターズメドレー', registrant: '佐藤'),
-  _item(seq: 2, fileName: 'Rehearsal_Take2.MP3', registrant: '鈴木', date: '2026-07-15'),
-  _item(seq: 3, title: '夏の思い出', artist: 'サザン', registrant: '田中', date: '2026-08-20'),
-  _item(seq: 4, title: '消した曲', status: ContentStatus.deleted, date: '2026-07-01'),
+  _item(
+    seq: 2,
+    fileName: 'Rehearsal_Take2.MP3',
+    registrant: '鈴木',
+    date: '2026-07-15',
+  ),
+  _item(
+    seq: 3,
+    title: '夏の思い出',
+    artist: 'サザン',
+    registrant: '田中',
+    date: '2026-08-20',
+  ),
+  _item(
+    seq: 4,
+    title: '消した曲',
+    status: ContentStatus.deleted,
+    date: '2026-07-01',
+  ),
 ];
 
 Widget _wrap(Widget child, {required ListRole role, bool siteAdmin = false}) {
@@ -69,11 +85,13 @@ Widget _wrap(Widget child, {required ListRole role, bool siteAdmin = false}) {
         ),
       ),
       listItemsProvider(_listId).overrideWith((ref) => Stream.value(_items)),
-      listAccessProvider(_listId).overrideWith(
-        (ref) => ListAccess(isSiteAdmin: siteAdmin, role: role),
-      ),
+      listAccessProvider(
+        _listId,
+      ).overrideWith((ref) => ListAccess(isSiteAdmin: siteAdmin, role: role)),
       listStatsProvider(_listId).overrideWith((ref) => Stream.value(null)),
-      listMembersProvider(_listId).overrideWith((ref) => Stream.value(const [])),
+      listMembersProvider(
+        _listId,
+      ).overrideWith((ref) => Stream.value(const [])),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -97,7 +115,10 @@ void main() {
   group('リスト詳細（6.4）', () {
     testWidgets('項目が連番順に並ぶ', (tester) async {
       await tester.pumpWidget(
-        _wrap(const ListDetailScreen(listId: _listId), role: ListRole.superUser),
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: ListRole.superUser,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -184,7 +205,10 @@ void main() {
 
     testWidgets('Super User には「追加」を出す', (tester) async {
       await tester.pumpWidget(
-        _wrap(const ListDetailScreen(listId: _listId), role: ListRole.superUser),
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: ListRole.superUser,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -193,7 +217,10 @@ void main() {
 
     testWidgets('Super User にはリスト管理への導線を出さない', (tester) async {
       await tester.pumpWidget(
-        _wrap(const ListDetailScreen(listId: _listId), role: ListRole.superUser),
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: ListRole.superUser,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -202,7 +229,10 @@ void main() {
 
     testWidgets('リスト管理者にはリスト管理への導線を出す', (tester) async {
       await tester.pumpWidget(
-        _wrap(const ListDetailScreen(listId: _listId), role: ListRole.listAdmin),
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: ListRole.listAdmin,
+        ),
       );
       await tester.pumpAndSettle();
 

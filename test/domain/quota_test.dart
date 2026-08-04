@@ -86,10 +86,7 @@ void main() {
 
     test('サイズ 0 以下は不正として弾く', () {
       expect(
-        QuotaPolicy.canStartUpload(
-          status: status(0),
-          fileSizeBytes: 0,
-        ).reason,
+        QuotaPolicy.canStartUpload(status: status(0), fileSizeBytes: 0).reason,
         UploadBlockReason.invalidSize,
       );
     });

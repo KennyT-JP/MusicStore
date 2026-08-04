@@ -232,7 +232,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 158 件
+flutter test      # 172 件
 flutter analyze
 
 cd functions && npm test   # 25 件（サーバー側のドメインロジック）
@@ -252,10 +252,10 @@ cd functions && npm test   # 25 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 71 件（うち 8 件はスキップ。下記参照）
+npm test          # 75 件（うち 8 件はスキップ。下記参照）
 ```
 
-Firestore ルールは 66 件すべて検証できます。
+Firestore ルールは 70 件すべて検証できます。
 
 > **Storage ルールの一部はエミュレータで検証できません。**
 > `storage.rules` はメンバー判定のために Firestore を参照しますが（`firestore.exists()`）、

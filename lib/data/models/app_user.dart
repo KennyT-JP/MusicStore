@@ -75,7 +75,8 @@ class NotificationSettings {
   Map<String, dynamic> toMap() => {
     'master': master,
     'types': {
-      for (final entry in types.entries) entry.key.wireName: entry.value.toMap(),
+      for (final entry in types.entries)
+        entry.key.wireName: entry.value.toMap(),
     },
   };
 
@@ -91,8 +92,7 @@ class NotificationSettings {
       types[type] ?? const NotificationChannelSetting();
 
   /// この種別のアプリ内通知を出すか。マスターがオフなら全て出さない。
-  bool inAppEnabled(NotificationType type) =>
-      master && settingFor(type).inApp;
+  bool inAppEnabled(NotificationType type) => master && settingFor(type).inApp;
 
   NotificationSettings copyWith({
     bool? master,

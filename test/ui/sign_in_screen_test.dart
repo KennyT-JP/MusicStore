@@ -62,7 +62,9 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'ログイン'));
     await tester.pumpAndSettle();
 
-    verify(() => auth.signInWithEmail('user@example.com', 'password')).called(1);
+    verify(
+      () => auth.signInWithEmail('user@example.com', 'password'),
+    ).called(1);
   });
 
   testWidgets('未入力なら送信しない', (tester) async {

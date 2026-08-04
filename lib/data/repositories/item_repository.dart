@@ -115,10 +115,9 @@ class ItemRepository {
       fileName: fileName,
     );
 
-    final task = _storage.ref(storagePath).putData(
-      bytes,
-      SettableMetadata(contentType: contentType),
-    );
+    final task = _storage
+        .ref(storagePath)
+        .putData(bytes, SettableMetadata(contentType: contentType));
     if (onProgress != null) {
       task.snapshotEvents.listen((snapshot) {
         if (snapshot.totalBytes > 0) {
@@ -217,7 +216,11 @@ class ItemRepository {
         'date': date.toIso8601Date(),
         'title': title?.trim().isNotEmpty == true ? title!.trim() : null,
         'artist': artist?.trim().isNotEmpty == true ? artist!.trim() : null,
-        if (url != null) ...{'kind': ItemKind.url.wireName, 'url': url.trim(), 'file': null},
+        if (url != null) ...{
+          'kind': ItemKind.url.wireName,
+          'url': url.trim(),
+          'file': null,
+        },
         if (file != null) ...{
           'kind': ItemKind.file.wireName,
           'file': file.toMap(),
@@ -242,7 +245,9 @@ class ItemRepository {
     'status': ContentStatus.deleted.wireName,
     'deletedBy': uid,
     'deletedAt': FieldValue.serverTimestamp(),
-    'purgeAt': Timestamp.fromDate(DateTime.now().add(Duration(days: graceDays))),
+    'purgeAt': Timestamp.fromDate(
+      DateTime.now().add(Duration(days: graceDays)),
+    ),
     'updatedAt': FieldValue.serverTimestamp(),
   });
 
@@ -305,9 +310,7 @@ class ItemRepository {
     required String body,
     required DateTime? openedWith,
   }) async {
-    final ref = _db.doc(
-      FirestorePaths.itemComment(listId, itemId, commentId),
-    );
+    final ref = _db.doc(FirestorePaths.itemComment(listId, itemId, commentId));
     await _db.runTransaction((tx) async {
       final snapshot = await tx.get(ref);
       final current = (snapshot.data()?['updatedAt'] as Timestamp?)?.toDate();

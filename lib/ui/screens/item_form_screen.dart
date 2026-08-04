@@ -121,7 +121,10 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         bottom: TabBar(
           controller: _tabs,
           tabs: [
-            Tab(text: l10n.tabFile, icon: const Icon(Icons.audio_file_outlined)),
+            Tab(
+              text: l10n.tabFile,
+              icon: const Icon(Icons.audio_file_outlined),
+            ),
             Tab(text: l10n.tabUrl, icon: const Icon(Icons.link)),
           ],
         ),
@@ -144,10 +147,7 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
                 height: 150,
                 child: TabBarView(
                   controller: _tabs,
-                  children: [
-                    _filePane(l10n, stats?.quota),
-                    _urlPane(l10n),
-                  ],
+                  children: [_filePane(l10n, stats?.quota), _urlPane(l10n)],
                 ),
               ),
 
@@ -405,7 +405,8 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     // （仕様書 13.7 / 13.4）、Cloud Functions 側の対応と合わせて実装する。
     if (isFileTab && _picked != null) {
       setState(
-        () => _error = 'ファイルの差し替えはまだ実装されていません。'
+        () => _error =
+            'ファイルの差し替えはまだ実装されていません。'
             '曲名・アーティスト名・日付の変更は保存できます。',
       );
       return;

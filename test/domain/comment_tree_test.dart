@@ -148,11 +148,7 @@ void main() {
     });
 
     test('深い階層でも積み上がる', () {
-      final parent = comment(
-        'c3',
-        parent: 'c2',
-        path: ['c0', 'c1', 'c2'],
-      );
+      final parent = comment('c3', parent: 'c2', path: ['c0', 'c1', 'c2']);
       expect(CommentTree.pathForReply(parent), ['c0', 'c1', 'c2', 'c3']);
     });
   });

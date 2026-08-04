@@ -35,7 +35,11 @@ class RoleChip extends StatelessWidget {
   (String, Color, Color) _appearance(BuildContext context, ColorScheme scheme) {
     final l10n = AppL10n.of(context);
     if (isSiteAdmin) {
-      return (l10n.roleSiteAdmin, scheme.primaryContainer, scheme.onPrimaryContainer);
+      return (
+        l10n.roleSiteAdmin,
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      );
     }
     return switch (role) {
       ListRole.listAdmin => (
