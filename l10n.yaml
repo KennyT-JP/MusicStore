@@ -1,0 +1,9 @@
+# 多言語対応の設定（仕様書 2 章：初期対応は日本語・英語）
+#
+# 文言は lib/l10n/*.arb に置き、後から言語を追加しやすくする。
+# 日本語を原文とするため、テンプレートは app_ja.arb。
+arb-dir: lib/l10n
+template-arb-file: app_ja.arb
+output-localization-file: app_localizations.dart
+output-class: AppL10n
+nullable-getter: false

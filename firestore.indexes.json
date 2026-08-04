@@ -1,0 +1,77 @@
+{
+  "indexes": [
+    {
+      "//": "自分の参加リスト一覧（仕様書 13.3）。members に対する collectionGroup クエリで、ドキュメント ID = 自分の uid を絞り込む。",
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "joinedAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "リスト内の項目一覧。削除済みを除いて連番順に並べる（仕様書 6.4）。",
+      "collectionGroup": "items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "seq", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "猶予期間を過ぎた削除項目の抽出（仕様書 13.4）。定期実行の Cloud Functions が使う。",
+      "collectionGroup": "items",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "purgeAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "項目のコメントをスレッド順に並べる（仕様書 13.3）。path で親子関係、createdAt で同階層の並び。",
+      "collectionGroup": "comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "保留中のリスト作成申請をサイト管理者に見せる（仕様書 5.1）。",
+      "collectionGroup": "listRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "自分が出したリスト作成申請の状態一覧（仕様書 5.2.1）。",
+      "collectionGroup": "listRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requestedBy", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "保留中の参加申請をリスト管理者に見せる（仕様書 5.2）。",
+      "collectionGroup": "joinRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "requestedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "通知一覧を新しい順に、未読を絞り込んで表示する（仕様書 14.2）。",
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

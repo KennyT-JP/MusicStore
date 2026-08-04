@@ -1,0 +1,8 @@
+{
+  "//": "本番と検証を別プロジェクトに分ける（仕様書 12.2）。プロジェクトを作成したら ID を差し替えてください。切り替えは firebase use staging / firebase use prod。",
+  "projects": {
+    "default": "REPLACE_ME-staging",
+    "staging": "REPLACE_ME-staging",
+    "prod": "REPLACE_ME-prod"
+  }
+}

@@ -1,0 +1,256 @@
+rules_version = '2';
+
+// Firestore セキュリティルール（仕様書 13.5）
+//
+// 画面上の出し分け（14.5）は利便性のためのもので、権限の担保はここで行う。
+// 12.6 のとおり、このファイルは Firebase Emulator Suite でテストする。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------------
+    // ヘルパー
+    // -----------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // サイト管理者は Auth のカスタムクレームで判定する（13.5）。
+    // ルールから追加の読み取りが発生しないため、高速かつ課金もない。
+    function isSiteAdmin() {
+      return isSignedIn() && request.auth.token.siteAdmin == true;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function memberPath(listId) {
+      return /databases/$(database)/documents/lists/$(listId)/members/$(uid());
+    }
+
+    function isMember(listId) {
+      return isSiteAdmin() || (isSignedIn() && exists(memberPath(listId)));
+    }
+
+    function memberRole(listId) {
+      return get(memberPath(listId)).data.role;
+    }
+
+    function isListAdmin(listId) {
+      return isSiteAdmin() ||
+        (isSignedIn() &&
+         exists(memberPath(listId)) &&
+         memberRole(listId) == 'listAdmin');
+    }
+
+    // Super User 以上。上位は下位を包含する（4.1）。
+    function canWrite(listId) {
+      return isListAdmin(listId) ||
+        (isSignedIn() &&
+         exists(memberPath(listId)) &&
+         memberRole(listId) == 'superUser');
+    }
+
+    // -----------------------------------------------------------------
+    // users
+    // -----------------------------------------------------------------
+
+    match /users/{userId} {
+      // 表示名の解決に必要なため、ログイン済みなら誰でも読める（13.3）。
+      allow read: if isSignedIn();
+
+      // 本人のみ。退会フラグと通知設定の書き換えは Functions に任せる。
+      allow create: if isSignedIn() && uid() == userId;
+      allow update: if isSignedIn() && uid() == userId
+        && !request.resource.data.diff(resource.data)
+             .affectedKeys()
+             .hasAny(['isWithdrawn', 'withdrawnAt']);
+
+      // 退会しても users ドキュメントは残す（3.5）。削除は許可しない。
+      allow delete: if false;
+
+      match /notifications/{notificationId} {
+        allow read: if isSignedIn() && uid() == userId;
+
+        // 既読の更新だけを本人に許す。作成は Functions のみ（13.4）。
+        allow update: if isSignedIn() && uid() == userId
+          && request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(['isRead']);
+        allow create, delete: if false;
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // lists（公開可能な最小情報のみ／13.2）
+    // -----------------------------------------------------------------
+
+    match /lists/{listId} {
+      // 未参加者にもリスト名だけは見せる（5.3）。
+      // 使用容量などの内部情報は meta/stats に分けてあるため、ここは公開してよい。
+      allow read: if isSignedIn();
+
+      // 作成は承認処理（Functions）のみ（5.1）。
+      allow create: if false;
+
+      // 集計フィールドは Functions が持つ。人が触れるのは名前まで。
+      allow update: if isListAdmin(listId)
+        && !request.resource.data.diff(resource.data)
+             .affectedKeys()
+             .hasAny(['adminCount', 'memberCount', 'createdBy', 'nameLower']);
+
+      allow delete: if isListAdmin(listId);
+
+      // ---------------------------------------------------------------
+      // meta/stats（容量・連番／13.3）
+      // ---------------------------------------------------------------
+
+      match /meta/{docId} {
+        allow read: if isMember(listId);
+
+        // 連番はトランザクション、容量は Functions が更新する。
+        // クライアントからの直接書き込みは一切許可しない。
+        allow write: if false;
+      }
+
+      // ---------------------------------------------------------------
+      // members
+      // ---------------------------------------------------------------
+
+      match /members/{memberUid} {
+        // 自分の行は、メンバーかどうかの判定のために本人も読める。
+        allow read: if isMember(listId) || (isSignedIn() && uid() == memberUid);
+
+        // 追加は承認・招待受諾（Functions）のみ。
+        allow create: if false;
+
+        allow update: if isListAdmin(listId);
+
+        // 除外はリスト管理者以上、離脱は本人（5.4）。
+        allow delete: if isListAdmin(listId) ||
+          (isSignedIn() && uid() == memberUid);
+      }
+
+      // ---------------------------------------------------------------
+      // joinRequests（参加申請／5.2）
+      // ---------------------------------------------------------------
+
+      match /joinRequests/{requesterUid} {
+        allow read: if isListAdmin(listId) ||
+          (isSignedIn() && uid() == requesterUid);
+
+        // 申請者は役割を選べない（5.2）。pending 以外での作成も認めない。
+        // 却下後の再申請は同じドキュメントの上書きで行う（5.2.1）。
+        allow create, update: if isSignedIn()
+          && uid() == requesterUid
+          && request.resource.data.status == 'pending'
+          && !request.resource.data.keys().hasAny(['assignedRole', 'decidedBy']);
+
+        // 承認・却下は Functions が行う。申請の取り下げは本人に許す。
+        allow delete: if isListAdmin(listId) ||
+          (isSignedIn() && uid() == requesterUid);
+      }
+
+      // ---------------------------------------------------------------
+      // items（6 章）
+      // ---------------------------------------------------------------
+
+      match /items/{itemId} {
+        allow read: if isMember(listId);
+
+        // 追加は Super User 以上（4.2）。登録者は自分自身に限る。
+        allow create: if canWrite(listId)
+          && request.resource.data.createdBy == uid()
+          && request.resource.data.seq is int;
+
+        // 編集・削除は本人＋リスト管理者以上（6.3）。
+        // 連番は振り直さない（6.2）ので、seq の変更は許可しない。
+        allow update: if (isListAdmin(listId) ||
+            (canWrite(listId) && resource.data.createdBy == uid()))
+          && request.resource.data.seq == resource.data.seq
+          && request.resource.data.createdBy == resource.data.createdBy;
+
+        // 物理削除はしない。status を 'deleted' にするソフト削除（6.2）。
+        allow delete: if false;
+
+        match /comments/{commentId} {
+          allow read: if isMember(listId);
+
+          // Read Only は一切書けない（9）。
+          allow create: if canWrite(listId)
+            && request.resource.data.createdBy == uid();
+
+          allow update: if (isListAdmin(listId) ||
+              (canWrite(listId) && resource.data.createdBy == uid()))
+            && request.resource.data.createdBy == resource.data.createdBy;
+
+          // 返信がぶら下がるためソフト削除にする（9）。
+          allow delete: if false;
+        }
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // listNames（リスト名の重複チェック／13.3）
+    // -----------------------------------------------------------------
+
+    match /listNames/{nameLower} {
+      // ID 直接指定でのみ到達させる。list による列挙は許可しない。
+      // 列挙できると未参加者が全リスト名を知れてしまい、5.3 に反する。
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // -----------------------------------------------------------------
+    // listRequests（リスト作成申請／5.1）
+    // -----------------------------------------------------------------
+
+    match /listRequests/{requestId} {
+      allow read: if isSiteAdmin() ||
+        (isSignedIn() && resource.data.requestedBy == uid());
+
+      allow create: if isSignedIn()
+        && request.resource.data.requestedBy == uid()
+        && request.resource.data.status == 'pending';
+
+      // 承認・却下は Functions が行う（13.3）。
+      allow update, delete: if false;
+    }
+
+    // -----------------------------------------------------------------
+    // invites（招待 URL／3.3）
+    // -----------------------------------------------------------------
+
+    match /invites/{inviteId} {
+      // ID を知っている人だけが到達できる。ID は推測できない値にする（13.3）。
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      // 発行・受諾とも Functions のみ。
+      // ワンタイム性はトランザクションで担保する（13.3）。
+      allow write: if false;
+    }
+
+    // -----------------------------------------------------------------
+    // siteConfig（11.1）
+    // -----------------------------------------------------------------
+
+    match /siteConfig/{docId} {
+      allow read: if isSignedIn();
+
+      // siteAdminCount は Functions が持つ（4.5）。
+      allow write: if isSiteAdmin()
+        && !request.resource.data.diff(resource.data)
+             .affectedKeys().hasAny(['siteAdminCount']);
+    }
+
+    // -----------------------------------------------------------------
+    // 上記以外は一切許可しない
+    // -----------------------------------------------------------------
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

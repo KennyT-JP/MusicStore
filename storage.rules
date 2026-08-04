@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// Storage セキュリティルール（仕様書 13.5 / 13.7）
+//
+// ファイルの配置は lists/{listId}/items/{itemId}/{ファイル名}。
+// パスにリスト ID を含めることで、リスト単位でアクセスを制限できる。
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSiteAdmin() {
+      return isSignedIn() && request.auth.token.siteAdmin == true;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function memberPath(listId) {
+      return /databases/(default)/documents/lists/$(listId)/members/$(uid());
+    }
+
+    function isMember(listId) {
+      return isSiteAdmin() ||
+        (isSignedIn() && firestore.exists(memberPath(listId)));
+    }
+
+    function memberRole(listId) {
+      return firestore.get(memberPath(listId)).data.role;
+    }
+
+    function isListAdmin(listId) {
+      return isSiteAdmin() ||
+        (isSignedIn() &&
+         firestore.exists(memberPath(listId)) &&
+         memberRole(listId) == 'listAdmin');
+    }
+
+    // Super User 以上（4.2）。
+    function canWrite(listId) {
+      return isListAdmin(listId) ||
+        (isSignedIn() &&
+         firestore.exists(memberPath(listId)) &&
+         memberRole(listId) == 'superUser');
+    }
+
+    match /lists/{listId}/items/{itemId}/{fileName} {
+      // メンバーなら誰でも再生・ダウンロードできる。
+      // Read Only も閲覧・再生は可（4.2）。
+      allow read: if isMember(listId);
+
+      // アップロードは Super User 以上（4.2）。
+      //
+      // 容量上限の判定はここでは行わない。ルールからは合計使用量を
+      // 参照できないため、アップロード開始前のクライアント側チェック（7.5）と、
+      // Cloud Functions での集計・ブロック（13.4）で担保する。
+      allow create: if canWrite(listId);
+
+      // 差し替えは新しいファイルを別名で保存する（13.7）ため、
+      // 既存ファイルの上書きは許可しない。
+      allow update: if false;
+
+      // 削除は Functions が猶予期間の経過後に行う（13.4）。
+      // 誤操作でファイルだけ先に消えると復元できなくなるため、
+      // クライアントからの削除は認めない。
+      allow delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

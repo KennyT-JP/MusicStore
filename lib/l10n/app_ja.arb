@@ -1,0 +1,196 @@
+{
+  "@@locale": "ja",
+
+  "appTitle": "音楽リスト",
+  "@appTitle": {
+    "description": "アプリ名。ブラウザのタブと上部バーに表示する"
+  },
+
+  "navHome": "ホーム",
+  "navNotifications": "通知",
+  "navSettings": "設定",
+  "navSiteAdmin": "サイト管理",
+
+  "environmentBannerStaging": "検証環境",
+  "@environmentBannerStaging": {
+    "description": "本番以外で作業していることを見失わないための表示（仕様書 12.2）"
+  },
+
+  "signIn": "ログイン",
+  "signUp": "アカウントを作成",
+  "signOut": "ログアウト",
+  "signInWithGoogle": "Google でログイン",
+  "signInWithEmail": "メールアドレスでログイン",
+  "emailLabel": "メールアドレス",
+  "passwordLabel": "パスワード",
+  "forgotPassword": "パスワードをお忘れですか",
+  "resetPassword": "パスワードを再設定",
+  "resetPasswordSent": "再設定用のリンクを送信しました。メールをご確認ください。",
+
+  "verifyEmailTitle": "確認メールを送りました",
+  "verifyEmailBody": "{email} 宛に確認メールを送りました。メール内のリンクを開くと、ご利用いただけます。",
+  "@verifyEmailBody": {
+    "description": "メール確認は必須（仕様書 3.1）",
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "verifyEmailResend": "確認メールを再送する",
+  "verifyEmailRecheck": "確認が済んだので次へ",
+
+  "homeTitle": "参加しているリスト",
+  "homeEmpty": "まだどのリストにも参加していません。",
+  "homeEmptyHint": "リストを作りたい場合は作成を申請してください。既にあるリストに入りたい場合は、参加している方から共有 URL を受け取ってください。",
+  "requestNewList": "リスト作成を申請",
+  "myRequests": "自分の申請",
+
+  "roleListAdmin": "リスト管理者",
+  "roleSuperUser": "Super User",
+  "roleReadOnly": "Read Only",
+  "roleSiteAdmin": "サイト管理者",
+
+  "itemCount": "{count, plural, other{{count}件}}",
+  "@itemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "quotaUsage": "{used} / {total}",
+  "@quotaUsage": {
+    "description": "容量使用量。リスト管理者以上に表示（仕様書 7.4）",
+    "placeholders": {
+      "used": { "type": "String" },
+      "total": { "type": "String" }
+    }
+  },
+
+  "columnSeq": "連番",
+  "columnDate": "日付",
+  "columnTitle": "曲名",
+  "columnArtist": "アーティスト名",
+  "columnRegistrant": "登録者",
+
+  "sortBy": "並び替え",
+  "searchHint": "曲名・アーティスト名・ファイル名で検索",
+  "showDeletedItems": "削除済みも表示",
+  "itemDeleted": "削除されました",
+  "@itemDeleted": {
+    "description": "ソフト削除された項目の表示（仕様書 6.2）"
+  },
+  "withdrawnUser": "退会したユーザー",
+  "@withdrawnUser": {
+    "description": "退会・除外・離脱したユーザーの表示名（仕様書 3.5 / 5.4）"
+  },
+
+  "addItem": "追加",
+  "editItem": "編集",
+  "deleteItem": "削除",
+  "restoreItem": "復元",
+  "tabFile": "ファイル",
+  "tabUrl": "URL",
+  "chooseFile": "ファイルを選択",
+  "urlLabel": "URL",
+  "dateLabel": "日付",
+  "titleLabel": "曲名（任意）",
+  "artistLabel": "アーティスト名（任意）",
+  "commentLabel": "コメント（任意）",
+  "save": "保存",
+  "cancel": "キャンセル",
+
+  "uploadProgress": "アップロード中… {percent}%",
+  "@uploadProgress": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "uploadFailed": "アップロードに失敗しました。もう一度お試しください。",
+  "quotaExceeded": "上限を超えました。リスト管理者にご連絡ください。",
+  "@quotaExceeded": {
+    "description": "上限超過時のアップロードブロック（仕様書 7.3）"
+  },
+  "quotaRemaining": "残り {remaining}",
+  "@quotaRemaining": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+
+  "comments": "コメント",
+  "writeComment": "コメントを書く",
+  "reply": "返信",
+  "commentDeleted": "削除されました",
+
+  "conflictTitle": "保存できませんでした",
+  "conflictBody": "ほかの方がこの項目を更新しました。最新の内容を読み込み直してください。",
+  "@conflictBody": {
+    "description": "同時編集の検出（仕様書 6.3）"
+  },
+  "reload": "読み込み直す",
+
+  "joinRequestTitle": "このリストに参加する",
+  "joinRequestBody": "このリストの中身は、参加が承認されるまで表示されません。",
+  "joinRequestButton": "参加を申請",
+  "joinRequestSent": "参加を申請しました。承認されるまでお待ちください。",
+  "leaveList": "このリストから抜ける",
+
+  "inviteAccepted": "リストに参加しました。",
+  "inviteExpired": "招待の有効期限が切れています。招待した方に再発行を依頼してください。",
+  "@inviteExpired": {
+    "description": "有効期限は受諾時点で判定（仕様書 3.3）"
+  },
+  "inviteAlreadyUsed": "この招待はすでに使用されています。招待した方に再発行を依頼してください。",
+  "inviteRevoked": "この招待は取り消されています。",
+  "inviteNotFound": "招待が見つかりません。URL をご確認ください。",
+  "inviteAlreadyMember": "すでにこのリストに参加しています。",
+  "createInvite": "招待 URL を発行",
+
+  "requestStatusPending": "申請中",
+  "requestStatusApproved": "承認",
+  "requestStatusRejected": "却下",
+  "requestAgain": "もう一度申請する",
+  "approve": "承認",
+  "reject": "却下",
+
+  "members": "メンバー",
+  "manageMembers": "メンバー管理",
+  "joinRequests": "参加申請",
+  "removeMember": "リストから外す",
+  "changeRole": "役割を変更",
+  "listSettings": "リスト設定",
+  "deleteList": "リストを削除",
+  "deleteListWarning": "リストを削除すると、そのリストのファイル・コメントもすべて削除されます。この操作は取り消せません。",
+
+  "siteAdminListRequests": "リスト作成申請",
+  "siteAdminLists": "リストと容量",
+  "siteAdminUsers": "ユーザー管理",
+  "siteAdminSettings": "サイト設定",
+  "listsWithoutAdmin": "管理者不在のリスト",
+  "assignListAdmin": "リスト管理者を指名",
+  "promoteToSiteAdmin": "サイト管理者にする",
+  "lastSiteAdminBlocked": "あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。",
+  "@lastSiteAdminBlocked": {
+    "description": "最後のサイト管理者は降格・退会できない（仕様書 4.5）"
+  },
+
+  "displayName": "表示名",
+  "language": "表示言語",
+  "notificationSettings": "通知設定",
+  "notificationMaster": "すべての通知",
+  "withdraw": "退会する",
+  "withdrawWarning": "退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。",
+
+  "notifyItemAdded": "項目が追加された",
+  "notifyCommentAdded": "コメントが付いた",
+  "notifyQuotaNotice": "容量が 80% を超えた",
+  "notifyQuotaWarning": "容量が 90% を超えた",
+  "notifyListRequested": "リスト作成の申請があった",
+  "notifyJoinRequested": "参加申請があった",
+  "notifyRequestApproved": "申請が承認された",
+
+  "notificationsEmpty": "通知はありません。",
+  "markAllAsRead": "すべて既読にする",
+
+  "errorGeneric": "エラーが発生しました。しばらくしてからもう一度お試しください。",
+  "errorNoPermission": "この操作を行う権限がありません。",
+  "notFound": "ページが見つかりません。"
+}
