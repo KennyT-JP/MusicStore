@@ -1,0 +1,18 @@
+{
+  "name": "musiclist-rules-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Firestore / Storage セキュリティルールのテスト（仕様書 12.6）",
+  "scripts": {
+    "//": "JAVA_TOOL_OPTIONS を空にするのは、環境変数が設定されていると JVM が起動時に 'Picked up ...' を出力し、Storage エミュレータのルールランタイムがそれを解釈できずに落ちるため。",
+    "test": "JAVA_TOOL_OPTIONS= firebase emulators:exec --project demo-musiclist --only firestore,storage \"vitest run\"",
+    "test:watch": "vitest"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.17.0",
+    "vitest": "^4.1.10"
+  }
+}

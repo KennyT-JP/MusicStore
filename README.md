@@ -21,25 +21,38 @@
 
 ## 開発の始め方
 
+**Firebase プロジェクトを作らなくても、ローカルのエミュレータですぐ動かせます。**
+
 ```sh
+# ターミナル 1：エミュレータ
+firebase emulators:start --project demo-musiclist
+
+# ターミナル 2：確認用データの投入（初回のみ）
+cd scripts && npm install && cd ..
+export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+node scripts/seed-emulator.js
+
+# ターミナル 3：アプリ
 flutter pub get
-flutter test          # 単体テスト
-flutter analyze       # 静的解析
-flutter run -d chrome # 検証環境で起動
+flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
 
-**初回はこれだけでは起動しません。** Firebase プロジェクトの作成と接続設定が必要です。手順は [docs/SETUP.md](docs/SETUP.md) を参照してください。設定が未記入のまま起動すると、原因が分かる形で例外を投げて止まります。
+ログインは `site-admin@example.com` / `password` などで行えます（詳細は [docs/SETUP.md](docs/SETUP.md)）。
+
+クラウドの Firebase プロジェクトに繋ぐ手順も [docs/SETUP.md](docs/SETUP.md) にあります。接続設定が未記入のままクラウドに繋ごうとすると、原因が分かる形で例外を投げて止まります。
 
 ## 環境の切り替え
 
 本番と検証（ステージング）を**別々の Firebase プロジェクト**に分けています（仕様書 12.2）。検証作業が本番データを壊す事故を構造的に防ぐためです。
 
 ```sh
-flutter run -d chrome                             # 検証環境（既定）
-flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
+flutter run -d chrome --dart-define=USE_EMULATOR=true  # ローカルのエミュレータ
+flutter run -d chrome                                  # 検証環境（既定）
+flutter run -d chrome --dart-define=APP_ENV=prod       # 本番環境
 ```
 
-指定がないときは検証環境に倒します。検証環境では画面上部に「検証環境」のバナーが出ます。
+指定がないときは検証環境に倒します。検証環境では画面上部に「検証環境」のバナーが出ます。**本番環境では `USE_EMULATOR=true` を指定しても無視します**（取り違え防止）。
 
 ## ディレクトリ構成
 
@@ -62,7 +75,8 @@ lib/
     firestore_paths.dart   Firestore / Storage のパス定義（13.2 / 13.7）
   env/
     app_environment.dart   本番・検証の切り替え（12.2）
-    firebase_options.dart  Firebase の接続設定（要差し替え）
+    firebase_options.dart  Firebase の接続設定（クラウド分は要差し替え）
+    firebase_emulators.dart エミュレータへの接続
   ui/
     routes.dart            画面のパス定義（14.2）
     app_router.dart        画面遷移とリダイレクト判定（14.3）
@@ -70,7 +84,9 @@ lib/
     screens/               各画面（14.2）
   l10n/                    日本語・英語の文言（2 章）
 
-test/                    単体テスト
+test/                    Flutter の単体テスト
+rules-test/              セキュリティルールのテスト（エミュレータ上で実行）
+scripts/                 運用スクリプト（サイト管理者の登録・エミュレータへの投入）
 firestore.rules          Firestore セキュリティルール（13.5）
 storage.rules            Storage セキュリティルール（13.5）
 firestore.indexes.json   Firestore のインデックス定義
@@ -94,13 +110,18 @@ docs/                    仕様書・セットアップ手順
 | リダイレクト判定（`ui/app_router.dart`） | 未ログインで内容が漏れないこと |
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
-セキュリティルールは Firebase Emulator Suite でテストします（手順は [docs/SETUP.md](docs/SETUP.md)）。
+```sh
+flutter test              # 144 件
+cd rules-test && npm test # 71 件（Firestore ルール 66 件を含む）
+```
+
+**Storage ルールの一部は自動テストで検証できません。** `storage.rules` はメンバー判定に Firestore を参照しますが、Storage エミュレータがこれに対応していないためです（本番では動きます）。該当箇所はステージング環境での手動確認で補います。確認項目は [docs/SETUP.md](docs/SETUP.md) にチェックリストとしてまとめてあります。
 
 ## 現在の状態
 
 仕様は確定済み、プロジェクトの骨格ができた段階です。
 
-- **できていること**：ドメインロジック、ルーティング、レスポンシブな外枠、多言語対応、セキュリティルール、単体テスト 137 件
-- **これから**：Firebase プロジェクトの作成と接続、各画面の中身の実装、Cloud Functions の実装
+- **できていること**：ドメインロジック、ルーティング、レスポンシブな外枠、多言語対応、セキュリティルールとそのテスト、エミュレータでの起動確認
+- **これから**：クラウドの Firebase プロジェクト作成と接続、各画面の中身の実装、Cloud Functions の実装
 
 画面は仕様書 14.2 で洗い出した 20 面をルーティングが通る状態で置いてあり、中身が未実装であることを画面上に明示しています。

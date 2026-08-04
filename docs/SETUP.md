@@ -2,6 +2,8 @@
 
 このリポジトリを動かすまでの手順です。仕様書の該当箇所を併記しています。
 
+**Firebase プロジェクトを作らなくても、ローカルのエミュレータですぐ動かせます。** まずは「2. エミュレータで動かす」を試し、クラウドへの接続はそのあとで構いません。
+
 ---
 
 ## 1. 開発環境
@@ -9,21 +11,68 @@
 | 必要なもの | バージョン | 確認コマンド |
 | --- | --- | --- |
 | Flutter SDK | 3.44 以上 | `flutter --version` |
-| Node.js | 20 以上（Cloud Functions・Firebase CLI 用） | `node --version` |
+| Node.js | 20 以上 | `node --version` |
+| Java | 11 以上（Firestore エミュレータが JVM 上で動く） | `java -version` |
 | Firebase CLI | 最新 | `firebase --version` |
 
 ```sh
 # Firebase CLI
 npm install -g firebase-tools
-firebase login
 
-# FlutterFire CLI（Firebase の接続設定を生成する）
+# FlutterFire CLI（クラウドに接続するときに使う）
 dart pub global activate flutterfire_cli
 ```
 
+`firebase login` は、クラウドのプロジェクトを操作するときだけ必要です。エミュレータだけならログイン不要です。
+
 ---
 
-## 2. Firebase プロジェクトの作成（仕様書 12.1 / 12.2）
+## 2. エミュレータで動かす（Firebase プロジェクト不要）
+
+ローカルのエミュレータに接続してアプリを起動します。クラウドの検証環境にも触れないため、気兼ねなく試せます。
+
+```sh
+# ターミナル 1：エミュレータを起動
+firebase emulators:start --project demo-musiclist
+
+# ターミナル 2：動作確認用のデータを入れる（初回のみ）
+cd scripts && npm install && cd ..
+export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+node scripts/seed-emulator.js
+
+# ターミナル 3：アプリを起動
+flutter pub get
+flutter run -d chrome --dart-define=USE_EMULATOR=true
+```
+
+`seed-emulator.js` が投入するもの：
+
+| 内容 | 詳細 |
+| --- | --- |
+| ユーザー 4 人 | サイト管理者・リスト管理者・Super User・Read Only。パスワードはすべて `password` |
+| リスト 1 つ | 「練習音源」 |
+| 項目 3 件 | うち 1 件は削除済み（連番 3 が欠番として残る様子を確認できる） |
+| コメント 4 件 | 3 段の入れ子を含む |
+
+ログイン用のメールアドレス：
+
+```
+site-admin@example.com   サイト管理者
+list-admin@example.com   山田（リスト管理者）
+super-user@example.com   佐藤（Super User）
+read-only@example.com    鈴木（Read Only）
+```
+
+エミュレータの管理画面は http://127.0.0.1:4000 で開けます。
+
+> **本番環境ではエミュレータに繋がりません。** `--dart-define=APP_ENV=prod` を指定した場合、`USE_EMULATOR=true` があっても無視します。本番のつもりでエミュレータを見ていた、という取り違えを防ぐためです。
+
+> **エミュレータのデータは消えます。** `firebase emulators:start` を止めるとリセットされるため、必要なら `seed-emulator.js` を再実行してください。
+
+---
+
+## 3. Firebase プロジェクトの作成（仕様書 12.1 / 12.2）
 
 **本番と検証（ステージング）を別々のプロジェクトとして作成します。** Firestore のデータ・Storage のファイル・認証ユーザーがプロジェクト単位で完全に独立するため、検証作業が本番データを壊す事故を構造的に防げます。
 
@@ -49,7 +98,7 @@ dart pub global activate flutterfire_cli
 
 ---
 
-## 3. 接続設定の生成
+## 4. 接続設定の生成
 
 `.firebaserc` のプロジェクト ID を、作成した実際の ID に差し替えます。
 
@@ -101,7 +150,7 @@ static FirebaseOptions get current {
 
 ---
 
-## 4. セキュリティルールとインデックスの配置
+## 5. セキュリティルールとインデックスの配置
 
 ```sh
 firebase use staging
@@ -113,49 +162,38 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 
 ---
 
-## 5. 最初のサイト管理者を登録（仕様書 4.4）
+## 6. 最初のサイト管理者を登録（仕様書 4.4）
 
 サイト管理者は Auth の**カスタムクレーム**で判定します（仕様書 13.5）。最初の 1 人だけは、アプリ内から設定する手段がないため手作業で付与します。
 
 1. アプリを起動して、自分のアカウントでサインアップする
 2. Firebase コンソール → Authentication で自分の UID を控える
-3. 次のスクリプトを実行する（サービスアカウント鍵が必要）
-
-```js
-// scripts/grant-site-admin.js
-const admin = require('firebase-admin');
-admin.initializeApp({ credential: admin.credential.applicationDefault() });
-
-const uid = process.argv[2];
-admin.auth().setCustomUserClaims(uid, { siteAdmin: true })
-  .then(() => console.log(`granted siteAdmin to ${uid}`))
-  .then(() => process.exit(0));
-```
+3. サービスアカウント鍵を用意する
+   （Firebase コンソール → プロジェクトの設定 → サービスアカウント → 新しい秘密鍵の生成）
+4. `scripts/grant-site-admin.js` を実行する
 
 ```sh
+cd scripts && npm install && cd ..
+
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-node scripts/grant-site-admin.js <あなたの UID>
+node scripts/grant-site-admin.js <あなたの UID> --project musiclist-staging
 ```
 
-4. **アプリで再ログインする。** カスタムクレームは認証トークンに埋め込まれるため、トークンを取り直すまで反映されません（仕様書 13.5）。
+このスクリプトは次を行います。
 
-あわせて `siteConfig/global` を作成します。
+- カスタムクレーム `siteAdmin: true` を付与する（既存のクレームは消さない）
+- `siteConfig/global` がなければ初期値で作成する
+- すでにサイト管理者なら何もしない（再実行しても安全）
 
-```json
-{
-  "inviteExpiryHours": 24,
-  "defaultQuotaBytes": 1073741824,
-  "itemPurgeGraceDays": 30,
-  "orphanFileGraceHours": 24,
-  "siteAdminCount": 1
-}
-```
+5. **アプリで再ログインする。** カスタムクレームは認証トークンに埋め込まれるため、トークンを取り直すまで反映されません（仕様書 13.5）。
+
+> **サービスアカウント鍵はコミットしないでください。** `.gitignore` で `service-account*.json` と `*-firebase-adminsdk-*.json` を除外していますが、別の名前で保存した場合は注意が必要です。
 
 > 以後、サイト管理者の追加はアプリのサイト管理画面から行えます。**最後の 1 人は降格・退会できません**（仕様書 4.5）。
 
 ---
 
-## 6. 開発時の実行
+## 7. 開発時の実行
 
 ```sh
 flutter pub get
@@ -167,40 +205,65 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 
 ---
 
-## 7. テスト（仕様書 12.6）
+## 8. テスト（仕様書 12.6）
 
 ### 単体テスト
 
 ```sh
-flutter test
+flutter test      # 144 件
 flutter analyze
 ```
 
-権限判定・容量上限・連番・招待 URL・リダイレクト判定を検証します。Firebase に接続せず動くため、数秒で終わります。
+権限判定・容量上限・連番・招待 URL・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
 
 ### セキュリティルールのテスト
 
-エミュレータ上でルールを検証します。本番・検証プロジェクトに一切触れません。
+エミュレータ上でルールを検証します。本番・検証プロジェクトに一切触れません。エミュレータの起動と終了はスクリプトが面倒を見ます。
 
 ```sh
-firebase emulators:start --only firestore,auth,storage
+cd rules-test
+npm install
+npm test          # 71 件（うち 8 件はスキップ。下記参照）
 ```
 
-> **未実装**：ルールのテストコードはまだ書いていません。`@firebase/rules-unit-testing` を使ったテストを別途用意します。ルール本体（`firestore.rules` / `storage.rules`）は作成済みです。
+Firestore ルールは 66 件すべて検証できます。
+
+> **Storage ルールの一部はエミュレータで検証できません。**
+> `storage.rules` はメンバー判定のために Firestore を参照しますが（`firestore.exists()`）、
+> **これは本番の Cloud Storage では動くものの、Storage エミュレータでは動きません**。
+> エミュレータ上では常に偽と評価され、すべてのアクセスが拒否されます。
+>
+> そのため「メンバーだから許可される」ことを確認するテストは `describe.skip` にしてあります
+> （`rules-test/storage.rules.test.js`）。**下記の手動確認で必ず補ってください。**
+>
+> なお「拒否される」ことを確認するテストは、エミュレータではすべてが拒否されるため
+> 通ってしまいます。合格しても保証にはならないので、これらも手動確認の対象です。
 
 ### 手動確認
 
-次はステージング環境で手動確認します（仕様書 12.6）。
+ステージング環境で行います（仕様書 12.6）。
 
-- 画面のレイアウト・レスポンシブ表示（PC／スマートフォン）
-- 認証フロー（Google 連携・メール＋パスワード・パスワード再設定・メール確認）
-- ファイルのアップロード／ダウンロード／外部アプリでの再生
-- 通知の到達
-- 日本語・英語の表示切り替え
+**Storage ルールの確認（必須）** — 上記のとおり自動テストで補えない部分です。
+
+- [ ] Read Only のユーザーが音源をダウンロード・再生できる
+- [ ] Read Only のユーザーがアップロードできない
+- [ ] Super User・リスト管理者がアップロードできる
+- [ ] リストに参加していないユーザーが、そのリストの音源にアクセスできない
+- [ ] 同じパスへの上書きができない
+- [ ] クライアントからファイルを削除できない
+
+**その他**
+
+- [ ] 画面のレイアウト・レスポンシブ表示（PC／スマートフォン）
+- [ ] 認証フロー（Google 連携・メール＋パスワード・パスワード再設定・メール確認）
+- [ ] 未ログインで共有 URL を開き、ログイン後に元の URL へ戻る
+- [ ] ファイルのアップロード／ダウンロード／外部アプリでの再生
+- [ ] 通知の到達
+- [ ] 日本語・英語の表示切り替え
 
 ---
 
-## 8. デプロイ
+## 9. デプロイ
 
 ```sh
 flutter build web --release --dart-define=APP_ENV=prod

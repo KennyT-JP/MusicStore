@@ -54,3 +54,6 @@ ui-debug.log
 # サービスアカウント鍵は絶対にコミットしない
 service-account*.json
 *-firebase-adminsdk-*.json
+
+# Node
+node_modules/

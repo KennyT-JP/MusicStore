@@ -1,29 +1,41 @@
 /// エントリポイント
 ///
-/// 接続先の Firebase プロジェクトは、ビルド時の `--dart-define=APP_ENV` で
-/// 切り替える（仕様書 12.2）。指定がないときは検証環境に倒す。
+/// 接続先はビルド時の `--dart-define` で切り替える（仕様書 12.2）。
 ///
 /// ```sh
-/// flutter run -d chrome                            # 検証環境
-/// flutter run -d chrome --dart-define=APP_ENV=prod # 本番環境
+/// # ローカルのエミュレータ（Firebase プロジェクト不要）
+/// firebase emulators:start --project demo-musiclist
+/// flutter run -d chrome --dart-define=USE_EMULATOR=true
+///
+/// # 検証環境（既定）
+/// flutter run -d chrome
+///
+/// # 本番環境
+/// flutter run -d chrome --dart-define=APP_ENV=prod
 /// ```
 library;
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'env/firebase_emulators.dart';
 import 'env/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase の接続設定が未記入のままなら、起動時にはっきり分かる形で止める。
-  // 設定を忘れたまま動かして、原因の分かりにくい失敗を追うことを避ける。
+  // 接続設定が未記入のままクラウドに繋ごうとしたら、原因が分かる形で止める。
+  // 設定を忘れたまま動かして、追いにくい失敗を追うことを避ける。
   DefaultFirebaseOptions.assertConfigured();
 
-  // TODO(setup): flutterfire configure 後に Firebase を初期化する。
-  //   await Firebase.initializeApp(options: DefaultFirebaseOptions.current);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.current);
+
+  // 最初の読み書きより前にエミュレータへ向ける。
+  if (useFirebaseEmulators) {
+    await connectToFirebaseEmulators();
+  }
 
   runApp(const ProviderScope(child: MusicListApp()));
 }
