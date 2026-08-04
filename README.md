@@ -25,18 +25,17 @@
 
 ```sh
 # ターミナル 1：エミュレータ
-firebase emulators:start --project demo-musiclist
+./scripts/dev-emulators.sh
 
 # ターミナル 2：確認用データの投入（初回のみ）
-cd scripts && npm install && cd ..
-export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-node scripts/seed-emulator.js
+./scripts/seed.sh
 
 # ターミナル 3：アプリ
 flutter pub get
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
+
+繋がらないときは `node scripts/doctor.mjs` で原因を切り分けられます。
 
 ログインは `site-admin@example.com` / `password` などで行えます（詳細は [docs/SETUP.md](docs/SETUP.md)）。
 

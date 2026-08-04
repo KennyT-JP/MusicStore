@@ -32,3 +32,23 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  # 日本語フォントを同梱する。
+  #
+  # Flutter Web（CanvasKit）は、既定では日本語のグリフを実行時に
+  # Google Fonts から取得する。社内ネットワークなどで fonts.gstatic.com が
+  # 遮断されていると日本語が表示されないため、アプリに含めている。
+  #
+  # Noto Sans JP の日本語サブセット（各 2.25MB）。
+  # 初回のみダウンロードされ、以降は端末側にキャッシュされる
+  # （firebase.json の Cache-Control と Service Worker による。docs/SETUP.md 参照）。
+  #
+  # 太字を減らして初回の読み込みを軽くしたい場合は、w700 の行を消せば
+  # CanvasKit が w400 から擬似的な太字を作る（見た目は少し劣る）。
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-400.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansJP-700.ttf
+          weight: 700

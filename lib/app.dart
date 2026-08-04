@@ -13,6 +13,9 @@ import 'l10n/app_localizations.dart';
 import 'providers/app_providers.dart';
 import 'ui/app_router.dart';
 
+/// アプリ全体で使うフォント。pubspec.yaml の `fonts:` と揃えること。
+const String kAppFontFamily = 'NotoSansJP';
+
 /// ルーターを 1 度だけ組み立てて保持する。
 ///
 /// 画面を作り直すたびにルーターを作ると履歴が失われるため、
@@ -60,14 +63,19 @@ class MusicListApp extends ConsumerWidget {
       supportedLocales: AppL10n.supportedLocales,
 
       // Material 標準のテーマ（仕様書 12.5）。
+      // フォントだけは同梱の Noto Sans JP を指定する。既定のままだと
+      // 日本語のグリフを実行時に Google Fonts から取りに行くため、
+      // それが遮断された環境で文字が出なくなる（pubspec.yaml 参照）。
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        fontFamily: kAppFontFamily,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.indigo,
           brightness: Brightness.dark,
         ),
+        fontFamily: kAppFontFamily,
       ),
     );
   }

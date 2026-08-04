@@ -32,19 +32,25 @@ dart pub global activate flutterfire_cli
 ローカルのエミュレータに接続してアプリを起動します。クラウドの検証環境にも触れないため、気兼ねなく試せます。
 
 ```sh
-# ターミナル 1：エミュレータを起動
-firebase emulators:start --project demo-musiclist
+# ターミナル 1：エミュレータを起動（Functions のビルドもまとめて行う）
+./scripts/dev-emulators.sh
 
 # ターミナル 2：動作確認用のデータを入れる（初回のみ）
-cd scripts && npm install && cd ..
-export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-node scripts/seed-emulator.js
+./scripts/seed.sh
 
 # ターミナル 3：アプリを起動
 flutter pub get
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
+
+**うまく繋がらないときは、まず診断を実行してください。**
+
+```sh
+node scripts/doctor.mjs
+```
+
+必要なコマンド・Functions のビルド状況・ポートの使用状況・接続可否を順に調べ、
+問題があれば直し方を表示します。
 
 `seed-emulator.js` が投入するもの：
 
@@ -68,7 +74,24 @@ read-only@example.com    鈴木（Read Only）
 
 > **本番環境ではエミュレータに繋がりません。** `--dart-define=APP_ENV=prod` を指定した場合、`USE_EMULATOR=true` があっても無視します。本番のつもりでエミュレータを見ていた、という取り違えを防ぐためです。
 
-> **エミュレータのデータは消えます。** `firebase emulators:start` を止めるとリセットされるため、必要なら `seed-emulator.js` を再実行してください。
+> **エミュレータのデータは消えます。** エミュレータを止めるとリセットされるため、必要なら `./scripts/seed.sh` を再実行してください。
+
+### エミュレータに繋がらないとき
+
+`node scripts/doctor.mjs` を実行したうえで、症状ごとに次を確認してください。
+
+| 症状 | 原因と対処 |
+| --- | --- |
+| `Failed to load function definition from source` | **Functions がビルドされていません。** `cd functions && npm install && npm run build`。`./scripts/dev-emulators.sh` を使えば自動で行われます |
+| `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
+| `Port taken` / `port is not open` | 前回のエミュレータが残っています。`pkill -f "firebase.*emulators"` で止めてから起動し直してください |
+| アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
+| アプリは起動するがデータが出ない／権限エラー | `./scripts/seed.sh` を実行していないか、エミュレータを再起動してデータが消えています |
+| `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。`export NO_PROXY=127.0.0.1,localhost` を設定してください。`dev-emulators.sh` は自動で設定します |
+| `Cannot find module '@firebase/app'` | `cd functions && npm install` をやり直してください |
+| Java のエラーで Firestore が起動しない | JDK 11 以上が必要です。`java -version` で確認してください |
+
+上のどれにも当てはまらない場合は、`firebase emulators:start` の出力の**最後の 10 行**を控えてください。原因はたいていそこに出ています。
 
 ---
 
@@ -286,6 +309,28 @@ cd functions && npm run test:integration
 
 > **実行するとエミュレータの Auth と Firestore を初期化します。** 前回のサイト管理者が
 > 残っていると「最後の 1 人」の判定が変わってしまうためです。
+
+### 表示フォントについて
+
+日本語フォント（Noto Sans JP）を**アプリに同梱**しています。Flutter Web は既定では
+日本語のグリフを実行時に Google Fonts から取得するため、社内ネットワークなどで
+`fonts.gstatic.com` が遮断されていると日本語が表示されなくなるからです。
+
+- ファイル：`assets/fonts/NotoSansJP-400.ttf` / `-700.ttf`（各 2.25MB）
+- ライセンス：SIL Open Font License 1.1（`assets/fonts/OFL.txt` を同梱）
+
+**端末側でキャッシュされます。** 初回のみダウンロードし、2 回目以降は取得しません。
+
+| 仕組み | 効果 |
+| --- | --- |
+| `firebase.json` の `Cache-Control: max-age=31536000, immutable` | ブラウザが 1 年間キャッシュし、再訪問時にサーバーへ問い合わせない |
+| Flutter の Service Worker（既定で有効） | オフラインでも表示でき、アプリ更新時は変わったファイルだけ取り直す |
+
+`index.html` と Service Worker 自身は毎回確認させる設定にしています。ここをキャッシュすると
+アプリを更新しても古い版が表示され続けるためです。
+
+> 初回の読み込みを軽くしたい場合は、`pubspec.yaml` の `w700` の行を消すと 2.25MB 減ります。
+> 太字は CanvasKit が w400 から擬似的に作りますが、見た目は少し劣ります。
 
 ### 手動確認
 
