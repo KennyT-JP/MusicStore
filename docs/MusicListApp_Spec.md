@@ -1,10 +1,16 @@
-# 音楽リスト共有アプリ 仕様書（ドラフト v0.2）
+# 音楽リスト共有アプリ 仕様書（ドラフト v0.3）
 
 作成日：2026-08-04
 最終更新：2026-08-04
 ステータス：要件整理中のドラフト。今後の対話で追記・修正していきます。
 
-**v0.2 での更新**：12 章を「運用・非機能に関する方針」として確定内容に書き換え（料金プラン／環境構成／バックアップ／規約／UI／テスト／通知の実装範囲）。未確定分は 13 章へ移動。
+**更新履歴**
+
+| 版 | 内容 |
+| --- | --- |
+| v0.3 | 13 章「データモデル」を追加（コレクション構成／各ドキュメント構造／サーバー側処理／セキュリティルール／検索方式）。あわせて 6.3 に削除の猶予期間を追記。未確定分は 14 章へ移動 |
+| v0.2 | 12 章を「運用・非機能に関する方針」として確定内容に書き換え（料金プラン／環境構成／バックアップ／規約／UI／テスト／通知の実装範囲） |
+| v0.1 | 初版ドラフト |
 
 ---
 
@@ -144,9 +150,13 @@
 | 登録者 | **ログインユーザーを自動記録** |
 | コメント | **任意**（追加・アップロード時に記入できる） |
 
-### 6.3 編集
+### 6.3 編集・削除
+
 - 項目の**全フィールドを編集可能**（登録済みの**ファイル／URL そのものの差し替え**も含む）。
 - 編集・削除できる人：**登録した本人**、および自リストのリスト管理者、サイト管理者（4.2 参照）。
+- **削除には猶予期間がある**。削除した項目は一覧上「削除されました」と表示されるが、ファイル本体は**一定期間（初期値 30 日）Storage に保持**され、その間はリスト管理者以上が**復元できる**。猶予期間を過ぎるとファイルは完全に削除され、使用容量が減る（詳細は 13.4）。
+- **ファイルを差し替えた場合も、旧ファイルは同じ猶予期間だけ保持**される。
+- 猶予期間中は**容量を消費し続ける**ため、上限に近いリストでは削除してもすぐには空きが増えない点に注意（7.2）。
 
 ### 6.4 表示・並び替え・検索
 - **並び替え**：連番／日付／登録者 で並び替え可能。
@@ -356,11 +366,326 @@
 
 ---
 
-## 13. 今後の検討事項（未確定）
+## 13. データモデル（Firestore / Storage）
+
+### 13.1 設計の基本方針
+
+| 方針 | 内容 |
+| --- | --- |
+| 入れ子構成 | `lists/{listId}` の配下に項目・メンバー・コメントをぶら下げる。セキュリティルールをパス単位で書けるため、未参加者に中身を見せない要件（5.3）を構造で担保できる |
+| メンバー情報は一元管理 | 役割は `lists/{listId}/members/{uid}` の 1 か所のみに持つ。ユーザー側へのミラーは行わない |
+| コメントはフラット | 無制限の入れ子（9 章）を、親 ID とパス配列で表現する |
+| 表示名は参照で解決 | 項目・コメントには uid のみを持ち、名前は表示時に `users` から引く |
+| サーバー側で守る値 | 連番・使用容量など、狂うと困る値はトランザクションまたは Cloud Functions で更新し、クライアントからは書けないようにする |
+
+### 13.2 コレクション全体像
+
+```
+users/{uid}
+  └ notifications/{notificationId}
+
+lists/{listId}                       ← 公開可能な最小情報のみ
+  ├ meta/stats                       ← 容量・連番などの内部情報（メンバーのみ）
+  ├ members/{uid}
+  ├ joinRequests/{uid}
+  └ items/{itemId}
+      └ comments/{commentId}
+
+listNames/{nameLower}                ← リスト名の重複チェック用
+listRequests/{requestId}             ← リスト作成申請
+invites/{inviteId}                   ← 招待 URL
+siteConfig/global                    ← サイト全体の設定
+```
+
+#### `lists/{listId}` を 2 段に分けている理由
+
+Firestore の読み取り権限は**ドキュメント単位**で、「このフィールドだけ見せる」ということができない。5.3 で「未参加者が共有 URL を開いたらリスト名など最低限の情報だけ見える」と決めているため、**公開してよい情報**と**メンバーにしか見せたくない情報**を別ドキュメントに分ける必要がある。
+
+- `lists/{listId}` … リスト名・作成日時など。ログイン済みユーザーなら誰でも読める。
+- `lists/{listId}/meta/stats` … 使用容量・連番カウンタなど。そのリストのメンバーのみ読める。
+
+### 13.3 各ドキュメントの構造
+
+#### `users/{uid}` — ユーザー
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `displayName` | string | 表示名（3.4）。初期値は Google の表示名またはメール名 |
+| `email` | string | メールアドレス |
+| `photoURL` | string? | アイコン画像 |
+| `locale` | string | 表示言語（`ja` / `en`） |
+| `isWithdrawn` | bool | 退会済みかどうか（3.5） |
+| `withdrawnAt` | timestamp? | 退会日時 |
+| `notificationSettings` | map | 通知設定（10.3）。下記参照 |
+| `createdAt` / `updatedAt` | timestamp | |
+
+- **退会時は `users/{uid}` を削除せず、`isWithdrawn` を true にする**。過去の投稿は uid 参照のままなので、この 1 か所を変えるだけで全投稿の表示が「退会したユーザー」に切り替わる。
+- `notificationSettings` の形（プッシュは 12.7 により初期リリースでは画面に出さないが、値は最初から保持する）：
+
+```
+notificationSettings: {
+  master: true,                                  // 全体のマスタースイッチ
+  types: {
+    itemAdded:      { inApp: true, push: true },
+    commentAdded:   { inApp: true, push: true },
+    quotaNotice:    { inApp: true, push: true },
+    quotaWarning:   { inApp: true, push: true },
+    listRequested:  { inApp: true, push: true },
+    joinRequested:  { inApp: true, push: true },
+    requestApproved:{ inApp: true, push: true },
+  }
+}
+```
+
+#### `users/{uid}/notifications/{notificationId}` — アプリ内通知
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `type` | string | 通知種別（上記 `types` のキー） |
+| `listId` / `itemId` / `commentId` | string? | 遷移先の特定に使う |
+| `actorUid` | string? | 通知のきっかけを作った人 |
+| `isRead` | bool | 既読フラグ（未読件数の集計に使う） |
+| `createdAt` | timestamp | |
+
+- 通知は Cloud Functions が受信者ごとに 1 件ずつ作成する（まとめ通知は行わない／12.7）。
+
+#### `lists/{listId}` — リスト（公開可能な情報のみ）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `name` | string | リスト名 |
+| `nameLower` | string | 重複チェック用の正規化名 |
+| `createdBy` | string | 作成者（＝承認時のリスト管理者）の uid |
+| `createdAt` / `updatedAt` | timestamp | |
+| `adminCount` | number | リスト管理者の人数。**0 なら管理者不在**（5.6）。サイト管理画面での抽出に使う |
+| `memberCount` | number | メンバー数 |
+
+#### `lists/{listId}/meta/stats` — リストの内部情報（メンバーのみ）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `nextSeq` | number | 次に採番する連番（6.2）。初期値 1 |
+| `usedBytes` | number | 使用容量（7.2） |
+| `quotaBytes` | number | 容量上限。初期値 1GB（`1073741824`） |
+| `notifiedNotice80` | bool | 80% 通知の送信済みフラグ（重複通知の防止） |
+| `notifiedWarning90` | bool | 90% 通知の送信済みフラグ |
+
+- **クライアントからの書き込みは一切禁止**。連番はトランザクション、容量は Cloud Functions が更新する。
+- 使用量が各しきい値を下回ったら、対応するフラグを false に戻す（再び超えたときに改めて通知するため）。
+
+#### `lists/{listId}/members/{uid}` — メンバーと役割
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `role` | string | `listAdmin` / `superUser` / `readOnly` |
+| `joinedAt` | timestamp | |
+| `addedBy` | string? | 招待・承認を行った人の uid |
+| `via` | string | `invite` / `request` / `founder`（作成者） |
+
+- **サイト管理者はここに含めない**。サイト管理者は全リストへの権限をカスタムクレームで持つため（13.5）、メンバー登録は不要。
+- 「自分の参加リスト一覧」は、`members` に対する **collectionGroup クエリ**（ドキュメント ID＝自分の uid で絞り込み）で取得する。この用途で複合インデックスを 1 つ作成する。
+- **メンバーを除外したとき／本人が抜けたときは、このドキュメントを削除する**。投稿自体は残るため（5.4）、表示は次のルールになる。
+
+> **「退会したユーザー」と表示する条件**
+> 1. `users/{uid}.isWithdrawn` が true（＝アカウント退会／3.5）
+> 2. または、その uid が**そのリストの `members` に存在しない**（＝除外された／自分で抜けた／5.4）
+>
+> どちらの場合も元の表示名は出さず、「退会したユーザー」と表示する。
+
+#### `lists/{listId}/items/{itemId}` — リスト項目
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `seq` | number | 連番（6.2）。振り直しなし |
+| `date` | timestamp | 録音日想定。初期値は当日、自由に変更可 |
+| `kind` | string | `file` または `url`（どちらか一方のみ／6.1） |
+| `file` | map? | `kind == 'file'` のとき。下記参照 |
+| `url` | string? | `kind == 'url'` のとき |
+| `title` | string? | 曲名（任意） |
+| `artist` | string? | アーティスト名（任意） |
+| `createdBy` | string | 登録者の uid（自動記録） |
+| `createdAt` | timestamp | |
+| `updatedBy` / `updatedAt` | string / timestamp | 最終更新者・更新日時 |
+| `status` | string | `active` / `deleted`（ソフト削除） |
+| `deletedBy` / `deletedAt` | string / timestamp | 削除者・削除日時 |
+| `purgeAt` | timestamp? | ファイル本体の完全削除予定日時（13.4） |
+
+`file` マップの内容：
+
+```
+file: {
+  storagePath: 'lists/{listId}/items/{itemId}/{fileName}',
+  fileName:    'take01.mp3',
+  sizeBytes:   5242880,
+  contentType: 'audio/mpeg',
+}
+```
+
+- 項目の初回コメント（6.2）は、独立したコメントドキュメントとして `comments` に作成する。項目内には持たない。
+
+#### `lists/{listId}/items/{itemId}/comments/{commentId}` — コメント
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `body` | string | 本文 |
+| `parentId` | string? | 返信先コメントの ID。ルートコメントは `null` |
+| `path` | array&lt;string&gt; | ルートから親までの ID を順に並べた配列。ルートコメントは `[]` |
+| `depth` | number | 階層の深さ。ルートは 0 |
+| `createdBy` | string | 投稿者の uid |
+| `createdAt` / `updatedAt` | timestamp | |
+| `status` | string | `active` / `deleted` |
+
+- **項目のコメントは 1 回のクエリで全件取得し、アプリ側でツリーに組み直す**。`path` を持たせているのは、スレッド順（親の直下に子が並ぶ順序）でソートするため。
+- 返信がぶら下がっているコメントを削除した場合、`status` を `deleted` にして「削除されました」と表示し、**子の返信は残す**（親を物理削除するとツリーが切れるため）。
+
+#### `listNames/{nameLower}` — リスト名の重複チェック
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `listId` | string? | 確定済みリストの ID |
+| `requestId` | string? | 申請中の場合の申請 ID |
+| `reservedAt` | timestamp | |
+
+- 5.1 の重複チェックを、**ドキュメント ID の存在確認だけで行う**ための仕組み。
+- `lists` コレクションを名前で検索する方式にすると、未参加者が全リスト名を列挙できてしまい、5.3（全リスト一覧は公開しない）に反する。ID 直接指定なら「その名前があるか」しか分からない。
+
+#### `listRequests/{requestId}` — リスト作成申請（5.1）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `listName` / `nameLower` | string | 申請するリスト名 |
+| `estimatedTrackCount` | number | 概算の登録曲数 |
+| `expectedUserCount` | number | 使用者数 |
+| `purpose` | string | 作成目的 |
+| `requestedBy` / `requestedAt` | string / timestamp | 申請者・申請日時 |
+| `status` | string | `pending` / `approved` / `rejected` |
+| `decidedBy` / `decidedAt` | string / timestamp | 承認・却下したサイト管理者と日時 |
+| `createdListId` | string? | 承認時に作成されたリストの ID |
+
+- 承認処理は Cloud Functions で行い、**リスト作成・`listNames` の確定・申請者を `listAdmin` として `members` に登録・申請者への承認通知**までを一括で実行する。
+
+#### `lists/{listId}/joinRequests/{uid}` — 参加申請（5.2）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `requestedAt` | timestamp | |
+| `status` | string | `pending` / `approved` / `rejected` |
+| `assignedRole` | string? | 承認時にリスト管理者が決めた役割 |
+| `decidedBy` / `decidedAt` | string / timestamp | |
+
+- ドキュメント ID を申請者の uid にすることで、**同じ人が二重に申請することを構造的に防ぐ**。
+- 申請者は役割を選べない（5.2）。`assignedRole` は承認側だけが書き込める。
+
+#### `invites/{inviteId}` — 招待 URL（3.3）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `listId` | string | 招待先のリスト |
+| `role` | string | 付与する役割（`superUser` / `readOnly`） |
+| `createdBy` / `createdAt` | string / timestamp | 発行者・発行日時 |
+| `expiresAt` | timestamp | 有効期限。発行時点＋`siteConfig.inviteExpiryHours` |
+| `status` | string | `active` / `used` / `revoked` |
+| `usedBy` / `usedAt` | string? / timestamp? | 使用者・使用日時 |
+
+- `inviteId` は**推測できないランダムな文字列**とし、これがそのまま招待 URL に載る。
+- ワンタイム性の担保：招待の受諾は Cloud Functions で行い、**「有効期限内かつ `status == 'active'` であること」の確認と、`members` への登録・`status` の `used` への更新を 1 つのトランザクションで実行**する。同じ URL を同時に複数人が開いても、成立するのは 1 人だけになる。
+- トップレベルに置いているのは、**まだそのリストのメンバーでない人が読む必要がある**ため。
+
+#### `siteConfig/global` — サイト設定（11.1）
+
+| フィールド | 型 | 内容 |
+| --- | --- | --- |
+| `inviteExpiryHours` | number | 招待 URL の有効期限。初期値 24 |
+| `defaultQuotaBytes` | number | 新規リストの容量上限の初期値。`1073741824`（1GB） |
+| `itemPurgeGraceDays` | number | 削除項目のファイル保持日数（13.4）。初期値 30 |
+
+- 読み取りは全ログインユーザー、書き込みはサイト管理者のみ。
+
+### 13.4 サーバー側で行う処理（Cloud Functions）
+
+| 契機 | 処理 |
+| --- | --- |
+| Storage へのファイル保存 | `meta/stats.usedBytes` に加算し、80%／90% のしきい値を超えたらリスト管理者へ通知（7.3） |
+| Storage からのファイル削除 | `meta/stats.usedBytes` から減算し、しきい値を下回ったら通知済みフラグをリセット |
+| 項目の作成 | リスト管理者・サイト管理者へ通知（10.2） |
+| コメントの作成 | リスト管理者・サイト管理者、および親コメント／項目の投稿者本人へ通知 |
+| リスト作成申請の承認 | リスト・`listNames`・`members`・通知をまとめて作成 |
+| 招待 URL の受諾 | 有効性の検証と `members` 登録をトランザクションで実行 |
+| メンバーの追加・削除 | `lists/{listId}` の `memberCount` / `adminCount` を更新 |
+| 定期実行（1 日 1 回） | 猶予期間を過ぎた削除項目のファイルを Storage から完全削除（下記） |
+
+#### 削除項目のファイル保持と完全削除
+
+- 項目を削除すると、`status` を `deleted` にしたうえで **`purgeAt` に「削除日時＋`itemPurgeGraceDays`（初期値 30 日）」を設定**する。
+- 猶予期間中は、**リスト管理者・サイト管理者が項目を復元できる**（`status` を `active` に戻し、`purgeAt` を消す）。
+- 猶予期間を過ぎると、定期実行の Cloud Functions が Storage のファイルを削除する。これに連動して `usedBytes` が減る。
+- **猶予期間中は容量を消費し続ける**点に注意。上限に近いリストでは、削除してもすぐには空きが増えない。
+- 項目のドキュメント自体は完全削除後も残す（連番の欠番を維持し「削除されました」と表示するため／6.2）。
+
+> **ファイル差し替え時の扱い（6.3）**
+> 登録済みファイルを差し替えた場合も、**旧ファイルは同じ猶予期間（初期値 30 日）を置いてから削除**する。誤って差し替えたときに戻せる余地を残す。
+
+### 13.5 権限判定とセキュリティルール
+
+#### サイト管理者の判定
+
+- **Firebase Authentication のカスタムクレーム**（`siteAdmin: true`）で保持する。
+- セキュリティルールから追加の読み取りなしに判定できるため、高速かつ課金が発生しない。
+- 付与・剥奪は Cloud Functions（サイト管理者のみ実行可）で行う。
+- **注意**：カスタムクレームは認証トークンに埋め込まれるため、**変更が反映されるのはトークン更新後**（再ログイン、またはアプリ側でのトークン強制リフレッシュ）。権限を変更したら、対象ユーザーに再ログインを促す。
+
+#### ルールの基本構造
+
+```
+// 判定用のヘルパー
+isSiteAdmin()      : request.auth.token.siteAdmin == true
+memberRole(listId) : get(lists/{listId}/members/{uid}).role
+isListAdmin(listId): isSiteAdmin() || memberRole(listId) == 'listAdmin'
+canWrite(listId)   : isListAdmin(listId) || memberRole(listId) == 'superUser'
+isMember(listId)   : isSiteAdmin() || members ドキュメントが存在する
+```
+
+| パス | 読み取り | 書き込み |
+| --- | --- | --- |
+| `lists/{listId}` | ログイン済みなら誰でも（5.3 の最低限の情報） | サイト管理者・リスト管理者のみ（統計フィールドは Functions のみ） |
+| `lists/{listId}/meta/stats` | メンバーのみ | **不可**（Functions とトランザクションのみ） |
+| `lists/{listId}/members/{uid}` | メンバーのみ／自分の行は本人も可 | サイト管理者・リスト管理者。ただし本人による削除（離脱）は可 |
+| `lists/{listId}/items/**` | メンバーのみ | Super User 以上。編集・削除は本人＋リスト管理者以上（6.3） |
+| `lists/{listId}/items/*/comments/**` | メンバーのみ | Super User 以上。編集・削除は本人＋リスト管理者以上（9 章） |
+| `lists/{listId}/joinRequests/{uid}` | リスト管理者以上／自分の行は本人も可 | 作成は本人のみ、承認・却下はリスト管理者以上 |
+| `listNames/{nameLower}` | ログイン済みなら誰でも（ID 直接指定のみ／一覧取得は禁止） | **不可**（Functions のみ） |
+| `listRequests/{requestId}` | サイト管理者／申請者本人 | 作成は本人、承認・却下はサイト管理者 |
+| `invites/{inviteId}` | ログイン済みなら誰でも（ID を知っている人だけ到達できる） | **不可**（発行・受諾とも Functions のみ） |
+| `users/{uid}` | ログイン済みなら誰でも（表示名の解決に必要） | 本人のみ |
+| `users/{uid}/notifications/**` | 本人のみ | 本人のみ（既読の更新）。作成は Functions のみ |
+| `siteConfig/global` | ログイン済みなら誰でも | サイト管理者のみ |
+
+- Storage のルールも同様に、`lists/{listId}/items/**` へのアクセスを**そのリストのメンバーに限定**する。
+
+### 13.6 検索・並び替えの実現方法
+
+- **並び替え**（6.4／連番・日付・登録者）は、`items` を読み込んだうえで**アプリ側で並べ替える**。登録者名での並び替えは uid ではなく解決後の表示名で行う。
+- **検索**（6.4）は、**リストを開いた時点で項目を読み込んでおき、アプリのメモリ上で部分一致**させる。
+  - Firestore は部分一致検索に対応していないため、この方式を採る。
+  - 検索対象は、**曲名・アーティスト名。両方とも未記入の項目はファイル名**（6.4）。実装上は「曲名／アーティスト名／ファイル名のいずれかに含まれれば一致」とする。
+  - 大文字小文字は区別しない。
+- **制約**：項目数が数千件規模になると、リストを開いたときの読み込みが重くなる。その段階に達したら、ページングの導入や検索用キーワードの保持を改めて検討する。
+
+### 13.7 Storage のファイル配置
+
+```
+lists/{listId}/items/{itemId}/{元のファイル名}
+```
+
+- パスにリスト ID を含めることで、Storage 側のセキュリティルールをリスト単位で書ける。
+- 同一項目内でファイルを差し替えた場合は、**新しいファイルを別名で保存**し、旧ファイルは猶予期間後に削除する（13.4）。
+
+---
+
+## 14. 今後の検討事項（未確定）
 
 以下は本仕様書ではまだ未確定の項目です。今後の対話で順に確定させていきます。
 
-- **データモデル**（Firestore のコレクション構成・ドキュメント構造・セキュリティルール）。
 - **画面一覧・画面遷移**。
 - **仕様書の穴つぶし**（招待 URL の使用回数、検索の詳細挙動、ソフト削除の見え方、同時編集、エラー時の挙動 等）。
 - **独自ドメインの割り当て**（12.2）。
