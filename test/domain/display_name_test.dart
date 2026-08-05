@@ -87,4 +87,100 @@ void main() {
     );
     expect(result.text, withdrawnLabel);
   });
+
+  _initialDisplayNameTests();
+}
+
+/// 登録直後の表示名（仕様書 3.4）
+///
+/// **回帰テスト。** 実際に、登録画面で入力した名前ではなく
+/// メールアドレスの `@` より前が表示される不具合が出た。
+/// Firebase の `updateDisplayName` はサーバー側を更新するだけで、
+/// 手元の User オブジェクトの表示名は `reload` するまで空のままなのに、
+/// そちらを先に見ていたのが原因。
+void _initialDisplayNameTests() {
+  group('登録直後の表示名', () {
+    test('入力された名前を最優先にする', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: '藤田 剛',
+          // Auth 側はまだ空（updateDisplayName の直後はこうなる）。
+          authDisplayName: null,
+          email: 't-fujita@example.ne.jp',
+          fallback: 'ユーザー',
+        ),
+        '藤田 剛',
+      );
+    });
+
+    test('Auth 側に古い値が残っていても入力を優先する', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: '新しい名前',
+          authDisplayName: '古い名前',
+          email: 'someone@example.com',
+          fallback: 'ユーザー',
+        ),
+        '新しい名前',
+      );
+    });
+
+    test('入力がなければ Google の表示名を使う', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: null,
+          authDisplayName: '藤田 剛',
+          email: 'mobile.fujita@example.com',
+          fallback: 'ユーザー',
+        ),
+        '藤田 剛',
+      );
+    });
+
+    test('空白だけの入力は無視する', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: '   ',
+          authDisplayName: 'Google の名前',
+          email: 'a@example.com',
+          fallback: 'ユーザー',
+        ),
+        'Google の名前',
+      );
+    });
+
+    test('どちらもなければメールアドレスの @ より前', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: null,
+          authDisplayName: null,
+          email: 't-fujita@example.ne.jp',
+          fallback: 'ユーザー',
+        ),
+        't-fujita',
+      );
+    });
+
+    test('メールアドレスもなければ既定の呼び名', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: null,
+          authDisplayName: null,
+          email: null,
+          fallback: 'ユーザー',
+        ),
+        'ユーザー',
+      );
+    });
+
+    test('前後の空白は落とす', () {
+      expect(
+        DisplayNameResolver.initial(
+          entered: '  藤田 剛  ',
+          fallback: 'ユーザー',
+        ),
+        '藤田 剛',
+      );
+    });
+  });
 }

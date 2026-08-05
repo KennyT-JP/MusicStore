@@ -57,4 +57,32 @@ class DisplayNameResolver {
     }
     return ResolvedName(text: user.displayName, isAnonymized: false);
   }
+
+  /// 登録直後に `users` へ入れる表示名を決める（仕様書 3.4）。
+  ///
+  /// 優先順位は次のとおり。
+  ///
+  /// 1. [entered] — 登録画面で入力された名前
+  /// 2. [authDisplayName] — Google 連携で得られた名前
+  /// 3. [email] の `@` より前
+  /// 4. [fallback]
+  ///
+  /// **[entered] を必ず先に見ること。** `updateDisplayName` は Firebase の
+  /// サーバー側を更新するだけで、手元の User オブジェクトの表示名は
+  /// `reload` するまで空のままになる。そのため [authDisplayName] を先に
+  /// 見ると、入力された名前があるのにメールアドレスの `@` より前が
+  /// 採用されてしまう（実際にそうなっていた）。
+  static String initial({
+    String? entered,
+    String? authDisplayName,
+    String? email,
+    required String fallback,
+  }) {
+    for (final candidate in [entered, authDisplayName]) {
+      final trimmed = candidate?.trim() ?? '';
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    final localPart = email?.split('@').first.trim() ?? '';
+    return localPart.isNotEmpty ? localPart : fallback;
+  }
 }

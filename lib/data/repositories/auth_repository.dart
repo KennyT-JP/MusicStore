@@ -4,6 +4,7 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/display_name.dart';
 import '../../domain/permissions.dart';
 import '../firestore_paths.dart';
 import '../models/app_user.dart';
@@ -130,15 +131,15 @@ class AuthRepository {
     final snapshot = await ref.get();
     if (snapshot.exists) return;
 
-    final name = (displayName ?? user.displayName)?.trim() ?? '';
-
     final appUser = AppUser(
       uid: user.uid,
-      // 初期値は入力された名前、なければ Google の表示名、
-      // どちらもなければメール名（仕様書 3.4）。
-      displayName: name.isNotEmpty
-          ? name
-          : (user.email?.split('@').first ?? 'ユーザー'),
+      // 優先順位は domain 側に置いてある（仕様書 3.4）。回帰テストで守る。
+      displayName: DisplayNameResolver.initial(
+        entered: displayName,
+        authDisplayName: user.displayName,
+        email: user.email,
+        fallback: 'ユーザー',
+      ),
       email: user.email ?? '',
       photoUrl: user.photoURL,
       locale: 'ja',

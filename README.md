@@ -4,6 +4,7 @@
 
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
+- **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
 
 ## 技術スタック
 
@@ -91,7 +92,7 @@ lib/
     invite.dart            招待 URL の検証（3.3）
     comment_tree.dart      コメントの入れ子ツリー（9）
     item_query.dart        検索・並び替え（6.4）
-    display_name.dart      表示名の解決（3.5 / 5.4）
+    display_name.dart      表示名の解決と初期値の決定（3.4 / 3.5 / 5.4）
     local_date.dart        タイムゾーンを持たない日付（6.2）
     concurrent_edit.dart   同時編集の検出（6.3）
   data/
@@ -124,7 +125,7 @@ scripts/                 運用スクリプト（サイト管理者の登録・�
 firestore.rules          Firestore セキュリティルール（13.5）
 storage.rules            Storage セキュリティルール（13.5）
 firestore.indexes.json   Firestore のインデックス定義
-docs/                    仕様書・セットアップ手順
+docs/                    仕様書・セットアップ手順・開発ログ
 ```
 
 `domain/` は Firebase に依存させていません。通信なしでテストでき、権限や容量の判定を確実に検証できるようにするためです（仕様書 12.6）。
@@ -145,9 +146,9 @@ docs/                    仕様書・セットアップ手順
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 172 件
+flutter test                        # 181 件
 cd rules-test && npm test           # 71 件（Firestore ルール 66 件を含む）
-cd functions && npm test            # 25 件（サーバー側のドメインロジック）
+cd functions && npm test            # 29 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 18 件（要エミュレータ）
 ```
 
@@ -159,7 +160,7 @@ cd functions && npm run test:integration  # 18 件（要エミュレータ）
 
 ## 現在の状態
 
-仕様は確定済み、プロジェクトの骨格ができた段階です。
+仕様は確定済み、**検証環境（<https://music-storage-dev.web.app>）への配信まで完了**しています。
 
 ### 画面（20 / 20 実装済み）
 
@@ -202,5 +203,7 @@ cd functions && npm run test:integration  # 18 件（要エミュレータ）
 
 ### そのほか残っていること
 
-- クラウドの Firebase プロジェクトへの接続（手順は [docs/SETUP.md](docs/SETUP.md)）
-- 項目編集時のファイル差し替え（旧ファイルの猶予期間つき削除が必要なため、Functions 側の対応と合わせて実装）（旧ファイルの猶予期間つき削除が必要なため、Functions と合わせて実装）
+- 本番環境の構築 — Firestore と Cloud Storage の**ロケーションは作成後に変更できません**。決めきってから作ってください（仕様書 12.1 / 12.2）
+- 予算アラートの設定（仕様書 12.1）— 自動停止を実装しない方針のため、唯一の歯止めです
+- 項目編集時のファイル差し替え（旧ファイルの猶予期間つき削除が必要なため、Functions と合わせて実装）
+- Storage ルールの手動確認（[docs/SETUP.md](docs/SETUP.md) のチェックリスト）
