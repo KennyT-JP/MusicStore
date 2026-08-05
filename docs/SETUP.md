@@ -216,6 +216,56 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 
 上のどれにも当てはまらない場合は、`firebase emulators:start` の出力の**最後の 10 行**を控えてください。原因はたいていそこに出ています。
 
+### 呼び出し可能関数が `internal` で失敗するとき
+
+アプリから申請などを行うと `internal` とだけ表示され、Cloud Functions のログに
+次が出ている場合。
+
+```
+W submitlistrequest: The request was not authenticated.
+Either allow unauthenticated invocations or set the proper Authorization header.
+Empty Authorization header value.
+```
+
+**関数のコードは動いていません。** 手前の Cloud Run が呼び出しを門前払いしています。
+
+呼び出し可能関数（`onCall`）は、Cloud Run の側では**誰でも呼べる状態にしておく必要があります。**
+Firebase のログイン情報は `Authorization` ヘッダに載りますが、それは Google の
+アクセストークンではないため Cloud Run には読めません。**利用者の確認は関数の中で
+`request.auth` を見て行います**（未ログインなら `unauthenticated` を返す）。
+
+Firebase CLI は関数を**新規作成したとき**にこの設定を入れますが、初回デプロイが
+Cloud Build の失敗などで途中まで進んだ場合、作成後の設定だけが飛ばされることがあります。
+その場合、あとから `firebase deploy` を繰り返しても更新扱いになるため直りません。
+
+**直し方は作り直しです。**
+
+```sh
+firebase functions:delete submitListRequest approveListRequest rejectListRequest \
+  submitJoinRequest approveJoinRequest rejectJoinRequest \
+  createInvite acceptInvite revokeInvite \
+  grantSiteAdmin revokeSiteAdmin withdrawAccount \
+  listSiteUsers setListQuota assignListAdmin \
+  onItemCreated onCommentCreated onMemberWritten onListDeleted purgeDeletedFiles \
+  --region asia-northeast1 --project music-storage-dev --force
+
+firebase functions:delete onFileUploaded onFileDeleted \
+  --region us-east1 --project music-storage-dev --force
+
+./scripts/deploy.sh --no-build --only=functions
+```
+
+削除してから作り直すと、Firebase CLI が呼び出しの許可を含めて設定し直します。
+データ（Firestore・Storage）には影響しません。
+
+`gcloud` が使える環境（Google Cloud コンソールの Cloud Shell など）なら、
+作り直さずに許可だけ与えることもできます。
+
+```sh
+gcloud functions add-invoker-policy-binding submitListRequest \
+  --region=asia-northeast1 --member=allUsers --project=music-storage-dev
+```
+
 ### 一部の関数だけ Cloud Build で失敗するとき
 
 ```

@@ -34,10 +34,23 @@ class HomeScreen extends ConsumerWidget {
               icon: Icons.queue_music_outlined,
               title: l10n.homeEmpty,
               description: l10n.homeEmptyHint,
-              action: FilledButton.icon(
-                onPressed: () => context.go(AppRoutes.requestList),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.requestNewList),
+              // **申請一覧への導線をここにも置く。**
+              // 申請を出した直後はまだ参加リストが 0 件なので、この画面から
+              // 動けないと申請の状態を確認する手段がなくなる。
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => context.go(AppRoutes.requestList),
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.requestNewList),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => context.go(AppRoutes.myRequests),
+                    child: Text(l10n.myRequests),
+                  ),
+                ],
               ),
             );
           }
