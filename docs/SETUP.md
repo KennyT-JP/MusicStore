@@ -130,6 +130,34 @@ super-user@example.com   佐藤（Super User）
 read-only@example.com    鈴木（Read Only）
 ```
 
+### エミュレータでは確認メールが届きません
+
+新規登録すると「確認メールを送信しました」と表示されますが、**エミュレータは実際のメールを
+送りません**（外部にメールを出さないのがエミュレータの役目です）。不具合ではありません。
+
+確認用のリンクは、**エミュレータを起動したウィンドウ**に出力されます。
+
+```
+i  auth: To verify the email address foo@example.com, follow this link:
+   http://127.0.0.1:9099/emulator/action?mode=verifyEmail&oobCode=...&continueUrl=...
+```
+
+この URL をブラウザに貼れば、メールのリンクを踏んだのと同じ扱いになります。
+アプリの「メール確認待ち」画面で確認を取り直せば先へ進めます。
+
+見逃した場合は、次の URL をブラウザで開くと未使用のリンクが一覧で得られます
+（パスワード再設定のリンクも同じ場所に出ます）。
+
+```
+http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
+```
+
+**`./scripts/seed.sh`（Windows は `scripts\seed.cmd`）で作られる 4 つのアカウントは
+確認済みの状態で作ってあります**（パスワードはすべて `password`）。メール確認を試したい
+とき以外は、そちらでログインするのが手早いです。
+
+なおクラウドの検証環境・本番環境では、Firebase Authentication が実際にメールを送ります。
+
 エミュレータの管理画面は、**エミュレータを起動したマシンのブラウザ**から
 <http://127.0.0.1:4000> で開けます（データの中身や登録済みユーザーを確認できます）。
 
@@ -172,6 +200,7 @@ read-only@example.com    鈴木（Read Only）
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
 | `Port taken` / `port is not open` | 前回のエミュレータが残っています。macOS / Linux は `pkill -f "firebase.*emulators"`、Windows は `taskkill /F /IM java.exe` と `taskkill /F /IM node.exe` で止めてから起動し直してください |
 | アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
+| 新規登録したのに確認メールが届かない | **正常です。** エミュレータはメールを送りません。リンクはエミュレータの出力に表示されます（上の「エミュレータでは確認メールが届きません」参照） |
 | アプリは起動するがデータが出ない／権限エラー | `./scripts/seed.sh` を実行していないか、エミュレータを再起動してデータが消えています |
 | `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。macOS / Linux は `export NO_PROXY=127.0.0.1,localhost`、Windows は `set NO_PROXY=127.0.0.1,localhost`。起動スクリプトは自動で設定します |
 | `Cannot find module '@firebase/app'` | `cd functions && npm install` をやり直してください |
