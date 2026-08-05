@@ -1,14 +1,7 @@
 {
+  "//": "複合インデックスの定義（仕様書 13.3）。単一フィールドの索引は Firestore が自動で作るので、ここには書かない。書くと『このインデックスは不要』(400 this index is not necessary) で配信が止まる。",
+  "//members": "自分の参加リスト一覧は collectionGroup('members') にドキュメント ID の一致だけを課すクエリで、並び替えを伴わないため定義は不要。条件を増やしたときは、Firestore が実行時のエラーに必要な索引の作成 URL を含めて返すので、それを見てここに追記すること。",
   "indexes": [
-    {
-      "//": "自分の参加リスト一覧（仕様書 13.3）。members に対する collectionGroup クエリで、ドキュメント ID = 自分の uid を絞り込む。",
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "joinedAt", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "DESCENDING" }
-      ]
-    },
     {
       "//": "リスト内の項目一覧。削除済みを除いて連番順に並べる（仕様書 6.4）。",
       "collectionGroup": "items",
