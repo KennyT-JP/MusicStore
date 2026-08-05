@@ -486,9 +486,20 @@ Firestore も東京以外にある場合は、同じファイルに `FUNCTIONS_R
 ```sh
 cd scripts && npm install && cd ..
 
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-node scripts/grant-site-admin.js <あなたの UID> --project music-storage-dev
+node scripts/grant-site-admin.js <あなたの UID> \
+  --project music-storage-dev \
+  --key /path/to/service-account.json
 ```
+
+Windows も同じです（`\` での改行は使わず 1 行で書いてください）。
+
+```
+cd scripts && npm install && cd ..
+node scripts\grant-site-admin.js <あなたの UID> --project music-storage-dev --key C:\path\to\service-account.json
+```
+
+> 環境変数 `GOOGLE_APPLICATION_CREDENTIALS` でも指定できますが、Windows では
+> `export` が使えず間違えやすいため、`--key` で渡せるようにしています。
 
 このスクリプトは次を行います。
 

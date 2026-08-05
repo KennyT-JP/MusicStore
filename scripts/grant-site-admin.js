@@ -8,6 +8,9 @@
  *
  * ```sh
  * # クラウドのプロジェクトに対して実行する場合
+ * node scripts/grant-site-admin.js <UID> --key C:\path\to\service-account.json
+ *
+ * # 環境変数でも指定できる（--key があればそちらが優先）
  * export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
  * node scripts/grant-site-admin.js <UID>
  *
@@ -20,19 +23,42 @@
  * 実行後、対象のユーザーは**再ログインが必要**。カスタムクレームは
  * 認証トークンに埋め込まれるため、トークンを取り直すまで反映されない。
  */
+import { existsSync } from 'node:fs';
+
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 const args = process.argv.slice(2);
-const uid = args.find((a) => !a.startsWith('--'));
-const projectIndex = args.indexOf('--project');
-const projectId =
-  projectIndex >= 0 ? args[projectIndex + 1] : process.env.GCLOUD_PROJECT;
+
+/** `--名前 値` の形の引数を取り出す。 */
+function option(name) {
+  const index = args.indexOf(`--${name}`);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
+// --key の次の値も「オプションの値」なので、UID と間違えないように除く。
+const optionValues = new Set(
+  args.flatMap((a, i) => (a.startsWith('--') ? [args[i + 1]] : [])),
+);
+const uid = args.find((a) => !a.startsWith('--') && !optionValues.has(a));
+
+const projectId = option('project') ?? process.env.GCLOUD_PROJECT;
+
+// Windows では export が使えず、環境変数の指定でつまずきやすい。
+// 鍵のパスを引数でも渡せるようにしておく。
+const keyPath = option('key');
+if (keyPath) {
+  if (!existsSync(keyPath)) {
+    console.error(`鍵のファイルが見つかりません: ${keyPath}`);
+    process.exit(1);
+  }
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
+}
 
 if (!uid) {
   console.error(
-    '使い方: node scripts/grant-site-admin.js <UID> [--project <プロジェクト ID>]',
+    '使い方: node scripts/grant-site-admin.js <UID> [--project <プロジェクト ID>] [--key <サービスアカウント鍵のパス>]',
   );
   process.exit(1);
 }
