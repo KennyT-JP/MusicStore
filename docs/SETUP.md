@@ -194,6 +194,7 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 | `'.' は、内部コマンドまたは外部コマンド…として認識されていません` | **Windows で `.sh` を実行しようとしています。** `scripts\dev-emulators.cmd` / `scripts\seed.cmd` を使ってください |
 | `'#' は、内部コマンドまたは外部コマンド…として認識されていません` | 手順書のコメント行（`#` や `rem` で始まる説明文）を貼り付けています。無視して構いません |
 | `'firebase' は、内部コマンドまたは外部コマンド…として認識されていません` | Firebase CLI が入っていないか、PATH に反映されていません。`npm install -g firebase-tools` を実行し、**コマンドプロンプトを開き直して**ください |
+| `'flutterfire' は、内部コマンドまたは外部コマンド…として認識されていません` | `dart pub global activate` の入れ先（`%LOCALAPPDATA%\Pub\Cache\bin`）が PATH に入っていません。**PATH を直す必要はありません。** `scripts\configure-firebase.cmd` を使ってください（PATH に依存しない方法で起動します） |
 | メッセージが `繧ｨ繝ｩ繝ｼ` のように文字化けする | 古い版のスクリプトです。`git pull` で更新してください。現在の `.cmd` は英数字だけで書かれており、日本語は Node 側から出力しています |
 | `Because music_list_app requires SDK version ^3.12.2, version solving failed.` | **Flutter が古いだけです。** `flutter upgrade` を実行してください（「1. 開発環境」参照） |
 | `Failed to load function definition from source` | **Functions がビルドされていません。** `cd functions && npm install && npm run build`。`./scripts/dev-emulators.sh`（Windows は `scripts\dev-emulators.cmd`）を使えば自動で行われます |
@@ -265,17 +266,24 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 続いて、Flutter 側の接続設定を生成します。
 
 ```sh
-# 検証環境
-flutterfire configure \
-  --project=music-storage-dev \
-  --out=lib/env/firebase_options_staging.dart \
-  --platforms=web,android,ios
+./scripts/configure-firebase.sh          # 検証環境
+./scripts/configure-firebase.sh prod     # 本番環境
+```
 
-# 本番環境
-flutterfire configure \
-  --project=music-storage-d79b2 \
-  --out=lib/env/firebase_options_prod.dart \
-  --platforms=web,android,ios
+Windows は `scripts\configure-firebase.cmd` / `scripts\configure-firebase.cmd prod` です。
+
+> **`flutterfire` を直接呼ばずにスクリプト越しにしている理由。**
+> `dart pub global activate flutterfire_cli` は実行ファイルを pub のキャッシュ
+> （Windows なら `%LOCALAPPDATA%\Pub\Cache\bin`）に置きますが、**このフォルダは
+> PATH に入っていないことが多く**、`flutterfire` と打っても
+> 「認識されていません」になります。スクリプトは PATH に依存しない
+> `dart pub global run` 経由で起動し、未導入なら導入も行います。
+
+既定では **Web だけ**を設定します。Android / iOS も要るようになったら、あとから足せます
+（何度実行しても安全です）。
+
+```sh
+./scripts/configure-firebase.sh --platforms=web,android,ios
 ```
 
 **手で書き換える必要はありません。** 出力先の 2 ファイルはリポジトリに用意してあり、

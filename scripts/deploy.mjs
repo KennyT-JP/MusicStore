@@ -112,7 +112,9 @@ console.log('\n==> 接続設定を確認');
   if (source.includes('REPLACE_ME')) {
     fail(
       `${target.label}の接続設定が未生成です（lib/env/${target.optionsFile}）。`,
-      `flutterfire configure --project=${projectId} --out=lib/env/${target.optionsFile} --platforms=web,android,ios`,
+      isWindows
+        ? `scripts\\configure-firebase.cmd${wantsProd ? ' prod' : ''} を実行してください`
+        : `./scripts/configure-firebase.sh${wantsProd ? ' prod' : ''} を実行してください`,
     );
   }
   console.log(`    lib/env/${target.optionsFile} は設定済み`);
