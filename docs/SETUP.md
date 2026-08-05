@@ -201,7 +201,7 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
 | `Port taken` / `port is not open` | 前回のエミュレータが残っています。macOS / Linux は `pkill -f "firebase.*emulators"`、Windows は `taskkill /F /IM java.exe` と `taskkill /F /IM node.exe` で止めてから起動し直してください |
 | アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
-| デプロイが `We failed to modify the IAM policy for the project` で失敗する | ログイン中のアカウントにプロジェクトの権限設定を変える力がありません。**エラーの少し上に、必要な権限を付ける `gcloud` のコマンドが並んでいます。** まず ①ログイン中のアカウントを `firebase login:list` で確認 ②そのアカウントがプロジェクトの**オーナー**か Google Cloud コンソールの IAM で確認 ③`cloudresourcemanager.googleapis.com` が有効か確認。会社の組織配下のプロジェクトでは、組織のポリシーで拒否されている場合もあります |
+| デプロイが `We failed to modify the IAM policy for the project` で失敗する | 下の「IAM ポリシーの変更に失敗するとき」を参照してください |
 | 初回デプロイが `Permission denied while using the Eventarc Service Agent` で失敗する | **数分待ってもう一度実行してください。** 第 2 世代の関数は初回に裏でサービスアカウントが作られ、権限が行き渡るまで少し時間がかかります。設定の誤りではありません |
 | デプロイが `<何とか> API has not been used in project ... before or it is disabled` で失敗する | 出力に表示される URL を開いて API を有効化し、もう一度実行してください。`purgeDeletedFiles` が使う Cloud Scheduler API が該当することがあります |
 | デプロイが `cannot listen to a bucket in region ...` で失敗する | 関数とバケットのリージョンが違います。`functions/.env.<プロジェクト ID>` に `STORAGE_REGION=<バケットのリージョン>` を書いてください（5 章「リージョンについて」参照） |
@@ -215,6 +215,63 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 | `http://127.0.0.1:4000` が開けない（接続拒否） | **エミュレータを起動したマシンと、ブラウザを開いているマシンが違います。** 上の表を参照してください。同じマシンなら、そもそもエミュレータが起動していません |
 
 上のどれにも当てはまらない場合は、`firebase emulators:start` の出力の**最後の 10 行**を控えてください。原因はたいていそこに出ています。
+
+### IAM ポリシーの変更に失敗するとき
+
+```
+Error: We failed to modify the IAM policy for the project.
+```
+
+第 2 世代の Cloud Functions は、Storage や Pub/Sub の裏方（サービスエージェント）に
+権限を与えないと動きません。Firebase CLI がそれを自動で設定しようとして拒否された状態です。
+
+エラーの**少し上**に、必要な権限が `gcloud` のコマンドとして並んでいます。控えておいてください。
+
+原因は主に 3 つあります。**上から順に確認するのが早いです。**
+
+**1. Compute Engine API が未有効（新しいプロジェクトで最も多い）**
+
+付与先の 1 つ `<プロジェクト番号>-compute@developer.gserviceaccount.com` は、
+Compute Engine API を一度も有効にしていないプロジェクトには**存在しません**。
+存在しない相手に権限は付けられないため、まとめて失敗します。
+
+<https://console.cloud.google.com/apis/library/compute.googleapis.com> を開き、
+対象プロジェクトを選んで有効化してください。数分待ってから再実行します。
+
+```sh
+./scripts/deploy.sh --no-build      # Windows は scripts\deploy.cmd --no-build
+```
+
+`--no-build` を付けると Web の再ビルドを省けます。
+
+**2. ログイン中のアカウントがオーナーでない**
+
+```sh
+firebase login:list
+```
+
+プロジェクトを作成したアカウントと同じか確認し、違えば `firebase login --reauth` で入り直します。
+Google Cloud コンソールの IAM で、そのアカウントに**オーナー**が付いているかも確認してください
+（編集者だけでは権限設定を変えられません）。
+
+**3. 組織のポリシーで拒否されている**
+
+勤務先の Google Workspace 組織に属するプロジェクトだと、組織のポリシーで
+外部サービスアカウントの追加が禁止されていることがあります。この場合は自分では解除できません。
+管理者に依頼するか、個人アカウントで作ったプロジェクトを使ってください。
+
+**手動で付与する**
+
+上のどれでも直らない場合は、[Cloud Shell](https://console.cloud.google.com/) を開いて、
+エラーの上に出ていた `gcloud projects add-iam-policy-binding ...` をそのまま実行します
+（Cloud Shell には `gcloud` が入っています）。そこで出るエラーメッセージのほうが、
+Firebase CLI の要約より原因を具体的に示してくれます。
+
+真の原因を知りたい場合は詳細ログ付きで実行してください。
+
+```sh
+./scripts/deploy.sh --debug --no-build
+```
 
 ---
 
