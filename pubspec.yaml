@@ -9,6 +9,11 @@ environment:
 dependencies:
   cloud_firestore: ^6.8.0
   cloud_functions: ^6.3.6
+  # Flutter が「その環境らしい見た目」に切り替える部品（戻る矢印など）が
+  # CupertinoIcons を参照する。Mac や iPhone のブラウザで開いたときに
+  # これが無いとアイコンが豆腐（□）になるため入れている。
+  # 使われる字形だけが残るので、ビルド後の大きさはほとんど増えない。
+  cupertino_icons: ^1.0.8
   file_picker: ^11.0.3
   firebase_auth: ^6.5.7
   firebase_core: ^4.13.0

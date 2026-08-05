@@ -201,6 +201,8 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
 | `Port taken` / `port is not open` | 前回のエミュレータが残っています。macOS / Linux は `pkill -f "firebase.*emulators"`、Windows は `taskkill /F /IM java.exe` と `taskkill /F /IM node.exe` で止めてから起動し直してください |
 | アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
+| 初回デプロイが `Permission denied while using the Eventarc Service Agent` で失敗する | **数分待ってもう一度実行してください。** 第 2 世代の関数は初回に裏でサービスアカウントが作られ、権限が行き渡るまで少し時間がかかります。設定の誤りではありません |
+| デプロイが `<何とか> API has not been used in project ... before or it is disabled` で失敗する | 出力に表示される URL を開いて API を有効化し、もう一度実行してください。`purgeDeletedFiles` が使う Cloud Scheduler API が該当することがあります |
 | デプロイが `cannot listen to a bucket in region ...` で失敗する | 関数とバケットのリージョンが違います。`functions/.env.<プロジェクト ID>` に `STORAGE_REGION=<バケットのリージョン>` を書いてください（5 章「リージョンについて」参照） |
 | デプロイが `cannot listen to a database in region ...` で失敗する | 同様に `FUNCTIONS_REGION=<Firestore のロケーション>` を指定してください |
 | 新規登録したのに確認メールが届かない | **正常です。** エミュレータはメールを送りません。リンクはエミュレータの出力に表示されます（上の「エミュレータでは確認メールが届きません」参照） |
