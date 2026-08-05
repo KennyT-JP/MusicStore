@@ -82,8 +82,9 @@
       "source": "functions",
       "codebase": "default",
       "runtime": "nodejs22",
+      "//predeploy": "Firebase の例では $RESOURCE_DIR を使うが、Windows のコマンドプロンプトでは展開されずに失敗する。predeploy はプロジェクトのルートで実行されるので、相対パスで書けばどの OS でも動く。",
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run build"
+        "npm --prefix functions run build"
       ],
       "ignore": [
         "node_modules",

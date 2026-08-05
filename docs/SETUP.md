@@ -278,38 +278,56 @@ flutterfire configure \
   --platforms=web,android,ios
 ```
 
-生成された 2 ファイルを `lib/env/firebase_options.dart` から読み込むように書き換えます。現在は起動を止めるためのプレースホルダーが入っており、そのままでは `FirebaseNotConfiguredError` を投げて止まります。
+**手で書き換える必要はありません。** 出力先の 2 ファイルはリポジトリに用意してあり、
+`lib/env/firebase_options.dart` から読み込むよう配線済みです。上のコマンドが中身を
+実際の値で上書きします。
 
-```dart
-import 'firebase_options_prod.dart' as prod;
-import 'firebase_options_staging.dart' as staging;
+生成前は `REPLACE_ME` が入っており、そのままクラウドに繋ごうとすると
+`FirebaseNotConfiguredError` を投げて止まります（設定忘れに気づけるように）。
 
-static FirebaseOptions get current {
-  switch (AppEnvironment.current) {
-    case AppEnvironment.production:
-      return prod.DefaultFirebaseOptions.currentPlatform;
-    case AppEnvironment.staging:
-      return staging.DefaultFirebaseOptions.currentPlatform;
-  }
-}
-```
-
-最後に `lib/main.dart` の Firebase 初期化のコメントを外します。
+> **`flutterfire configure` は `firebase login` 済みであることが前提です。** まだの場合は
+> 先に `firebase login` を実行してください。ブラウザが開き、Google アカウントでの許可を求められます。
 
 > **補足**：Firebase の Web 設定値（apiKey 等）は公開前提の識別子であり、それ自体は秘密情報ではありません。アクセス制御はセキュリティルールで行います（仕様書 13.5）。
 
 ---
 
-## 5. セキュリティルールとインデックスの配置
+## 5. デプロイ
+
+セキュリティルール・インデックス・Cloud Functions・Web アプリをまとめて配信します。
 
 ```sh
-cd functions && npm install && cd ..
+./scripts/deploy.sh          # 検証環境（music-storage-dev）
+./scripts/deploy.sh prod     # 本番環境（music-storage-d79b2）
+```
 
-firebase use staging
-firebase deploy --only firestore:rules,firestore:indexes,storage,functions
+Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 
-firebase use prod
-firebase deploy --only firestore:rules,firestore:indexes,storage,functions
+このスクリプトは順に次を行います。
+
+1. `.firebaserc` からデプロイ先のプロジェクト ID を読む
+2. `firebase login` 済みか確認する
+3. **接続設定が生成済みか確認する**（`REPLACE_ME` が残っていれば、そこで止める）
+4. 本番の場合は、プロジェクト ID の入力を求める
+5. `flutter build web --release`（本番は `--dart-define=APP_ENV=prod` 付き）
+6. `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting`
+
+3 の確認を入れているのは、**設定を忘れたまま配信すると、起動と同時に
+`FirebaseNotConfiguredError` で止まるアプリが公開されてしまう**ためです。
+
+完了すると `https://<プロジェクト ID>.web.app` で開けます。
+
+> **初回は Google Cloud 側の API 有効化を求められることがあります。** 出力に表示された
+> URL を開いて有効化し、もう一度実行してください。`purgeDeletedFiles` が使う
+> Cloud Scheduler API が該当します。
+
+> **Firestore と Cloud Storage は、先に Firebase コンソールで作成しておく必要があります。**
+> 未作成のままだとルールの配信で失敗します（3 章参照）。
+
+個別に配信したい場合は、従来どおり CLI を直接使えます。
+
+```sh
+firebase deploy --project music-storage-dev --only firestore:rules
 ```
 
 > **Cloud Functions のリージョンは `asia-northeast1`（東京）にしています。**

@@ -9,24 +9,25 @@
 /// | `--dart-define=APP_ENV=prod` | 本番プロジェクト |
 ///
 /// **検証・本番の設定はプレースホルダーのままです。**
-/// Firebase プロジェクトを作成したら、次の手順で実際の値に置き換えてください。
+/// Firebase プロジェクトを作成したら、次を実行してください。
 ///
 /// ```sh
 /// dart pub global activate flutterfire_cli
 ///
 /// flutterfire configure \
-///   --project=<検証用プロジェクト ID> \
+///   --project=music-storage-dev \
 ///   --out=lib/env/firebase_options_staging.dart \
 ///   --platforms=web,android,ios
 ///
 /// flutterfire configure \
-///   --project=<本番用プロジェクト ID> \
+///   --project=music-storage-d79b2 \
 ///   --out=lib/env/firebase_options_prod.dart \
 ///   --platforms=web,android,ios
 /// ```
 ///
-/// 生成された 2 つのファイルを import し、[DefaultFirebaseOptions.current] から
-/// 返すように書き換えます。詳しい手順は docs/SETUP.md を参照してください。
+/// **このファイルを書き換える必要はありません。** 出力先の 2 ファイルは
+/// あらかじめ用意してあり、上のコマンドが中身を実際の値で上書きします。
+/// 詳しい手順は docs/SETUP.md を参照してください。
 ///
 /// なお Firebase の Web 設定値（apiKey 等）は公開前提の識別子であり、
 /// これ自体は秘密情報ではありません。アクセス制御はセキュリティルール
@@ -37,6 +38,10 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'app_environment.dart';
 import 'firebase_emulators.dart';
+// flutterfire configure が生成・上書きするファイル。どちらも同じ
+// DefaultFirebaseOptions というクラス名なので、接頭辞を付けて読み分ける。
+import 'firebase_options_prod.dart' as prod;
+import 'firebase_options_staging.dart' as staging;
 
 /// 環境に応じた Firebase の接続設定。
 class DefaultFirebaseOptions {
@@ -72,21 +77,13 @@ class DefaultFirebaseOptions {
     storageBucket: 'demo-musiclist.appspot.com',
   );
 
-  static const FirebaseOptions _staging = FirebaseOptions(
-    apiKey: _placeholder,
-    appId: _placeholder,
-    messagingSenderId: _placeholder,
-    projectId: _placeholder,
-    storageBucket: _placeholder,
-  );
+  /// 検証環境。firebase_options_staging.dart の中身を使う。
+  static FirebaseOptions get _staging =>
+      staging.DefaultFirebaseOptions.currentPlatform;
 
-  static const FirebaseOptions _production = FirebaseOptions(
-    apiKey: _placeholder,
-    appId: _placeholder,
-    messagingSenderId: _placeholder,
-    projectId: _placeholder,
-    storageBucket: _placeholder,
-  );
+  /// 本番環境。firebase_options_prod.dart の中身を使う。
+  static FirebaseOptions get _production =>
+      prod.DefaultFirebaseOptions.currentPlatform;
 
   /// 設定が実際の値に置き換えられているか。
   static bool get isConfigured => current.apiKey != _placeholder;
