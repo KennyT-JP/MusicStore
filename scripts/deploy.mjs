@@ -27,6 +27,12 @@ const isWindows = process.platform === 'win32';
 const argv = process.argv.slice(2);
 const wantsProd = argv.includes('prod');
 const skipConfirm = argv.includes('--yes');
+// 失敗の原因が「上の出力を見てください」でしか分からないとき用。
+// Firebase CLI の詳細ログを出す。
+const wantsDebug = argv.includes('--debug');
+// ビルドを飛ばして配信だけやり直す。IAM や API の有効化を直したあとの
+// 再実行で、5 分かかる Web ビルドを繰り返さずに済む。
+const skipBuild = argv.includes('--no-build');
 
 /** デプロイ先。.firebaserc のエイリアスと対応する。 */
 const target = wantsProd
@@ -139,8 +145,10 @@ if (wantsProd && !skipConfirm) {
 // -------------------------------------------------------------------------
 // ビルドとデプロイ
 
-console.log('\n==> Flutter Web をビルド');
-{
+if (skipBuild) {
+  console.log('\n==> Flutter Web のビルドは省略（--no-build）');
+} else {
+  console.log('\n==> Flutter Web をビルド');
   const code = await run('flutter', ['build', 'web', '--release', ...target.dartDefine]);
   if (code === null) fail('flutter コマンドが見つかりません。', 'https://docs.flutter.dev/get-started/install');
   if (code !== 0) fail('flutter build web に失敗しました。');
@@ -155,12 +163,22 @@ console.log('\n==> デプロイ');
     projectId,
     '--only',
     'firestore:rules,firestore:indexes,storage,functions,hosting',
+    ...(wantsDebug ? ['--debug'] : []),
   ]);
   if (code !== 0) {
-    fail(
-      'デプロイに失敗しました。',
-      '上の出力の最後を確認してください。初回は Cloud Scheduler API などの有効化を求められることがあります',
+    console.error('');
+    console.error('  よくある原因:');
+    console.error('   ・初回は権限が行き渡るまで数分かかる → そのまま数分待って再実行');
+    console.error('   ・API が未有効 → 出力に出ている URL を開いて有効化');
+    console.error('   ・IAM の書き換えに失敗 → **エラーの少し上**に、必要な権限を付ける');
+    console.error('     gcloud のコマンドが並んでいます。そこを確認してください');
+    console.error('');
+    console.error(
+      isWindows
+        ? '  詳しく見る: scripts\\deploy.cmd --debug（ビルドを省くなら --no-build も付ける）'
+        : '  詳しく見る: ./scripts/deploy.sh --debug（ビルドを省くなら --no-build も付ける）',
     );
+    fail('デプロイに失敗しました。', 'docs/SETUP.md の「エミュレータに繋がらないとき」の下にある対処表も参照してください');
   }
 }
 
