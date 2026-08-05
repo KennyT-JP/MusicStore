@@ -201,6 +201,8 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
 | `Port taken` / `port is not open` | 前回のエミュレータが残っています。macOS / Linux は `pkill -f "firebase.*emulators"`、Windows は `taskkill /F /IM java.exe` と `taskkill /F /IM node.exe` で止めてから起動し直してください |
 | アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
+| デプロイが `cannot listen to a bucket in region ...` で失敗する | 関数とバケットのリージョンが違います。`functions/.env.<プロジェクト ID>` に `STORAGE_REGION=<バケットのリージョン>` を書いてください（5 章「リージョンについて」参照） |
+| デプロイが `cannot listen to a database in region ...` で失敗する | 同様に `FUNCTIONS_REGION=<Firestore のロケーション>` を指定してください |
 | 新規登録したのに確認メールが届かない | **正常です。** エミュレータはメールを送りません。リンクはエミュレータの出力に表示されます（上の「エミュレータでは確認メールが届きません」参照） |
 | アプリは起動するがデータが出ない／権限エラー | `./scripts/seed.sh` を実行していないか、エミュレータを再起動してデータが消えています |
 | `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。macOS / Linux は `export NO_PROXY=127.0.0.1,localhost`、Windows は `set NO_PROXY=127.0.0.1,localhost`。起動スクリプトは自動で設定します |
@@ -338,11 +340,42 @@ Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 firebase deploy --project music-storage-dev --only firestore:rules
 ```
 
-> **Cloud Functions のリージョンは `asia-northeast1`（東京）にしています。**
-> Firestore を別のロケーション（`us-central` など）で作成した場合は、
-> `functions/src/config.ts` の `REGION` と `lib/env/firebase_emulators.dart` の
-> `kFunctionsRegion` を合わせて変更してください。リージョンが違うと、
-> トリガーのたびにリージョン間の通信が発生して遅延と費用が増えます。
+### リージョンについて
+
+Cloud Functions は既定で `asia-northeast1`（東京）で動かします。主な利用者が日本にいる想定です。
+
+**プロジェクトのロケーションが東京でない場合、デプロイが失敗します。**
+
+```
+Error: A function in region asia-northeast1 cannot listen to a bucket in region us-east1
+```
+
+トリガーは対象と同じリージョンでしか動かせないためです。しかも **Cloud Storage の
+バケットは作成後にリージョンを変更できません。** そこでコードを直さずに、
+`functions/.env.<プロジェクト ID>` で上書きできるようにしてあります。
+
+| 変数 | 対象 | 既定 |
+| --- | --- | --- |
+| `FUNCTIONS_REGION` | 全体（呼び出し可能関数・定期実行・Firestore トリガー） | `asia-northeast1` |
+| `STORAGE_REGION` | Storage のトリガーだけ | `FUNCTIONS_REGION` と同じ |
+
+検証環境はバケットが `us-east1` にあるため、`functions/.env.music-storage-dev` で
+`STORAGE_REGION=us-east1` を指定済みです。
+
+現在のロケーションは次で確認できます。
+
+```sh
+firebase firestore:databases:list --project music-storage-dev
+```
+
+Firestore も東京以外にある場合は、同じファイルに `FUNCTIONS_REGION` を追記してください。
+あわせて `lib/env/firebase_emulators.dart` の `kFunctionsRegion` も揃えます。
+
+> **本番プロジェクトは `asia-northeast1` で作成してください。** Firestore・Cloud Storage
+> ともにロケーションはあとから変更できず、直すにはプロジェクトの作り直しが必要になります。
+
+> **`functions/.env.*` に秘密情報を書かないでください。** リポジトリに入るファイルです。
+> 鍵やトークンは `firebase functions:secrets:set` で Secret Manager に置きます。
 
 > **`purgeDeletedFiles` は Cloud Scheduler を使います。** 初回のデプロイ時に
 > Cloud Scheduler API の有効化を求められることがあります。Blaze プランなら

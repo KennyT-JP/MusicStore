@@ -11,9 +11,27 @@ export { parseItemStoragePath } from './domain/paths';
  * 主な利用者が日本にいる想定で東京を既定にしている。
  * **Firestore のロケーションと揃えるのが望ましい**（別リージョンだと
  * トリガーのたびにリージョン間の通信が発生し、遅延と費用が増える）。
- * Firestore を us-central 等で作成した場合は、ここを合わせて変更すること。
+ *
+ * プロジェクトを別のロケーションで作ってしまった場合は、コードを直さずに
+ * `functions/.env.<プロジェクト ID>` で上書きできる。本番と検証でロケーションが
+ * 違っても、同じコードをそのまま配信できるようにするため。
+ *
+ * ```
+ * FUNCTIONS_REGION=us-east1
+ * ```
  */
-export const REGION = 'asia-northeast1';
+export const REGION = process.env.FUNCTIONS_REGION ?? 'asia-northeast1';
+
+/**
+ * Storage のトリガーを動かすリージョン。
+ *
+ * **バケットと同じリージョンでなければデプロイできない。** 違うと
+ * 「A function in region X cannot listen to a bucket in region Y」で失敗する。
+ *
+ * Cloud Storage のバケットは作成後にリージョンを変更できないため、
+ * ここだけ別に指定できるようにしてある。既定は [REGION] と同じ。
+ */
+export const STORAGE_REGION = process.env.STORAGE_REGION ?? REGION;
 
 /** Firestore のパス（Flutter 側 lib/data/firestore_paths.dart と対応）。 */
 export const paths = {

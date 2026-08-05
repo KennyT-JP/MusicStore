@@ -8,7 +8,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { onObjectDeleted, onObjectFinalized } from 'firebase-functions/v2/storage';
 
-import { REGION, paths, parseItemStoragePath } from '../config';
+import { STORAGE_REGION, paths, parseItemStoragePath } from '../config';
 import {
   levelToNotify,
   shouldResetNotice,
@@ -18,7 +18,7 @@ import { listAdminUids, notifyUsers } from '../notifications';
 
 /** ファイルが保存されたら加算し、しきい値を超えたら通知する。 */
 export const onFileUploaded = onObjectFinalized(
-  { region: REGION },
+  { region: STORAGE_REGION },
   async (event) => {
     const parsed = parseItemStoragePath(event.data.name);
     if (!parsed) return; // 項目のファイル以外には反応しない
@@ -32,7 +32,7 @@ export const onFileUploaded = onObjectFinalized(
 
 /** ファイルが削除されたら減算し、しきい値を下回ったらフラグを戻す。 */
 export const onFileDeleted = onObjectDeleted(
-  { region: REGION },
+  { region: STORAGE_REGION },
   async (event) => {
     const parsed = parseItemStoragePath(event.data.name);
     if (!parsed) return;
