@@ -71,7 +71,11 @@ class AuthRepository {
     if (displayName.trim().isNotEmpty) {
       await user.updateDisplayName(displayName.trim());
     }
-    await _ensureUserDocument(user);
+    // **入力された名前をそのまま渡す。**
+    // updateDisplayName はサーバー側を更新するだけで、手元の User の
+    // displayName は reload するまで空のまま。渡さずに user から読むと、
+    // 「まだ空」と判断してメールアドレスの @ より前を採用してしまう。
+    await _ensureUserDocument(user, displayName: displayName);
     await user.sendEmailVerification();
   }
 
@@ -118,17 +122,22 @@ class AuthRepository {
   ///
   /// Cloud Functions でも作成するが、Functions を用意する前でも動くように
   /// クライアント側でも用意する。すでにあれば何もしない。
-  Future<void> _ensureUserDocument(User? user) async {
+  /// [displayName] は登録画面で入力された名前。
+  /// 指定がなければ Auth 側の表示名を使う（Google 連携のとき）。
+  Future<void> _ensureUserDocument(User? user, {String? displayName}) async {
     if (user == null) return;
     final ref = _db.doc(FirestorePaths.user(user.uid));
     final snapshot = await ref.get();
     if (snapshot.exists) return;
 
+    final name = (displayName ?? user.displayName)?.trim() ?? '';
+
     final appUser = AppUser(
       uid: user.uid,
-      // 初期値は Google の表示名（またはメール名）（仕様書 3.4）。
-      displayName: user.displayName?.trim().isNotEmpty == true
-          ? user.displayName!.trim()
+      // 初期値は入力された名前、なければ Google の表示名、
+      // どちらもなければメール名（仕様書 3.4）。
+      displayName: name.isNotEmpty
+          ? name
           : (user.email?.split('@').first ?? 'ユーザー'),
       email: user.email ?? '',
       photoUrl: user.photoURL,

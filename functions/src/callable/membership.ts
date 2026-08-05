@@ -8,7 +8,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths, readSiteConfig } from '../config';
 import { isAssignableRole } from '../domain/roles';
-import { listAdminUids, notifyUsers } from '../notifications';
+import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
 
 /**
@@ -46,7 +46,7 @@ export const submitJoinRequest = onCall({ region: REGION }, async (request) => {
     assignedRole: FieldValue.delete(),
   }, { merge: true });
 
-  await notifyUsers(await listAdminUids(listId), {
+  await notifySafely(() => listAdminUids(listId), {
     type: 'joinRequested',
     listId,
     actorUid: uid,
@@ -102,7 +102,7 @@ export const approveJoinRequest = onCall(
       tx.delete(requestRef);
     });
 
-    await notifyUsers([targetUid], {
+    await notifySafely(() => [targetUid], {
       type: 'requestApproved',
       listId,
       actorUid: adminUid,

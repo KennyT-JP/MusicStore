@@ -9,7 +9,7 @@ import {
 } from 'firebase-functions/v2/firestore';
 
 import { REGION, paths } from '../config';
-import { listAdminUids, notifyUsers, siteAdminUids } from '../notifications';
+import { listAdminUids, notifySafely, siteAdminUids } from '../notifications';
 
 /**
  * 項目が追加されたら、リスト管理者とサイト管理者へ通知する（仕様書 10.2）。
@@ -21,12 +21,16 @@ export const onItemCreated = onDocumentCreated(
     const data = event.data?.data();
     if (!data) return;
 
-    const [admins, siteAdmins] = await Promise.all([
-      listAdminUids(listId),
-      siteAdminUids(),
-    ]);
-
-    await notifyUsers([...admins, ...siteAdmins], {
+    // 宛先集めから通知までを包む。ここで例外を出すとトリガーが失敗扱いになり、
+    // 再試行が延々と繰り返される。通知は本処理の副次的なものなので、
+    // 失敗はログに残して先へ進む。
+    await notifySafely(async () => {
+      const [admins, siteAdmins] = await Promise.all([
+        listAdminUids(listId),
+        siteAdminUids(),
+      ]);
+      return [...admins, ...siteAdmins];
+    }, {
       type: 'itemAdded',
       listId,
       itemId,
@@ -77,7 +81,7 @@ export const onCommentCreated = onDocumentCreated(
       if (typeof itemAuthor === 'string') recipients.add(itemAuthor);
     }
 
-    await notifyUsers(recipients, {
+    await notifySafely(() => [...recipients], {
       type: 'commentAdded',
       listId,
       itemId,

@@ -78,6 +78,30 @@ export async function notifyUsers(
 }
 
 /**
+ * 通知を送る。失敗しても呼び出し元を巻き込まない。
+ *
+ * **申請や承認などの本処理が終わったあとに使うこと。**
+ * 通知は副次的なものなのに、宛先を集める段階（Auth の走査など）で
+ * 例外が出ると呼び出し全体が internal で失敗する。利用者から見ると
+ * 「エラーが出たのに実際は登録されている」という分かりにくい状態になる。
+ *
+ * 宛先を集める処理も含めて包むため、関数として受け取る。
+ */
+export async function notifySafely(
+  collectRecipients: () => Promise<string[]> | string[],
+  payload: NotificationPayload
+): Promise<void> {
+  try {
+    await notifyUsers(await collectRecipients(), payload);
+  } catch (error) {
+    logger.error('通知の送信に失敗しました（本処理は完了しています）', {
+      type: payload.type,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
  * その人がこの種別のアプリ内通知を受け取る設定か（仕様書 10.3）。
  *
  * マスタースイッチがオフなら、種別の設定にかかわらず送らない。

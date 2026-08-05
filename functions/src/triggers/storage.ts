@@ -14,7 +14,7 @@ import {
   shouldResetNotice,
   shouldResetWarning,
 } from '../domain/quota';
-import { listAdminUids, notifyUsers } from '../notifications';
+import { listAdminUids, notifySafely } from '../notifications';
 
 /** ファイルが保存されたら加算し、しきい値を超えたら通知する。 */
 export const onFileUploaded = onObjectFinalized(
@@ -93,7 +93,7 @@ async function applyDelta(listId: string, deltaBytes: number): Promise<void> {
 
   // 通知はトランザクションの外で行う。トランザクションが再試行されたときに
   // 通知を重複して作らないようにするため。
-  await notifyUsers(await listAdminUids(listId), {
+  await notifySafely(() => listAdminUids(listId), {
     type: outcome.level === 'warning' ? 'quotaWarning' : 'quotaNotice',
     listId,
   });

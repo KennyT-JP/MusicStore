@@ -6,7 +6,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths, readSiteConfig } from '../config';
 import { normalizeListName } from '../domain/paths';
-import { notifyUsers, siteAdminUids } from '../notifications';
+import { notifySafely, siteAdminUids } from '../notifications';
 import { requireSiteAdmin, requireString } from './access';
 
 /**
@@ -113,7 +113,7 @@ export const approveListRequest = onCall(
     });
 
     // 申請が承認されたら申請者に通知する（仕様書 10.2）。
-    await notifyUsers([listId.requestedBy], {
+    await notifySafely(() => [listId.requestedBy], {
       type: 'requestApproved',
       listId: listId.listId,
       requestId,
@@ -230,7 +230,7 @@ export const submitListRequest = onCall({ region: REGION }, async (request) => {
   });
 
   // リスト作成の申請があったことをサイト管理者へ通知する（仕様書 10.2）。
-  await notifyUsers(await siteAdminUids(), {
+  await notifySafely(siteAdminUids, {
     type: 'listRequested',
     requestId: requestRef.id,
     actorUid: uid,
