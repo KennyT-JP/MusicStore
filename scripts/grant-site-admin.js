@@ -85,6 +85,24 @@ if (!uid && !email && !wantsList) {
 
 const usingEmulator = Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST);
 
+// 鍵もプロジェクトも指定されないまま走ると、あとで出る失敗が
+// 「ユーザーが見つかりません」に見えてしまう。先に弾く。
+if (!usingEmulator) {
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.error('サービスアカウント鍵が指定されていません。');
+    console.error('  --key <鍵のパス> を付けてください。');
+    console.error('  鍵は Firebase コンソール → プロジェクトの設定 → サービスアカウント');
+    console.error('  →「新しい秘密鍵の生成」で取得できます。');
+    process.exit(1);
+  }
+  if (!projectId) {
+    console.error('プロジェクト ID が指定されていません。--project <プロジェクト ID> を付けてください。');
+    process.exit(1);
+  }
+}
+
+console.log(`プロジェクト: ${projectId ?? '(未指定)'}`);
+
 initializeApp({
   projectId,
   // エミュレータでは認証情報が不要。
@@ -117,17 +135,29 @@ async function main() {
   }
 
   // メールアドレス指定なら、そこから UID を引く。
-  const user = email
-    ? await auth.getUserByEmail(email).catch(() => null)
-    : await auth.getUser(uid).catch(() => null);
+  //
+  // ここで失敗をひとまとめに握りつぶすと、鍵やプロジェクトの誤りまで
+  // 「ユーザーが見つかりません」に見えてしまい、原因を追えなくなる。
+  // 本当に見つからなかった場合だけを切り分ける。
+  let user;
+  try {
+    user = email
+      ? await auth.getUserByEmail(email)
+      : await auth.getUser(uid);
+  } catch (error) {
+    if (error.code !== 'auth/user-not-found') throw error;
 
-  if (!user) {
     console.error(
       email
         ? `メールアドレス ${email} のユーザーが見つかりません。`
         : `UID ${uid} のユーザーが見つかりません。`,
     );
-    console.error('先にアプリでサインアップしてください。');
+    console.error('');
+    console.error('確認すること:');
+    console.error(`  ・--project は正しいか（いま指定されているのは ${projectId}）`);
+    console.error('  ・そのプロジェクトのアプリでサインアップ済みか');
+    console.error('  ・Google 連携で登録した場合、メールアドレスが一致しているか');
+    console.error('');
     console.error('登録済みの一覧は --list で確認できます。');
     process.exit(1);
   }
@@ -169,7 +199,20 @@ async function main() {
 main().then(
   () => process.exit(0),
   (error) => {
+    console.error('');
     console.error('失敗しました:', error.message);
+    if (error.code) console.error('  コード:', error.code);
+
+    // 原因が読み取れる代表的なものには、対処も添える。
+    const text = `${error.code ?? ''} ${error.message ?? ''}`;
+    if (/PERMISSION_DENIED|permission-denied|403/.test(text)) {
+      console.error('  → 鍵の権限が足りないか、別のプロジェクトの鍵を指しています。');
+      console.error('     --project と --key が同じプロジェクトのものか確認してください。');
+    } else if (/could not load the default credentials|GOOGLE_APPLICATION_CREDENTIALS/i.test(text)) {
+      console.error('  → --key <鍵のパス> を付けてください。');
+    } else if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT/.test(text)) {
+      console.error('  → ネットワークに繋がっていないか、プロキシに遮られています。');
+    }
     process.exit(1);
   },
 );
