@@ -25,7 +25,7 @@
  * コードページに関係なく日本語がそのまま出る。
  * .sh と .cmd はこのファイルを呼ぶだけの薄い入り口にしてある。
  */
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -83,6 +83,38 @@ if (!(await exists('firebase'))) {
       ? 'npm install -g firebase-tools を実行し、そのあとコマンドプロンプトを開き直してください（PATH の反映に必要です）'
       : 'npm install -g firebase-tools を実行してください',
   );
+}
+
+// Firestore エミュレータは JVM 上で動く。Java が古いと
+// 起動の途中で分かりにくいエラーになるので、先に弾く。
+{
+  let javaVersion = null;
+  try {
+    javaVersion = execSync('java -version 2>&1', { stdio: ['ignore', 'pipe', 'pipe'] })
+      .toString()
+      .match(/version "([^"]+)"/)?.[1];
+  } catch {
+    javaVersion = null;
+  }
+
+  const hint = isWindows
+    ? 'winget install EclipseAdoptium.Temurin.21.JDK'
+    : 'https://adoptium.net/';
+
+  if (!javaVersion) {
+    fail('Java が見つかりません。', `Firestore エミュレータに必要です。JDK 21 を入れてください（${hint}）`);
+  }
+
+  // Java 8 以前は "1.8.0_492"、9 以降は "21.0.10"。
+  const parts = javaVersion.split('.').map((n) => Number.parseInt(n, 10));
+  const major = parts[0] === 1 ? parts[1] : parts[0];
+
+  if (Number.isFinite(major) && major < 11) {
+    fail(
+      `Java が古いです（Java ${major}）。Firestore エミュレータは Java 11 以上が必要です。`,
+      `JDK 21 を入れてください（${hint}）`,
+    );
+  }
 }
 
 console.log('==> functions の依存パッケージを確認');

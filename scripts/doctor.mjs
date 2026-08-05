@@ -143,12 +143,46 @@ node && Number(node.replace('v', '').split('.')[0]) >= 20
 
 // JAVA_TOOL_OPTIONS が設定されていると先頭に "Picked up ..." が出るので取り除く。
 const java = versionFromStderr('java -version', (line) => line.startsWith('Picked up'));
-java
-  ? ok('Java', java)
-  : ng(
-      'Java が見つかりません',
-      'Firestore エミュレータは JVM 上で動きます。JDK 11 以上を入れてください',
+
+/**
+ * `java -version` の出力からメジャーバージョンを取り出す。
+ *
+ * Java 8 以前は `"1.8.0_492"`、9 以降は `"21.0.10"` という書き方になる。
+ * 単純に先頭の数字を見ると Java 8 が「1」に見えてしまうので分けて扱う。
+ */
+function javaMajor(text) {
+  const raw = text.match(/version "([^"]+)"/)?.[1];
+  if (!raw) return null;
+  const parts = raw.split('.').map((n) => Number.parseInt(n, 10));
+  if (parts[0] === 1) return parts[1] ?? null; // 1.8.0_492 → 8
+  return Number.isNaN(parts[0]) ? null : parts[0];
+}
+
+// Firestore エミュレータが要求する下限。
+const REQUIRED_JAVA = 11;
+
+if (!java) {
+  ng(
+    'Java が見つかりません',
+    `Firestore エミュレータは JVM 上で動きます。JDK ${REQUIRED_JAVA} 以上を入れてください（${javaInstallHint()}）`,
+  );
+} else {
+  const major = javaMajor(java);
+  if (major !== null && major < REQUIRED_JAVA) {
+    ng(
+      `Java が古いです（Java ${major} — Firestore エミュレータは ${REQUIRED_JAVA} 以上が必要）`,
+      `JDK 21 を入れてください（${javaInstallHint()}）。入れたあと java -version が新しい方を指すか確認してください`,
     );
+  } else {
+    ok('Java', java);
+  }
+}
+
+function javaInstallHint() {
+  return isWindows
+    ? 'winget install EclipseAdoptium.Temurin.21.JDK'
+    : 'https://adoptium.net/';
+}
 
 const firebase = version('firebase --version');
 firebase

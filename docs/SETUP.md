@@ -15,7 +15,7 @@ Windows・macOS・Linux のいずれでも動きます。Windows のコマンド
 | --- | --- | --- |
 | Flutter SDK | **3.44 以上**（Dart 3.12.2 以上） | `flutter --version` |
 | Node.js | 20 以上 | `node --version` |
-| Java | 11 以上（Firestore エミュレータが JVM 上で動く） | `java -version` |
+| Java | **11 以上**（Firestore エミュレータが JVM 上で動く） | `java -version` |
 | Firebase CLI | 最新 | `firebase --version` |
 
 ```sh
@@ -175,7 +175,8 @@ read-only@example.com    鈴木（Read Only）
 | アプリは起動するがデータが出ない／権限エラー | `./scripts/seed.sh` を実行していないか、エミュレータを再起動してデータが消えています |
 | `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。macOS / Linux は `export NO_PROXY=127.0.0.1,localhost`、Windows は `set NO_PROXY=127.0.0.1,localhost`。起動スクリプトは自動で設定します |
 | `Cannot find module '@firebase/app'` | `cd functions && npm install` をやり直してください |
-| Java のエラーで Firestore が起動しない | JDK 11 以上が必要です。`java -version` で確認してください |
+| Java のエラーで Firestore が起動しない | JDK 11 以上が必要です。`java -version` が `1.8.0_xxx` のように **`1.` で始まる場合は Java 8** で、古すぎます。Windows は `winget install EclipseAdoptium.Temurin.21.JDK`、そのほかは <https://adoptium.net/> から JDK 21 を入れてください |
+| JDK を入れたのに `java -version` が古いまま | 古い Java のほうが PATH の先に残っています。Windows は「システム環境変数の編集」→ PATH から古い Java の行を消すか、新しい JDK の `bin` を上に移動してください。`where java` で優先順が見えます |
 | `http://127.0.0.1:4000` が開けない（接続拒否） | **エミュレータを起動したマシンと、ブラウザを開いているマシンが違います。** 上の表を参照してください。同じマシンなら、そもそもエミュレータが起動していません |
 
 上のどれにも当てはまらない場合は、`firebase emulators:start` の出力の**最後の 10 行**を控えてください。原因はたいていそこに出ています。
