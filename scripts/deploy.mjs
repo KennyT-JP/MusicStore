@@ -34,6 +34,12 @@ const wantsDebug = argv.includes('--debug');
 // 再実行で、5 分かかる Web ビルドを繰り返さずに済む。
 const skipBuild = argv.includes('--no-build');
 
+// 配信する対象を絞る（例: --only=functions、--only=functions:onItemCreated）。
+// 一部の関数だけ失敗したときに、そこだけやり直すために使う。
+const onlyTargets =
+  argv.find((a) => a.startsWith('--only='))?.slice('--only='.length) ??
+  'firestore:rules,firestore:indexes,storage,functions,hosting';
+
 /** デプロイ先。.firebaserc のエイリアスと対応する。 */
 const target = wantsProd
   ? { alias: 'prod', label: '本番環境', optionsFile: 'firebase_options_prod.dart', dartDefine: ['--dart-define=APP_ENV=prod'] }
@@ -162,7 +168,7 @@ console.log('\n==> デプロイ');
     '--project',
     projectId,
     '--only',
-    'firestore:rules,firestore:indexes,storage,functions,hosting',
+    onlyTargets,
     ...(wantsDebug ? ['--debug'] : []),
   ]);
   if (code !== 0) {
@@ -172,7 +178,14 @@ console.log('\n==> デプロイ');
     console.error('   ・API が未有効 → 出力に出ている URL を開いて有効化');
     console.error('   ・IAM の書き換えに失敗 → **エラーの少し上**に、必要な権限を付ける');
     console.error('     gcloud のコマンドが並んでいます。そこを確認してください');
+    console.error('   ・Cloud Build が失敗した関数がある → まずそのまま再実行。');
+    console.error('     初回は置き場所（Artifact Registry）の用意と同時に走るため崩れやすい');
     console.error('');
+    console.error(
+      isWindows
+        ? '  関数だけやり直す: scripts\\deploy.cmd --no-build --only=functions'
+        : '  関数だけやり直す: ./scripts/deploy.sh --no-build --only=functions',
+    );
     console.error(
       isWindows
         ? '  詳しく見る: scripts\\deploy.cmd --debug（ビルドを省くなら --no-build も付ける）'

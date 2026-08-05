@@ -216,6 +216,31 @@ http://127.0.0.1:9099/emulator/v1/projects/demo-musiclist/oobCodes
 
 上のどれにも当てはまらない場合は、`firebase emulators:start` の出力の**最後の 10 行**を控えてください。原因はたいていそこに出ています。
 
+### 一部の関数だけ Cloud Build で失敗するとき
+
+```
+Build failed with status: FAILURE and message: An unexpected error occurred.
+```
+
+**初回デプロイでよく起きます。** 22 個の関数のコンテナが一斉に組み立てられる一方で、
+置き場所（Artifact Registry のリポジトリ）はその最中に作られます。用意が整う前に
+始まった分が巻き添えで失敗するため、一部だけ成功して残りが落ちる、という形になります。
+
+**まずそのまま再実行してください。** 置き場所はもうできているので、次は通ることが多いです。
+成功済みの関数は更新されるだけで、二重に作られることはありません。
+
+```sh
+./scripts/deploy.sh --no-build --only=functions
+```
+
+Windows は `scripts\deploy.cmd --no-build --only=functions` です。
+`--only=functions` を付けると、成功済みのルールや Web の配信を省いて関数だけやり直せます。
+
+2 回試しても同じ関数が失敗する場合は、エラーに出ている
+`https://console.cloud.google.com/cloud-build/builds;region=.../<ID>` を開いて、
+**ビルドログの最後の 30 行**を確認してください。Firebase CLI の
+「An unexpected error occurred」より具体的な原因が出ています。
+
 ### IAM ポリシーの変更に失敗するとき
 
 ```
