@@ -2,6 +2,7 @@
  * 共通の設定と定数（仕様書 13.3 / 13.4）
  */
 import { getFirestore } from 'firebase-admin/firestore';
+import { defineString } from 'firebase-functions/params';
 
 export { parseItemStoragePath } from './domain/paths';
 
@@ -19,8 +20,18 @@ export { parseItemStoragePath } from './domain/paths';
  * ```
  * FUNCTIONS_REGION=us-east1
  * ```
+ *
+ * **`process.env` ではなく `defineString`（パラメータ）を使っている。**
+ * Firebase CLI は、どの関数をどこに配置するかを決める「解析」の段階では、
+ * 子プロセスに `HOME` / `PATH` などごく一部の環境変数しか渡さない。
+ * `.env` の中身が渡るのはその後なので、`process.env.FUNCTIONS_REGION` は
+ * 解析時には常に undefined になり、指定しても効かなかった。
+ * パラメータは解析時には未解決の式として扱われ、配置を決める直前に
+ * `.env` の値で解決されるため、こちらなら効く。
  */
-export const REGION = process.env.FUNCTIONS_REGION ?? 'asia-northeast1';
+export const REGION = defineString('FUNCTIONS_REGION', {
+  default: 'asia-northeast1',
+});
 
 /**
  * Storage のトリガーを動かすリージョン。
@@ -31,7 +42,9 @@ export const REGION = process.env.FUNCTIONS_REGION ?? 'asia-northeast1';
  * Cloud Storage のバケットは作成後にリージョンを変更できないため、
  * ここだけ別に指定できるようにしてある。既定は [REGION] と同じ。
  */
-export const STORAGE_REGION = process.env.STORAGE_REGION ?? REGION;
+export const STORAGE_REGION = defineString('STORAGE_REGION', {
+  default: REGION,
+});
 
 /** Firestore のパス（Flutter 側 lib/data/firestore_paths.dart と対応）。 */
 export const paths = {

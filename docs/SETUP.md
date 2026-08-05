@@ -362,6 +362,11 @@ Error: A function in region asia-northeast1 cannot listen to a bucket in region 
 検証環境はバケットが `us-east1` にあるため、`functions/.env.music-storage-dev` で
 `STORAGE_REGION=us-east1` を指定済みです。
 
+> **この値は `defineString`（パラメータ）として受け取っています**（`functions/src/config.ts`）。
+> `process.env` では受け取れません。Firebase CLI は「どの関数をどこに配置するか」を決める
+> 解析の段階で、子プロセスに `HOME` / `PATH` など一部の環境変数しか渡さないためです。
+> `.env` の中身が渡るのはその後なので、`process.env` 経由だと指定しても無視されます。
+
 現在のロケーションは次で確認できます。
 
 ```sh
