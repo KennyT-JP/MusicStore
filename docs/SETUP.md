@@ -8,9 +8,12 @@
 
 ## 1. 開発環境
 
+Windows・macOS・Linux のいずれでも動きます。Windows のコマンドは
+「2. エミュレータで動かす」に併記しています。
+
 | 必要なもの | バージョン | 確認コマンド |
 | --- | --- | --- |
-| Flutter SDK | 3.44 以上 | `flutter --version` |
+| Flutter SDK | **3.44 以上**（Dart 3.12.2 以上） | `flutter --version` |
 | Node.js | 20 以上 | `node --version` |
 | Java | 11 以上（Firestore エミュレータが JVM 上で動く） | `java -version` |
 | Firebase CLI | 最新 | `firebase --version` |
@@ -24,6 +27,23 @@ dart pub global activate flutterfire_cli
 ```
 
 `firebase login` は、クラウドのプロジェクトを操作するときだけ必要です。エミュレータだけならログイン不要です。
+
+> **Flutter のバージョンが古いと `flutter pub get` が失敗します。**
+>
+> ```
+> The current Dart SDK version is 3.9.2.
+> Because music_list_app requires SDK version ^3.12.2, version solving failed.
+> ```
+>
+> これはエラーではなく「Flutter が古い」という意味です。更新してください。
+>
+> ```sh
+> flutter upgrade
+> flutter --version   # Dart が 3.12.2 以上になっていることを確認
+> ```
+>
+> `flutter upgrade` が「not on a known channel」などで進まない場合は、
+> `flutter channel stable` を実行してから、もう一度 `flutter upgrade` してください。
 
 ---
 
@@ -44,6 +64,25 @@ dart pub global activate flutterfire_cli
 > cd MusicStore
 > ```
 
+**ウィンドウを 3 つ開いて、1 つずつ実行します。** 1 つ目は起動したまま動き続けるので、
+2 つ目・3 つ目は別のウィンドウで実行してください。
+
+**Windows（コマンドプロンプト / PowerShell）**
+
+```bat
+rem ウィンドウ 1：エミュレータを起動（Functions のビルドもまとめて行う）
+scripts\dev-emulators.cmd
+
+rem ウィンドウ 2：動作確認用のデータを入れる（初回のみ）
+scripts\seed.cmd
+
+rem ウィンドウ 3：アプリを起動
+flutter pub get
+flutter run -d chrome --dart-define=USE_EMULATOR=true
+```
+
+**macOS / Linux**
+
 ```sh
 # ターミナル 1：エミュレータを起動（Functions のビルドもまとめて行う）
 ./scripts/dev-emulators.sh
@@ -56,7 +95,15 @@ flutter pub get
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
 
-**うまく繋がらないときは、まず診断を実行してください。**
+> **Windows で `.sh` は動きません。** `./scripts/dev-emulators.sh` と打つと
+> 「`.` は、内部コマンドまたは外部コマンド…として認識されていません」になります。
+> `.sh` は macOS / Linux 用です。Windows では上の `.cmd` を使ってください。
+> 中身は同じことをしています。
+>
+> 上の例で `rem` や `#` で始まる行は説明用のコメントです。**貼り付けなくて構いません**
+> （貼り付けると「`#` は…認識されていません」と出ますが、実害はありません）。
+
+**うまく繋がらないときは、まず診断を実行してください。** Windows でもそのまま動きます。
 
 ```sh
 node scripts/doctor.mjs
@@ -116,12 +163,15 @@ read-only@example.com    鈴木（Read Only）
 
 | 症状 | 原因と対処 |
 | --- | --- |
-| `Failed to load function definition from source` | **Functions がビルドされていません。** `cd functions && npm install && npm run build`。`./scripts/dev-emulators.sh` を使えば自動で行われます |
+| `'.' は、内部コマンドまたは外部コマンド…として認識されていません` | **Windows で `.sh` を実行しようとしています。** `scripts\dev-emulators.cmd` / `scripts\seed.cmd` を使ってください |
+| `'#' は、内部コマンドまたは外部コマンド…として認識されていません` | 手順書のコメント行（`#` や `rem` で始まる説明文）を貼り付けています。無視して構いません |
+| `Because music_list_app requires SDK version ^3.12.2, version solving failed.` | **Flutter が古いだけです。** `flutter upgrade` を実行してください（「1. 開発環境」参照） |
+| `Failed to load function definition from source` | **Functions がビルドされていません。** `cd functions && npm install && npm run build`。`./scripts/dev-emulators.sh`（Windows は `scripts\dev-emulators.cmd`）を使えば自動で行われます |
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
-| `Port taken` / `port is not open` | 前回のエミュレータが残っています。`pkill -f "firebase.*emulators"` で止めてから起動し直してください |
+| `Port taken` / `port is not open` | 前回のエミュレータが残っています。macOS / Linux は `pkill -f "firebase.*emulators"`、Windows は `taskkill /F /IM java.exe` と `taskkill /F /IM node.exe` で止めてから起動し直してください |
 | アプリが `FirebaseNotConfiguredError` で止まる | `--dart-define=USE_EMULATOR=true` を付け忘れています。付けないとクラウドの検証環境に繋ごうとします |
 | アプリは起動するがデータが出ない／権限エラー | `./scripts/seed.sh` を実行していないか、エミュレータを再起動してデータが消えています |
-| `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。`export NO_PROXY=127.0.0.1,localhost` を設定してください。`dev-emulators.sh` は自動で設定します |
+| `Unable to parse JSON: ... "denied by ..."` | プロキシが localhost の通信を横取りしています。macOS / Linux は `export NO_PROXY=127.0.0.1,localhost`、Windows は `set NO_PROXY=127.0.0.1,localhost`。起動スクリプトは自動で設定します |
 | `Cannot find module '@firebase/app'` | `cd functions && npm install` をやり直してください |
 | Java のエラーで Firestore が起動しない | JDK 11 以上が必要です。`java -version` で確認してください |
 | `http://127.0.0.1:4000` が開けない（接続拒否） | **エミュレータを起動したマシンと、ブラウザを開いているマシンが違います。** 上の表を参照してください。同じマシンなら、そもそもエミュレータが起動していません |

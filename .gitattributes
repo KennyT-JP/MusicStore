@@ -1,0 +1,21 @@
+# 改行コードの扱い
+#
+# 既定はリポジトリ内で LF に統一する。
+* text=auto eol=lf
+
+# ただし Windows のバッチファイルだけは CRLF で取り出す。
+# LF のままだと、複数行にまたがる括弧や label の解釈が崩れて
+# 「構文が間違っています」で止まることがあるため。
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# シェルスクリプトは Windows 上でも LF のままでないと、
+# WSL や Git Bash で「bad interpreter: /usr/bin/env bash^M」になる。
+*.sh text eol=lf
+
+# バイナリは触らない。
+*.ttf binary
+*.otf binary
+*.woff2 binary
+*.png binary
+*.jpg binary

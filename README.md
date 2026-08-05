@@ -31,17 +31,29 @@ git clone https://github.com/KennyT-JP/MusicStore.git
 cd MusicStore
 ```
 
-```sh
-# ターミナル 1：エミュレータ
-./scripts/dev-emulators.sh
+ウィンドウを 3 つ開いて、1 つずつ実行します。
 
-# ターミナル 2：確認用データの投入（初回のみ）
-./scripts/seed.sh
+**Windows**
 
-# ターミナル 3：アプリ
-flutter pub get
+```bat
+scripts\dev-emulators.cmd    :: ウィンドウ 1：エミュレータ
+scripts\seed.cmd             :: ウィンドウ 2：確認用データの投入（初回のみ）
+
+flutter pub get              :: ウィンドウ 3：アプリ
 flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
+
+**macOS / Linux**
+
+```sh
+./scripts/dev-emulators.sh   # ターミナル 1：エミュレータ
+./scripts/seed.sh            # ターミナル 2：確認用データの投入（初回のみ）
+
+flutter pub get              # ターミナル 3：アプリ
+flutter run -d chrome --dart-define=USE_EMULATOR=true
+```
+
+`flutter pub get` が `requires SDK version ^3.12.2` で失敗する場合は、Flutter が古いだけです。`flutter upgrade` で更新してください。
 
 エミュレータの管理画面は、**起動したマシンのブラウザ**から <http://127.0.0.1:4000> で開けます。
 
