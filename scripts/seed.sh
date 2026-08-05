@@ -3,16 +3,7 @@
 #
 #   ./scripts/seed.sh
 #
-# エミュレータが起動している状態で実行してください。
+# 中身は seed.mjs にある。Windows と共通の 1 本にまとめてあるので、
+# 直すときはそちらを編集してください。
 set -euo pipefail
-
-cd "$(dirname "$0")"
-
-if [ ! -d node_modules ]; then
-  npm install
-fi
-
-export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
-export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-
-exec node seed-emulator.js
+exec node "$(dirname "$0")/seed.mjs" "$@"

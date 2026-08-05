@@ -165,6 +165,8 @@ read-only@example.com    鈴木（Read Only）
 | --- | --- |
 | `'.' は、内部コマンドまたは外部コマンド…として認識されていません` | **Windows で `.sh` を実行しようとしています。** `scripts\dev-emulators.cmd` / `scripts\seed.cmd` を使ってください |
 | `'#' は、内部コマンドまたは外部コマンド…として認識されていません` | 手順書のコメント行（`#` や `rem` で始まる説明文）を貼り付けています。無視して構いません |
+| `'firebase' は、内部コマンドまたは外部コマンド…として認識されていません` | Firebase CLI が入っていないか、PATH に反映されていません。`npm install -g firebase-tools` を実行し、**コマンドプロンプトを開き直して**ください |
+| メッセージが `繧ｨ繝ｩ繝ｼ` のように文字化けする | 古い版のスクリプトです。`git pull` で更新してください。現在の `.cmd` は英数字だけで書かれており、日本語は Node 側から出力しています |
 | `Because music_list_app requires SDK version ^3.12.2, version solving failed.` | **Flutter が古いだけです。** `flutter upgrade` を実行してください（「1. 開発環境」参照） |
 | `Failed to load function definition from source` | **Functions がビルドされていません。** `cd functions && npm install && npm run build`。`./scripts/dev-emulators.sh`（Windows は `scripts\dev-emulators.cmd`）を使えば自動で行われます |
 | `firebase login` を求められる／実プロジェクトに繋ごうとする | `--project demo-musiclist` を付け忘れています。`demo-` で始まる ID だとクラウドに一切アクセスしません |
