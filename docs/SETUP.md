@@ -478,28 +478,49 @@ Firestore も東京以外にある場合は、同じファイルに `FUNCTIONS_R
 サイト管理者は Auth の**カスタムクレーム**で判定します（仕様書 13.5）。最初の 1 人だけは、アプリ内から設定する手段がないため手作業で付与します。
 
 1. アプリを起動して、自分のアカウントでサインアップする
-2. Firebase コンソール → Authentication で自分の UID を控える
-3. サービスアカウント鍵を用意する
+2. サービスアカウント鍵を用意する
    （Firebase コンソール → プロジェクトの設定 → サービスアカウント → 新しい秘密鍵の生成）
-4. `scripts/grant-site-admin.js` を実行する
+3. `scripts/grant-site-admin.js` を**メールアドレス指定で**実行する
 
 ```sh
 cd scripts && npm install && cd ..
 
-node scripts/grant-site-admin.js <あなたの UID> \
+node scripts/grant-site-admin.js \
+  --email you@example.com \
   --project music-storage-dev \
   --key /path/to/service-account.json
 ```
 
-Windows も同じです（`\` での改行は使わず 1 行で書いてください）。
+Windows は 1 行で書きます（`\` での改行は使えません）。
 
 ```
 cd scripts && npm install && cd ..
-node scripts\grant-site-admin.js <あなたの UID> --project music-storage-dev --key C:\path\to\service-account.json
+node scripts\grant-site-admin.js --email you@example.com --project music-storage-dev --key C:\path\to\service-account.json
 ```
 
-> 環境変数 `GOOGLE_APPLICATION_CREDENTIALS` でも指定できますが、Windows では
+> **UID を調べる必要はありません。** メールアドレスから引きます。
+> Firebase コンソールを開くと、ブラウザが別の Google アカウントでサインインしている場合に
+> 「プロジェクトが存在しないか、…権限がありません」と出て詰まりがちなので、
+> そこを通らずに済むようにしています。
+
+誰が登録済みか分からないときは一覧を出せます。
+
+```sh
+node scripts/grant-site-admin.js --list --project music-storage-dev --key /path/to/service-account.json
+```
+
+```
+UID                           メールアドレス
+00hzFMGtVt6wDYVy7yG4pv2GnfQp  site-admin@example.com [サイト管理者]
+UZVRD2u3uqP42SwGajslvSIyiHJ0  super-user@example.com
+```
+
+UID を直接指定することもできます（`--email` の代わりに UID を置く）。
+
+> 環境変数 `GOOGLE_APPLICATION_CREDENTIALS` でも鍵を指定できますが、Windows では
 > `export` が使えず間違えやすいため、`--key` で渡せるようにしています。
+
+> 何度実行しても安全です。すでにサイト管理者ならその旨を表示して何もしません。
 
 このスクリプトは次を行います。
 

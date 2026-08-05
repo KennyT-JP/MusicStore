@@ -8,9 +8,16 @@
  *
  * ```sh
  * # クラウドのプロジェクトに対して実行する場合
+ * # UID が分からなければメールアドレスで指定できる（コンソールを開かずに済む）
+ * node scripts/grant-site-admin.js --email you@example.com --key C:\path\to\service-account.json
+ *
+ * # 誰が登録済みか分からないときは一覧を出す
+ * node scripts/grant-site-admin.js --list --key C:\path\to\service-account.json
+ *
+ * # UID を直接指定してもよい
  * node scripts/grant-site-admin.js <UID> --key C:\path\to\service-account.json
  *
- * # 環境変数でも指定できる（--key があればそちらが優先）
+ * # 環境変数でも鍵を指定できる（--key があればそちらが優先）
  * export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
  * node scripts/grant-site-admin.js <UID>
  *
@@ -37,11 +44,19 @@ function option(name) {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+// 値を取らないオプション。次の引数を「値」とみなしてはいけない。
+const flags = new Set(['--list']);
+
 // --key の次の値も「オプションの値」なので、UID と間違えないように除く。
 const optionValues = new Set(
-  args.flatMap((a, i) => (a.startsWith('--') ? [args[i + 1]] : [])),
+  args.flatMap((a, i) => (a.startsWith('--') && !flags.has(a) ? [args[i + 1]] : [])),
 );
 const uid = args.find((a) => !a.startsWith('--') && !optionValues.has(a));
+
+// UID は Firebase コンソールでしか見られず、そのコンソールが別アカウントで
+// 開いていると辿り着けない。メールアドレスからも引けるようにしておく。
+const email = option('email');
+const wantsList = args.includes('--list');
 
 const projectId = option('project') ?? process.env.GCLOUD_PROJECT;
 
@@ -56,10 +71,15 @@ if (keyPath) {
   process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 }
 
-if (!uid) {
-  console.error(
-    '使い方: node scripts/grant-site-admin.js <UID> [--project <プロジェクト ID>] [--key <サービスアカウント鍵のパス>]',
-  );
+if (!uid && !email && !wantsList) {
+  console.error('使い方:');
+  console.error('  node scripts/grant-site-admin.js --email <メールアドレス> [オプション]');
+  console.error('  node scripts/grant-site-admin.js <UID>                    [オプション]');
+  console.error('  node scripts/grant-site-admin.js --list                   [オプション]');
+  console.error('');
+  console.error('オプション:');
+  console.error('  --project <プロジェクト ID>   例: music-storage-dev');
+  console.error('  --key <鍵のパス>              サービスアカウント鍵（JSON）');
   process.exit(1);
 }
 
@@ -74,22 +94,54 @@ initializeApp({
 const auth = getAuth();
 const db = getFirestore();
 
+/** 登録済みユーザーを一覧表示する（誰がいるか分からないとき用）。 */
+async function listUsers() {
+  const { users } = await auth.listUsers(100);
+  if (users.length === 0) {
+    console.log('登録済みのユーザーがいません。先にアプリでサインアップしてください。');
+    return;
+  }
+  console.log(`登録済みユーザー（${users.length} 件）:`);
+  console.log('');
+  for (const u of users) {
+    const admin = u.customClaims?.siteAdmin === true ? ' [サイト管理者]' : '';
+    const verified = u.emailVerified ? '' : ' （メール未確認）';
+    console.log(`  ${u.uid}  ${u.email ?? '(メールなし)'}${verified}${admin}`);
+  }
+}
+
 async function main() {
-  const user = await auth.getUser(uid).catch(() => null);
+  if (wantsList) {
+    await listUsers();
+    return;
+  }
+
+  // メールアドレス指定なら、そこから UID を引く。
+  const user = email
+    ? await auth.getUserByEmail(email).catch(() => null)
+    : await auth.getUser(uid).catch(() => null);
+
   if (!user) {
-    console.error(`UID ${uid} のユーザーが見つかりません。`);
-    console.error('先にアプリでサインアップし、Authentication で UID を確認してください。');
+    console.error(
+      email
+        ? `メールアドレス ${email} のユーザーが見つかりません。`
+        : `UID ${uid} のユーザーが見つかりません。`,
+    );
+    console.error('先にアプリでサインアップしてください。');
+    console.error('登録済みの一覧は --list で確認できます。');
     process.exit(1);
   }
 
+  const targetUid = user.uid;
+
   const existing = user.customClaims ?? {};
   if (existing.siteAdmin === true) {
-    console.log(`${uid}（${user.email ?? 'メール未設定'}）はすでにサイト管理者です。`);
+    console.log(`${targetUid}（${user.email ?? 'メール未設定'}）はすでにサイト管理者です。`);
     return;
   }
 
   // 他のクレームを消さないよう、既存のものに足す形にする。
-  await auth.setCustomUserClaims(uid, { ...existing, siteAdmin: true });
+  await auth.setCustomUserClaims(targetUid, { ...existing, siteAdmin: true });
 
   // siteConfig を作成し、サイト管理者の人数を反映する（仕様書 4.5 / 13.3）。
   const configRef = db.doc('siteConfig/global');
@@ -107,7 +159,7 @@ async function main() {
     console.log('siteConfig/global を初期値で作成しました。');
   }
 
-  console.log(`${uid}（${user.email ?? 'メール未設定'}）をサイト管理者にしました。`);
+  console.log(`${targetUid}（${user.email ?? 'メール未設定'}）をサイト管理者にしました。`);
   console.log('');
   console.log('※ 反映には再ログインが必要です。');
   console.log('  カスタムクレームは認証トークンに埋め込まれるため、');
