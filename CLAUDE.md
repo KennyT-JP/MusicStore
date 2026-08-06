@@ -20,9 +20,9 @@
 
 | 実行するもの | 件数 | エミュレータ |
 | --- | --- | --- |
-| `flutter analyze` / `flutter test` | 199 | 不要 |
-| `cd rules-test && npm test` | 105 | スクリプトが自動で起動・終了 |
-| `cd functions && npm test` | 41 | 不要 |
+| `flutter analyze` / `flutter test` | 203 | 不要 |
+| `cd rules-test && npm test` | 111 | スクリプトが自動で起動・終了 |
+| `cd functions && npm test` | 76 | 不要 |
 | `cd functions && npm run test:integration` | 47 | **別のウィンドウで `npm run serve` が必要** |
 
 ## 開発の進め方

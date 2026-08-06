@@ -6,7 +6,7 @@
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
-- **監査の記録**：[docs/AUDIT-2026-08-06.md](docs/AUDIT-2026-08-06.md)
+- **監査の記録**：[第 1 回](docs/AUDIT-2026-08-06.md) / [第 2 回](docs/AUDIT-2026-08-06-2.md)
 - **監査の追加確認項目**：[docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — **見つけられなかった**欠陥から起こしたもの
 - **バックログ**：[docs/BACKLOG.md](docs/BACKLOG.md)
 
@@ -93,7 +93,7 @@ lib/
     permissions.dart       権限判定（4.2 / 6.3 / 9）
     quota.dart             容量上限の判定（7.2 / 7.3 / 7.5）
     sequence.dart          連番の採番（6.2）
-    invite.dart            招待 URL の検証（3.3）
+    invite.dart            招待を受諾できない理由（3.3）。判定はサーバー側
     comment_tree.dart      コメントの入れ子ツリー（9）
     item_query.dart        検索・並び替え（6.4）
     display_name.dart      表示名の解決と初期値の決定（3.4 / 3.5 / 5.4）
@@ -145,14 +145,16 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | 権限判定（`domain/permissions.dart`） | 間違えると見えてはいけない情報が見える |
 | 容量上限（`domain/quota.dart`） | 80%／90% の通知境界、上限超過時のブロック |
 | 連番（`domain/sequence.dart`） | 振り直しなし・欠番維持が崩れると復旧できない |
-| 招待 URL（`domain/invite.dart`） | ワンタイム性・有効期限 |
+| 招待 URL（`functions/src/domain/invite.ts`） | ワンタイム性・有効期限。**判定はサーバー側にある** |
+| 孤児ファイルの削除判断（`functions/src/domain/paths.ts`） | 消したら戻せない |
+| 死蔵の有無（`test/domain/no_dead_code_test.dart`） | テストがあっても本番から呼ばれていなければ守られていない |
 | リダイレクト判定（`ui/app_router.dart`） | 未ログインで内容が漏れないこと |
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 199 件
-cd rules-test && npm test           # 105 件（Firestore ルール 92 件・Storage 13 件）
-cd functions && npm test            # 41 件（サーバー側のドメインロジック・通知）
+flutter test                        # 203 件
+cd rules-test && npm test           # 111 件（Firestore ルール 98 件・Storage 13 件）
+cd functions && npm test            # 76 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 47 件（要エミュレータ）
 ```
 
@@ -166,6 +168,10 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 片方を変えたらもう片方も直してください。
 
 **Storage ルールも自動テストで検証しています。** 以前は「Storage エミュレータが `firestore.exists()` に対応していない」という理由で 8 件をスキップしていましたが、**2026-08-06 の監査で実際に試したところ誤りでした**（[docs/DEVLOG.md](docs/DEVLOG.md) 参照）。現在はスキップなしです。
+
+**メンバー判定が働いていないときは、その場で止まります。** `firestore.exists()` が失敗すると
+全員が拒否され、「〜できない」を確かめるテストが**すべて緑になってしまう**ためです
+（第 2 回の監査で、ルールをわざと壊す対照実験により実証しました）。
 
 ## 現在の状態
 
@@ -199,7 +205,7 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 | 契機 | 処理 |
 | --- | --- |
 | Storage への保存・削除 | 使用容量の加減算と 80%／90% 通知 |
-| 項目の作成 | リスト管理者・サイト管理者へ通知 |
+| 項目の作成 | そのリストのメンバー全員へ通知（10.2） |
 | コメントの作成 | 管理者＋親コメント／項目の投稿者へ通知 |
 | メンバーの増減 | memberCount / adminCount の更新 |
 | リストの削除 | 配下のデータ・ファイル・名前予約の削除 |
