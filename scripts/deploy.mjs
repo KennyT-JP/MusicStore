@@ -173,7 +173,15 @@ console.log('\n==> デプロイ');
   ]);
   if (code !== 0) {
     console.error('');
-    console.error('  よくある原因:');
+    // **やり直しのコマンドには配信先を必ず含める。**
+    // 以前は `prod` を落とした案内を出しており、そのまま実行すると
+    // 本番のつもりで検証環境へ配信してしまう状態だった。
+    const cmd = isWindows ? 'scripts\\deploy.cmd' : './scripts/deploy.sh';
+    const to = `${cmd}${wantsProd ? ' prod' : ''}`;
+
+    console.error('  よくある原因（いずれも初回特有で、再実行すれば通ります）:');
+    console.error('   ・送信が途中で切れた → そのまま再実行');
+    console.error('     （hosting の uploading が途中で止まった場合など）');
     console.error('   ・初回は権限が行き渡るまで数分かかる → そのまま数分待って再実行');
     console.error('   ・API が未有効 → 出力に出ている URL を開いて有効化');
     console.error('   ・IAM の書き換えに失敗 → **エラーの少し上**に、必要な権限を付ける');
@@ -181,17 +189,22 @@ console.log('\n==> デプロイ');
     console.error('   ・Cloud Build が失敗した関数がある → まずそのまま再実行。');
     console.error('     初回は置き場所（Artifact Registry）の用意と同時に走るため崩れやすい');
     console.error('');
-    console.error(
-      isWindows
-        ? '  関数だけやり直す: scripts\\deploy.cmd --no-build --only=functions'
-        : '  関数だけやり直す: ./scripts/deploy.sh --no-build --only=functions',
-    );
-    console.error(
-      isWindows
-        ? '  詳しく見る: scripts\\deploy.cmd --debug（ビルドを省くなら --no-build も付ける）'
-        : '  詳しく見る: ./scripts/deploy.sh --debug（ビルドを省くなら --no-build も付ける）',
-    );
-    fail('デプロイに失敗しました。', 'docs/SETUP.md の「エミュレータに繋がらないとき」の下にある対処表も参照してください');
+    console.error('  やり直す（Web のビルドは終わっているので省けます）:');
+    console.error(`    ${to} --no-build`);
+    console.error('');
+    console.error('  対象を絞る:');
+    console.error(`    ${to} --no-build --only=hosting`);
+    console.error(`    ${to} --no-build --only=functions`);
+    console.error('');
+    console.error('  詳しく見る:');
+    console.error(`    ${to} --no-build --debug`);
+    if (wantsProd) {
+      console.error('');
+      console.error('  ※ 本番へのやり直しには prod が要ります。');
+      console.error('     付け忘れると検証環境へ配信されます。');
+    }
+    console.error('');
+    fail('デプロイに失敗しました。', 'docs/SETUP.md の「本番へ配信する前の確認」も参照してください');
   }
 }
 
