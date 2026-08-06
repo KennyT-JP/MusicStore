@@ -210,6 +210,24 @@ console.log('\n==> デプロイ');
 
 console.log('');
 console.log(`==> 完了（${target.label} / ${projectId}）`);
-console.log(`    https://${projectId}.web.app`);
+console.log(`    配信した対象: ${onlyTargets}`);
+
+// **URL を出すのは Hosting を配信したときだけ。**
+// --only=functions などで絞ったときにも URL を出していたため、
+// 「配信できた」と読めてしまった。実際には Hosting が一度も成功して
+// おらず、サイトを開くと Site Not Found になった。
+if (onlyTargets.includes('hosting')) {
+  console.log(`    https://${projectId}.web.app`);
+} else {
+  console.log('');
+  console.log('    ※ Hosting は配信していません（--only で除かれています）。');
+  console.log('       Web アプリを反映するには次を実行してください:');
+  console.log(
+    `       ${isWindows ? 'scripts\\deploy.cmd' : './scripts/deploy.sh'}` +
+      `${wantsProd ? ' prod' : ''} --only=hosting`
+  );
+  console.log('       **--no-build は付けないでください。** ビルド済みの');
+  console.log('       build/web が別の環境向けだと、配信先と中身が食い違います。');
+}
 console.log('');
 console.log('    最初のサイト管理者の登録がまだなら、docs/SETUP.md の 6 章を行ってください。');
