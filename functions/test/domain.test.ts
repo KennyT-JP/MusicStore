@@ -31,6 +31,7 @@ import {
   normalizeListName,
   parseItemStoragePath,
 } from '../src/domain/paths';
+import { ERROR_CODES, fail } from '../src/errors';
 
 const readOnly: ListAccess = { isSiteAdmin: false, role: 'readOnly' };
 const superUser: ListAccess = { isSiteAdmin: false, role: 'superUser' };
@@ -323,5 +324,45 @@ describe('上限を超えたアップロードの扱い（7.5 / S5）', () => {
     expect(
       shouldRejectUpload({ usedBytesAfter: 1, sizeBytes: 1, quotaBytes: 0 })
     ).toBe(true);
+  });
+});
+
+/**
+ * エラーの符号（仕様書 2 章 / 監査 第2回）
+ *
+ * **回帰テスト。** サーバーが返す文をそのまま画面に出していたため、
+ * 英語表示でも申請・承認・招待・退会・容量変更のエラーが日本語で出ていた。
+ * 符号（details.code）を載せて、画面側で文言を引くようにした。
+ *
+ * 符号を増やしたときに、控えの文言と画面側の l10n を足し忘れないよう
+ * ここで数と中身を固定する。画面側の対応表は
+ * test/domain/function_error_test.dart にある。
+ */
+describe('エラーの符号（2 章）', () => {
+  test('すべての符号に控えの文言がある', () => {
+    for (const code of ERROR_CODES) {
+      const error = fail('internal', code);
+      expect(error.message, code).toBeTruthy();
+      expect(error.message, code).not.toBe(code);
+    }
+  });
+
+  test('符号は details に載る（画面が出し分けるため）', () => {
+    const error = fail('not-found', 'listNotFound');
+    expect(error.details).toMatchObject({ code: 'listNotFound' });
+  });
+
+  test('穴埋めの値も details に載る', () => {
+    const error = fail('already-exists', 'listNameTaken', {
+      listName: '練習音源',
+    });
+    expect(error.details).toMatchObject({
+      code: 'listNameTaken',
+      listName: '練習音源',
+    });
+  });
+
+  test('符号が重複していない', () => {
+    expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
   });
 });

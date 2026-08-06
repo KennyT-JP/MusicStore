@@ -15,15 +15,32 @@ import '../models/requests.dart';
 ///
 /// 画面に出す文言を [message] に持つ。
 class FunctionsCallException implements Exception {
-  const FunctionsCallException(this.code, this.message);
+  const FunctionsCallException(
+    this.code,
+    this.message, {
+    this.reason,
+    this.params = const {},
+  });
 
   /// `already-exists` など、Functions が返したコード。
   final String code;
 
+  /// サーバー側が用意した文（日本語）。
+  ///
+  /// **画面に出すのは最後の手段。** [reason] に対応する文言があるなら、
+  /// そちらを使う。以前はこの文をそのまま出していたため、英語表示でも
+  /// 申請・承認・招待・退会・容量変更のエラーが日本語で出ていた
+  /// （監査 第2回）。
   final String message;
 
+  /// 画面が文言を出し分けるための符号（functions/src/errors.ts）。
+  final String? reason;
+
+  /// 文言に差し込む値（リスト名など）。
+  final Map<String, String> params;
+
   @override
-  String toString() => 'FunctionsCallException($code): $message';
+  String toString() => 'FunctionsCallException($code/$reason): $message';
 }
 
 /// Cloud Functions の呼び出し口。
@@ -126,7 +143,14 @@ class FunctionsRepository {
       final result = await _call('acceptInvite', {'inviteId': inviteId});
       return result['listId'] as String;
     } on FunctionsCallException catch (e) {
-      throw InviteRejectedException(_rejectionFrom(e.message));
+      // **招待そのものの理由でない失敗を、招待の失敗に潰さない。**
+      // 以前はあらゆる例外を InviteRejection に丸め、既定を notFound に
+      // していた。未ログイン・メール未確認・通信の失敗でも
+      // 「招待が見つかりません。URL をご確認ください。」と出て、
+      // 利用者は直しようのないことを指示されていた（監査 第2回）。
+      final rejection = _rejectionFrom(e.reason);
+      if (rejection == null) rethrow;
+      throw InviteRejectedException(rejection);
     }
   }
 
@@ -192,24 +216,35 @@ class FunctionsRepository {
       if (value is Map) return Map<String, dynamic>.from(value);
       return const {};
     } on FirebaseFunctionsException catch (e) {
-      throw FunctionsCallException(e.code, e.message ?? '処理に失敗しました。');
+      // details に符号が載っていれば取り出す（functions/src/errors.ts）。
+      final details = e.details;
+      final map = details is Map ? details : const {};
+      final reason = map['code'];
+
+      throw FunctionsCallException(
+        e.code,
+        e.message ?? '処理に失敗しました。',
+        reason: reason is String ? reason : null,
+        params: {
+          for (final entry in map.entries)
+            if (entry.key != 'code') '${entry.key}': '${entry.value}',
+        },
+      );
     }
   }
 
-  /// Functions が返したメッセージを [InviteRejection] に対応づける。
+  /// Functions が返した符号を [InviteRejection] に対応づける。
   ///
-  /// 招待の失敗理由は画面で出し分けたいので、文言ではなくコードで返している。
-  InviteRejection _rejectionFrom(String message) {
-    if (message.contains('invite-expired')) return InviteRejection.expired;
-    if (message.contains('invite-already-used')) {
-      return InviteRejection.alreadyUsed;
-    }
-    if (message.contains('invite-revoked')) return InviteRejection.revoked;
-    if (message.contains('invite-already-member')) {
-      return InviteRejection.alreadyMember;
-    }
-    return InviteRejection.notFound;
-  }
+  /// **当てはまらなければ null を返す。** 既定を notFound にすると、
+  /// 招待と関係のない失敗まで「招待が見つかりません」になってしまう。
+  InviteRejection? _rejectionFrom(String? reason) => switch (reason) {
+    'inviteExpired' => InviteRejection.expired,
+    'inviteAlreadyUsed' => InviteRejection.alreadyUsed,
+    'inviteRevoked' => InviteRejection.revoked,
+    'alreadyMember' => InviteRejection.alreadyMember,
+    'inviteNotFound' => InviteRejection.notFound,
+    _ => null,
+  };
 }
 
 /// 招待を受諾できなかったときに投げる（仕様書 3.3）。

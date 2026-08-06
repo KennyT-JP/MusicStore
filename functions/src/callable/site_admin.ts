@@ -4,7 +4,7 @@
 import { getAuth } from 'firebase-admin/auth';
 import * as logger from 'firebase-functions/logger';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
 import { canStepDownAsSiteAdmin } from '../domain/roles';
@@ -16,10 +16,7 @@ import {
   requireString,
   requireUid,
 } from './access';
-
-/** サイト管理者が 0 人になる操作をブロックするときの文言（仕様書 4.5）。 */
-const LAST_SITE_ADMIN_MESSAGE =
-  'あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。';
+import { fail } from '../errors';
 
 /**
  * サイト管理者に昇格させる（仕様書 4.4）。
@@ -34,7 +31,7 @@ export const grantSiteAdmin = onCall({ region: REGION }, async (request) => {
   const auth = getAuth();
   const user = await auth.getUser(targetUid).catch(() => null);
   if (!user) {
-    throw new HttpsError('not-found', 'ユーザーが見つかりません。');
+    throw fail('not-found', 'userNotFound');
   }
   if (user.customClaims?.siteAdmin === true) {
     return { ok: true, alreadyAdmin: true };
@@ -63,7 +60,7 @@ export const revokeSiteAdmin = onCall({ region: REGION }, async (request) => {
   const auth = getAuth();
   const user = await auth.getUser(targetUid).catch(() => null);
   if (!user) {
-    throw new HttpsError('not-found', 'ユーザーが見つかりません。');
+    throw fail('not-found', 'userNotFound');
   }
   if (user.customClaims?.siteAdmin !== true) {
     return { ok: true, alreadyNotAdmin: true };
@@ -71,7 +68,7 @@ export const revokeSiteAdmin = onCall({ region: REGION }, async (request) => {
 
   const count = await countSiteAdmins();
   if (!canStepDownAsSiteAdmin(true, count)) {
-    throw new HttpsError('failed-precondition', LAST_SITE_ADMIN_MESSAGE);
+    throw fail('failed-precondition', 'lastSiteAdmin');
   }
 
   const claims = { ...(user.customClaims ?? {}) };
@@ -97,7 +94,7 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
   if (isSiteAdminRequest(request)) {
     const count = await countSiteAdmins();
     if (!canStepDownAsSiteAdmin(true, count)) {
-      throw new HttpsError('failed-precondition', LAST_SITE_ADMIN_MESSAGE);
+      throw fail('failed-precondition', 'lastSiteAdmin');
     }
   }
 
@@ -129,10 +126,7 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
 
   if (memberships === null) {
     // ここで先へ進むと、members に残ったまま Auth だけ消える。
-    throw new HttpsError(
-      'internal',
-      '参加中のリストを確認できませんでした。時間をおいて試してください。'
-    );
+    throw fail('internal', 'listNotFound');
   }
 
   await Promise.all(

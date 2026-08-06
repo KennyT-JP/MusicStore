@@ -174,7 +174,7 @@ class _RequestListScreenState extends ConsumerState<RequestListScreen> {
       if (mounted) setState(() => _sent = true);
     } on FunctionsCallException catch (e) {
       // リスト名の重複チェックはサーバー側で行う（仕様書 5.1）。
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
     } finally {
@@ -451,7 +451,7 @@ class _JoinRequestScreenState extends ConsumerState<JoinRequestScreen> {
           .read(functionsRepositoryProvider)
           .submitJoinRequest(widget.listId);
     } on FunctionsCallException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
     } finally {

@@ -151,23 +151,38 @@ class _Header extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (Permissions.canManageMembers(access))
+              // **メニューはメンバー全員に出す。**
+              // 中身は権限で出し分ける。以前はリスト管理者以上にしか
+              // 出しておらず、Super User と Read Only は
+              // **自分からリストを抜ける手段がどこにも無かった**
+              // （仕様書 5.4／監査 第2回）。
+              if (Permissions.canManageMembers(access) ||
+                  Permissions.canLeaveList(access))
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.settings_outlined),
-                  onSelected: (value) => context.go(value),
+                  onSelected: (value) => value == _leaveAction
+                      ? _confirmLeave(context, ref, listId)
+                      : context.go(value),
                   itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: AppRoutes.listMembers(listId),
-                      child: Text(l10n.manageMembers),
-                    ),
-                    PopupMenuItem(
-                      value: AppRoutes.listJoinRequests(listId),
-                      child: Text(l10n.joinRequests),
-                    ),
-                    PopupMenuItem(
-                      value: AppRoutes.listSettings(listId),
-                      child: Text(l10n.listSettings),
-                    ),
+                    if (Permissions.canManageMembers(access)) ...[
+                      PopupMenuItem(
+                        value: AppRoutes.listMembers(listId),
+                        child: Text(l10n.manageMembers),
+                      ),
+                      PopupMenuItem(
+                        value: AppRoutes.listJoinRequests(listId),
+                        child: Text(l10n.joinRequests),
+                      ),
+                      PopupMenuItem(
+                        value: AppRoutes.listSettings(listId),
+                        child: Text(l10n.listSettings),
+                      ),
+                    ],
+                    if (Permissions.canLeaveList(access))
+                      PopupMenuItem(
+                        value: _leaveAction,
+                        child: Text(l10n.leaveList),
+                      ),
                   ],
                 ),
             ],
@@ -222,6 +237,42 @@ class _Header extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// メニューの値。ルートのパスと混ざらない文字列にする。
+const String _leaveAction = '#leave';
+
+/// 自分からリストを抜ける（仕様書 5.4）。
+Future<void> _confirmLeave(
+  BuildContext context,
+  WidgetRef ref,
+  String listId,
+) async {
+  final l10n = AppL10n.of(context);
+  final uid = ref.read(firebaseUserProvider).value?.uid;
+  if (uid == null) return;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.leaveList),
+      content: Text(l10n.leaveListBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(l10n.leaveList),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  await ref.read(listRepositoryProvider).removeMember(listId, uid);
+  if (context.mounted) context.go(AppRoutes.home);
 }
 
 class _SortChip extends ConsumerWidget {

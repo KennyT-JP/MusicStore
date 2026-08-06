@@ -6,11 +6,12 @@
  */
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
 import { shouldResetNotice, shouldResetWarning } from '../domain/quota';
 import { requireSiteAdmin, requireString } from './access';
+import { fail } from '../errors';
 
 /**
  * ユーザーの一覧を返す（仕様書 11.1 ユーザー管理）。
@@ -81,13 +82,13 @@ export const setListQuota = onCall({ region: REGION }, async (request) => {
     (request.data as Record<string, unknown>)?.quotaBytes
   );
   if (!Number.isFinite(quotaBytes) || quotaBytes <= 0) {
-    throw new HttpsError('invalid-argument', '上限は 1 バイト以上で指定してください。');
+    throw fail('invalid-argument', 'invalidQuota');
   }
 
   const statsRef = getFirestore().doc(paths.listStats(listId));
   const snapshot = await statsRef.get();
   if (!snapshot.exists) {
-    throw new HttpsError('not-found', 'リストが見つかりません。');
+    throw fail('not-found', 'listNotFound');
   }
 
   // 上限を上げた結果しきい値を下回ることがあるので、通知フラグも戻す。
@@ -125,12 +126,12 @@ export const assignListAdmin = onCall({ region: REGION }, async (request) => {
 
   const list = await db.doc(paths.list(listId)).get();
   if (!list.exists) {
-    throw new HttpsError('not-found', 'リストが見つかりません。');
+    throw fail('not-found', 'listNotFound');
   }
 
   const user = await getAuth().getUser(targetUid).catch(() => null);
   if (!user) {
-    throw new HttpsError('not-found', 'ユーザーが見つかりません。');
+    throw fail('not-found', 'userNotFound');
   }
 
   const memberRef = db.doc(paths.listMember(listId, targetUid));

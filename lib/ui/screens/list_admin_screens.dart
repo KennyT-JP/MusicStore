@@ -241,7 +241,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
       if (mounted) {
         setState(
           () => _error = error is FunctionsCallException
-              ? error.message
+              ? describeFunctionsError(context, error)
               : AppL10n.of(context).errorGeneric,
         );
       }
@@ -268,7 +268,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
         });
       }
     } on FunctionsCallException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
     } finally {

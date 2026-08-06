@@ -4,6 +4,7 @@ library;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/repositories/functions_repository.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 画面上部に出すエラー。
@@ -70,4 +71,52 @@ String describeAuthError(BuildContext context, FirebaseAuthException e) {
     default:
       return l10n.errorGeneric;
   }
+}
+
+/// Cloud Functions のエラーを、利用者に伝わる文言に変換する。
+///
+/// **サーバーが返す文をそのまま出さない。** 以前は `e.message` を無加工で
+/// 表示しており、呼び出し口 15 本のうち 14 本がこの形だった。そのため
+/// 英語表示にしていても、申請・承認・招待・退会・容量変更のエラーは
+/// すべて日本語で出ていた（監査 第2回）。しかも
+/// 「あなたは現在ただ 1 人のサイト管理者です」のように、**同じ文が
+/// l10n に用意されているのに使われていない**ものが複数あった。
+///
+/// サーバーは `details.code` に符号を載せる（functions/src/errors.ts）。
+/// ここでその符号から文言を引き、知らない符号のときだけサーバーの文に倒す。
+String describeFunctionsError(
+  BuildContext context,
+  FunctionsCallException e,
+) {
+  final l10n = AppL10n.of(context);
+  return switch (e.reason) {
+    'signInRequired' => l10n.functionErrorSignInRequired,
+    'emailNotVerified' => l10n.functionErrorEmailNotVerified,
+    'siteAdminOnly' => l10n.functionErrorSiteAdminOnly,
+    'listAdminOnly' => l10n.functionErrorListAdminOnly,
+    'listNotFound' => l10n.functionErrorListNotFound,
+    'userNotFound' => l10n.functionErrorUserNotFound,
+    'requestNotFound' => l10n.functionErrorRequestNotFound,
+    'requestAlreadyHandled' => l10n.functionErrorRequestAlreadyHandled,
+    'listNameMissing' => l10n.functionErrorListNameMissing,
+    'requesterUnknown' => l10n.functionErrorRequesterUnknown,
+    'invalidTrackCount' => l10n.functionErrorInvalidTrackCount,
+    'invalidUserCount' => l10n.functionErrorInvalidUserCount,
+    'invalidQuota' => l10n.functionErrorInvalidQuota,
+    'lastSiteAdmin' => l10n.functionErrorLastSiteAdmin,
+    'alreadyMember' => l10n.functionErrorAlreadyMember,
+    'inviteNotFound' => l10n.functionErrorInviteNotFound,
+    'inviteExpired' => l10n.functionErrorInviteExpired,
+    'inviteAlreadyUsed' => l10n.functionErrorInviteAlreadyUsed,
+    'inviteRevoked' => l10n.functionErrorInviteRevoked,
+    'inviteRoleNotAllowed' => l10n.functionErrorInviteRoleNotAllowed,
+    'roleNotAllowed' => l10n.functionErrorRoleNotAllowed,
+    'missingField' => l10n.functionErrorMissingField,
+    'fieldTooLong' => l10n.functionErrorFieldTooLong,
+    'listNameTaken' => l10n.functionErrorListNameTaken(
+      e.params['listName'] ?? '',
+    ),
+    // まだ翻訳を用意していない符号。サーバーの文を出す。
+    _ => e.message,
+  };
 }

@@ -2,12 +2,13 @@
  * リスト作成申請の承認・却下（仕様書 5.1 / 5.2.1 / 13.3）
  */
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths, readSiteConfig } from '../config';
 import { normalizeListName } from '../domain/paths';
 import { notifySafely, siteAdminUids } from '../notifications';
 import { requireSiteAdmin, requireString, requireUid } from './access';
+import { fail } from '../errors';
 
 /**
  * リスト作成申請を承認する（仕様書 5.1）。
@@ -35,25 +36,22 @@ export const approveListRequest = onCall(
     const listId = await db.runTransaction(async (tx) => {
       const snapshot = await tx.get(requestRef);
       if (!snapshot.exists) {
-        throw new HttpsError('not-found', '申請が見つかりません。');
+        throw fail('not-found', 'requestNotFound');
       }
 
       const data = snapshot.data() ?? {};
       if (data.status !== 'pending') {
-        throw new HttpsError(
-          'failed-precondition',
-          'この申請はすでに処理されています。'
-        );
+        throw fail('failed-precondition', 'requestAlreadyHandled');
       }
 
       const listName = String(data.listName ?? '').trim();
       if (!listName) {
-        throw new HttpsError('failed-precondition', 'リスト名がありません。');
+        throw fail('failed-precondition', 'listNameMissing');
       }
       const nameLower = normalizeListName(listName);
       const requestedBy = String(data.requestedBy ?? '');
       if (!requestedBy) {
-        throw new HttpsError('failed-precondition', '申請者が不明です。');
+        throw fail('failed-precondition', 'requesterUnknown');
       }
 
       // 承認の時点であらためて重複を確かめる。
@@ -61,10 +59,7 @@ export const approveListRequest = onCall(
       const nameRef = db.doc(paths.listName(nameLower));
       const existingName = await tx.get(nameRef);
       if (existingName.exists && existingName.data()?.listId) {
-        throw new HttpsError(
-          'already-exists',
-          `「${listName}」は既に使われています。`
-        );
+        throw fail('already-exists', 'listNameTaken', { listName });
       }
 
       const listRef = db.collection(paths.lists).doc();
@@ -146,14 +141,11 @@ export const rejectListRequest = onCall({ region: REGION }, async (request) => {
   await db.runTransaction(async (tx) => {
     const snapshot = await tx.get(requestRef);
     if (!snapshot.exists) {
-      throw new HttpsError('not-found', '申請が見つかりません。');
+      throw fail('not-found', 'requestNotFound');
     }
     const data = snapshot.data() ?? {};
     if (data.status !== 'pending') {
-      throw new HttpsError(
-        'failed-precondition',
-        'この申請はすでに処理されています。'
-      );
+      throw fail('failed-precondition', 'requestAlreadyHandled');
     }
 
     const nameLower = String(data.nameLower ?? '');
@@ -193,10 +185,10 @@ export const submitListRequest = onCall({ region: REGION }, async (request) => {
   const expectedUserCount = Number(data.expectedUserCount ?? 0);
 
   if (!Number.isFinite(estimatedTrackCount) || estimatedTrackCount < 0) {
-    throw new HttpsError('invalid-argument', '登録曲数を正しく入力してください。');
+    throw fail('invalid-argument', 'invalidTrackCount');
   }
   if (!Number.isFinite(expectedUserCount) || expectedUserCount < 0) {
-    throw new HttpsError('invalid-argument', '使用者数を正しく入力してください。');
+    throw fail('invalid-argument', 'invalidUserCount');
   }
 
   const db = getFirestore();
@@ -207,10 +199,7 @@ export const submitListRequest = onCall({ region: REGION }, async (request) => {
   await db.runTransaction(async (tx) => {
     const existing = await tx.get(nameRef);
     if (existing.exists) {
-      throw new HttpsError(
-        'already-exists',
-        `「${listName}」は既に使われているか、申請中です。`
-      );
+      throw fail('already-exists', 'listNameTaken', { listName });
     }
 
     // 申請中の名前として予約する。listId はまだ入れない。

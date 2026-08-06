@@ -4,12 +4,13 @@
 import { randomBytes } from 'node:crypto';
 
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths, readSiteConfig } from '../config';
 import { isAssignableRole } from '../domain/roles';
 import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
+import { fail } from '../errors';
 
 /**
  * 参加を申請する（仕様書 5.2）。
@@ -25,15 +26,12 @@ export const submitJoinRequest = onCall({ region: REGION }, async (request) => {
 
   const list = await db.doc(paths.list(listId)).get();
   if (!list.exists) {
-    throw new HttpsError('not-found', 'リストが見つかりません。');
+    throw fail('not-found', 'listNotFound');
   }
 
   const member = await db.doc(paths.listMember(listId, uid)).get();
   if (member.exists) {
-    throw new HttpsError(
-      'already-exists',
-      'すでにこのリストに参加しています。'
-    );
+    throw fail('already-exists', 'alreadyMember');
   }
 
   // ドキュメント ID を申請者の uid にすることで二重申請を防ぐ（仕様書 13.3）。
@@ -84,10 +82,7 @@ export const approveJoinRequest = onCall(
 
     const role = (request.data as Record<string, unknown>)?.role;
     if (!isAssignableRole(role)) {
-      throw new HttpsError(
-        'invalid-argument',
-        '役割は Super User か Read Only を指定してください。'
-      );
+      throw fail('invalid-argument', 'roleNotAllowed');
     }
 
     const db = getFirestore();
@@ -96,13 +91,10 @@ export const approveJoinRequest = onCall(
     await db.runTransaction(async (tx) => {
       const snapshot = await tx.get(requestRef);
       if (!snapshot.exists) {
-        throw new HttpsError('not-found', '申請が見つかりません。');
+        throw fail('not-found', 'requestNotFound');
       }
       if (snapshot.data()?.status !== 'pending') {
-        throw new HttpsError(
-          'failed-precondition',
-          'この申請はすでに処理されています。'
-        );
+        throw fail('failed-precondition', 'requestAlreadyHandled');
       }
 
       tx.set(db.doc(paths.listMember(listId, targetUid)), {
@@ -144,13 +136,10 @@ export const rejectJoinRequest = onCall({ region: REGION }, async (request) => {
   const snapshot = await ref.get();
 
   if (!snapshot.exists) {
-    throw new HttpsError('not-found', '対象の申請が見つかりません。');
+    throw fail('not-found', 'requestNotFound');
   }
   if (snapshot.data()?.status !== 'pending') {
-    throw new HttpsError(
-      'failed-precondition',
-      'この申請はすでに処理されています。'
-    );
+    throw fail('failed-precondition', 'requestAlreadyHandled');
   }
 
   await ref.update({
@@ -174,10 +163,7 @@ export const createInvite = onCall({ region: REGION }, async (request) => {
 
   const role = (request.data as Record<string, unknown>)?.role;
   if (!isAssignableRole(role)) {
-    throw new HttpsError(
-      'invalid-argument',
-      '役割は Super User か Read Only を指定してください。'
-    );
+    throw fail('invalid-argument', 'inviteRoleNotAllowed');
   }
 
   const config = await readSiteConfig();
@@ -219,31 +205,31 @@ export const acceptInvite = onCall({ region: REGION }, async (request) => {
   const listId = await db.runTransaction(async (tx) => {
     const snapshot = await tx.get(inviteRef);
     if (!snapshot.exists) {
-      throw new HttpsError('not-found', 'invite-not-found');
+      throw fail('not-found', 'inviteNotFound');
     }
 
     const data = snapshot.data() ?? {};
     if (data.status === 'used') {
-      throw new HttpsError('failed-precondition', 'invite-already-used');
+      throw fail('failed-precondition', 'inviteAlreadyUsed');
     }
     if (data.status === 'revoked') {
-      throw new HttpsError('failed-precondition', 'invite-revoked');
+      throw fail('failed-precondition', 'inviteRevoked');
     }
 
     const expiresAt = data.expiresAt as Timestamp | undefined;
     if (!expiresAt || expiresAt.toMillis() <= Date.now()) {
-      throw new HttpsError('failed-precondition', 'invite-expired');
+      throw fail('failed-precondition', 'inviteExpired');
     }
 
     const targetListId = String(data.listId ?? '');
     if (!targetListId) {
-      throw new HttpsError('failed-precondition', 'invite-not-found');
+      throw fail('failed-precondition', 'inviteNotFound');
     }
 
     const memberRef = db.doc(paths.listMember(targetListId, uid));
     const member = await tx.get(memberRef);
     if (member.exists) {
-      throw new HttpsError('already-exists', 'invite-already-member');
+      throw fail('already-exists', 'alreadyMember');
     }
 
     tx.set(memberRef, {
@@ -277,7 +263,7 @@ export const revokeInvite = onCall({ region: REGION }, async (request) => {
   const db = getFirestore();
   const snapshot = await db.doc(paths.invite(inviteId)).get();
   if (!snapshot.exists) {
-    throw new HttpsError('not-found', '招待が見つかりません。');
+    throw fail('not-found', 'inviteNotFound');
   }
 
   const listId = String(snapshot.data()?.listId ?? '');

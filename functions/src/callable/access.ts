@@ -3,10 +3,11 @@
  */
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
+import { type CallableRequest } from 'firebase-functions/v2/https';
 
 import { paths } from '../config';
 import { type ListAccess, isListAdmin, parseRole } from '../domain/roles';
+import { fail } from '../errors';
 
 /**
  * ログイン済みかつメール確認済みであることを確かめ、uid を返す。
@@ -18,13 +19,10 @@ import { type ListAccess, isListAdmin, parseRole } from '../domain/roles';
 export function requireUid(request: CallableRequest): string {
   const uid = request.auth?.uid;
   if (!uid) {
-    throw new HttpsError('unauthenticated', 'ログインが必要です。');
+    throw fail('unauthenticated', 'signInRequired');
   }
   if (request.auth?.token?.email_verified !== true) {
-    throw new HttpsError(
-      'permission-denied',
-      'メールアドレスの確認が済んでいません。確認メールのリンクを開いてください。'
-    );
+    throw fail('permission-denied', 'emailNotVerified');
   }
   return uid;
 }
@@ -44,10 +42,7 @@ export function isSiteAdminRequest(request: CallableRequest): boolean {
 export function requireSiteAdmin(request: CallableRequest): string {
   const uid = requireUid(request);
   if (!isSiteAdminRequest(request)) {
-    throw new HttpsError(
-      'permission-denied',
-      'この操作はサイト管理者のみ行えます。'
-    );
+    throw fail('permission-denied', 'siteAdminOnly');
   }
   return uid;
 }
@@ -75,10 +70,7 @@ export async function requireListAdmin(
   const uid = requireUid(request);
   const access = await accessFor(request, listId);
   if (!isListAdmin(access)) {
-    throw new HttpsError(
-      'permission-denied',
-      'この操作はリスト管理者のみ行えます。'
-    );
+    throw fail('permission-denied', 'listAdminOnly');
   }
   return uid;
 }
@@ -117,11 +109,11 @@ export function requireString(
 ): string {
   const value = (data as Record<string, unknown> | undefined)?.[key];
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new HttpsError('invalid-argument', `${key} を指定してください。`);
+    throw fail('invalid-argument', 'missingField', { field: key });
   }
   const trimmed = value.trim();
   if (trimmed.length > maxLength) {
-    throw new HttpsError('invalid-argument', `${key} が長すぎます。`);
+    throw fail('invalid-argument', 'fieldTooLong', { field: key });
   }
   return trimmed;
 }

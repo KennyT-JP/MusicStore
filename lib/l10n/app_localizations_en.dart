@@ -736,6 +736,89 @@ class AppL10nEn extends AppL10n {
   String get markAllAsRead => 'Mark all as read';
 
   @override
+  String get functionErrorSignInRequired => 'Please sign in.';
+
+  @override
+  String get functionErrorEmailNotVerified =>
+      'Your email address is not verified yet. Please open the link in the verification email.';
+
+  @override
+  String get functionErrorSiteAdminOnly => 'Only site admins can do this.';
+
+  @override
+  String get functionErrorListAdminOnly => 'Only list admins can do this.';
+
+  @override
+  String get functionErrorListNotFound => 'That list was not found.';
+
+  @override
+  String get functionErrorUserNotFound => 'That user was not found.';
+
+  @override
+  String get functionErrorRequestNotFound => 'That request was not found.';
+
+  @override
+  String get functionErrorRequestAlreadyHandled =>
+      'This request has already been handled.';
+
+  @override
+  String get functionErrorListNameMissing => 'The list name is missing.';
+
+  @override
+  String get functionErrorRequesterUnknown => 'The requester is unknown.';
+
+  @override
+  String get functionErrorInvalidTrackCount =>
+      'Please enter a valid number of tracks.';
+
+  @override
+  String get functionErrorInvalidUserCount =>
+      'Please enter a valid number of users.';
+
+  @override
+  String get functionErrorInvalidQuota => 'The limit must be at least 1 byte.';
+
+  @override
+  String get functionErrorLastSiteAdmin =>
+      'You are currently the only site admin. Please appoint another site admin first.';
+
+  @override
+  String get functionErrorAlreadyMember => 'You have already joined this list.';
+
+  @override
+  String get functionErrorInviteNotFound =>
+      'That invite was not found. Please check the URL.';
+
+  @override
+  String get functionErrorInviteExpired => 'This invite has expired.';
+
+  @override
+  String get functionErrorInviteAlreadyUsed =>
+      'This invite has already been used.';
+
+  @override
+  String get functionErrorInviteRevoked => 'This invite has been revoked.';
+
+  @override
+  String get functionErrorInviteRoleNotAllowed =>
+      'Invites cannot grant the list admin role.';
+
+  @override
+  String get functionErrorRoleNotAllowed =>
+      'Please choose Super User or Read Only.';
+
+  @override
+  String get functionErrorMissingField => 'Something required is missing.';
+
+  @override
+  String get functionErrorFieldTooLong => 'That value is too long.';
+
+  @override
+  String functionErrorListNameTaken(String listName) {
+    return '\"$listName\" is already in use or pending.';
+  }
+
+  @override
   String get errorGeneric => 'Something went wrong. Please try again later.';
 
   @override

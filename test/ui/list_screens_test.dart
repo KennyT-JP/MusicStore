@@ -112,7 +112,7 @@ Widget _wrapWithAccess(Widget child, {required ListAccess access}) {
   );
 }
 
-Widget _wrap(Widget child, {required ListRole role, bool siteAdmin = false}) {
+Widget _wrap(Widget child, {required ListRole? role, bool siteAdmin = false}) {
   return ProviderScope(
     overrides: [
       listProvider(_listId).overrideWith(
@@ -261,7 +261,15 @@ void main() {
       expect(find.widgetWithText(FloatingActionButton, '追加'), findsOneWidget);
     });
 
-    testWidgets('Super User にはリスト管理への導線を出さない', (tester) async {
+    // **回帰テスト（監査 第2回）。**
+    //
+    // 以前はメニューそのものをリスト管理者以上にしか出しておらず、
+    // Super User と Read Only は**自分からリストを抜ける手段が
+    // どこにも無かった**（仕様書 5.4）。判定関数 canLeaveList は
+    // 実装済みなのに、本番コードから一度も呼ばれていなかった。
+    //
+    // メニューは出すが、中身は権限で分ける。
+    testWidgets('Super User にもメニューは出すが、管理の項目は出さない', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const ListDetailScreen(listId: _listId),
@@ -270,7 +278,60 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.settings_outlined), findsNothing);
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('このリストから抜ける'), findsOneWidget);
+      expect(find.text('メンバー管理'), findsNothing);
+      expect(find.text('リスト設定'), findsNothing);
+    });
+
+    testWidgets('Read Only も自分からリストを抜けられる（5.4）', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const ListDetailScreen(listId: _listId), role: ListRole.readOnly),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('このリストから抜ける'), findsOneWidget);
+    });
+
+    testWidgets('リスト管理者には管理の項目と離脱の両方を出す', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: ListRole.listAdmin,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('メンバー管理'), findsOneWidget);
+      expect(find.text('このリストから抜ける'), findsOneWidget);
+    });
+
+    testWidgets('メンバーでないサイト管理者には離脱を出さない', (tester) async {
+      // 参加していないので「抜ける」対象がない。
+      await tester.pumpWidget(
+        _wrap(
+          const ListDetailScreen(listId: _listId),
+          role: null,
+          siteAdmin: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('メンバー管理'), findsOneWidget);
+      expect(find.text('このリストから抜ける'), findsNothing);
     });
 
     testWidgets('リスト管理者にはリスト管理への導線を出す', (tester) async {

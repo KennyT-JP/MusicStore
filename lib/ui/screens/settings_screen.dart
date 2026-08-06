@@ -11,6 +11,7 @@ import '../../data/repositories/functions_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_message.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -324,7 +325,7 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
       // 退会するとアカウントが消えるため、ルーターがログイン画面へ送る。
     } on FunctionsCallException catch (e) {
       // 最後のサイト管理者は退会できない（仕様書 4.5）。
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
     } finally {

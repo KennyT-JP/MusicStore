@@ -1339,6 +1339,150 @@ abstract class AppL10n {
   /// **'すべて既読にする'**
   String get markAllAsRead;
 
+  /// No description provided for @functionErrorSignInRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインが必要です。'**
+  String get functionErrorSignInRequired;
+
+  /// No description provided for @functionErrorEmailNotVerified.
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスの確認が済んでいません。確認メールのリンクを開いてください。'**
+  String get functionErrorEmailNotVerified;
+
+  /// No description provided for @functionErrorSiteAdminOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作はサイト管理者のみ行えます。'**
+  String get functionErrorSiteAdminOnly;
+
+  /// No description provided for @functionErrorListAdminOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作はリスト管理者のみ行えます。'**
+  String get functionErrorListAdminOnly;
+
+  /// No description provided for @functionErrorListNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストが見つかりません。'**
+  String get functionErrorListNotFound;
+
+  /// No description provided for @functionErrorUserNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーが見つかりません。'**
+  String get functionErrorUserNotFound;
+
+  /// No description provided for @functionErrorRequestNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'申請が見つかりません。'**
+  String get functionErrorRequestNotFound;
+
+  /// No description provided for @functionErrorRequestAlreadyHandled.
+  ///
+  /// In ja, this message translates to:
+  /// **'この申請はすでに処理されています。'**
+  String get functionErrorRequestAlreadyHandled;
+
+  /// No description provided for @functionErrorListNameMissing.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名がありません。'**
+  String get functionErrorListNameMissing;
+
+  /// No description provided for @functionErrorRequesterUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'申請者が不明です。'**
+  String get functionErrorRequesterUnknown;
+
+  /// No description provided for @functionErrorInvalidTrackCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録曲数を正しく入力してください。'**
+  String get functionErrorInvalidTrackCount;
+
+  /// No description provided for @functionErrorInvalidUserCount.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用者数を正しく入力してください。'**
+  String get functionErrorInvalidUserCount;
+
+  /// No description provided for @functionErrorInvalidQuota.
+  ///
+  /// In ja, this message translates to:
+  /// **'上限は 1 バイト以上で指定してください。'**
+  String get functionErrorInvalidQuota;
+
+  /// No description provided for @functionErrorLastSiteAdmin.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。'**
+  String get functionErrorLastSiteAdmin;
+
+  /// No description provided for @functionErrorAlreadyMember.
+  ///
+  /// In ja, this message translates to:
+  /// **'すでにこのリストに参加しています。'**
+  String get functionErrorAlreadyMember;
+
+  /// No description provided for @functionErrorInviteNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待が見つかりません。URL をご確認ください。'**
+  String get functionErrorInviteNotFound;
+
+  /// No description provided for @functionErrorInviteExpired.
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待は有効期限が切れています。'**
+  String get functionErrorInviteExpired;
+
+  /// No description provided for @functionErrorInviteAlreadyUsed.
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待は既に使われています。'**
+  String get functionErrorInviteAlreadyUsed;
+
+  /// No description provided for @functionErrorInviteRevoked.
+  ///
+  /// In ja, this message translates to:
+  /// **'この招待は取り消されています。'**
+  String get functionErrorInviteRevoked;
+
+  /// No description provided for @functionErrorInviteRoleNotAllowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待でリスト管理者は付与できません。'**
+  String get functionErrorInviteRoleNotAllowed;
+
+  /// No description provided for @functionErrorRoleNotAllowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'役割は Super User か Read Only を指定してください。'**
+  String get functionErrorRoleNotAllowed;
+
+  /// No description provided for @functionErrorMissingField.
+  ///
+  /// In ja, this message translates to:
+  /// **'入力が足りません。'**
+  String get functionErrorMissingField;
+
+  /// No description provided for @functionErrorFieldTooLong.
+  ///
+  /// In ja, this message translates to:
+  /// **'入力が長すぎます。'**
+  String get functionErrorFieldTooLong;
+
+  /// No description provided for @functionErrorListNameTaken.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{listName}」は既に使われているか、申請中です。'**
+  String functionErrorListNameTaken(String listName);
+
   /// No description provided for @errorGeneric.
   ///
   /// In ja, this message translates to:

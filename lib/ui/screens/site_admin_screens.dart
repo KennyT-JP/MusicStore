@@ -16,6 +16,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_message.dart';
 
 // ---------------------------------------------------------------------------
 // サイト管理のトップ
@@ -251,7 +252,7 @@ class _ListRequestCardState extends ConsumerState<_ListRequestCard> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: Text(describeFunctionsError(context, e))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -473,7 +474,7 @@ class _SiteListCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: Text(describeFunctionsError(context, e))));
       }
     }
   }
@@ -511,7 +512,7 @@ class _SiteListCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: Text(describeFunctionsError(context, e))));
       }
     }
   }
@@ -649,7 +650,7 @@ class _SiteUserTile extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).showSnackBar(SnackBar(content: Text(describeFunctionsError(context, e))));
       }
     }
   }

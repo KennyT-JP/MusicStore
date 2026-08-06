@@ -699,6 +699,83 @@ class AppL10nJa extends AppL10n {
   String get markAllAsRead => 'すべて既読にする';
 
   @override
+  String get functionErrorSignInRequired => 'ログインが必要です。';
+
+  @override
+  String get functionErrorEmailNotVerified =>
+      'メールアドレスの確認が済んでいません。確認メールのリンクを開いてください。';
+
+  @override
+  String get functionErrorSiteAdminOnly => 'この操作はサイト管理者のみ行えます。';
+
+  @override
+  String get functionErrorListAdminOnly => 'この操作はリスト管理者のみ行えます。';
+
+  @override
+  String get functionErrorListNotFound => 'リストが見つかりません。';
+
+  @override
+  String get functionErrorUserNotFound => 'ユーザーが見つかりません。';
+
+  @override
+  String get functionErrorRequestNotFound => '申請が見つかりません。';
+
+  @override
+  String get functionErrorRequestAlreadyHandled => 'この申請はすでに処理されています。';
+
+  @override
+  String get functionErrorListNameMissing => 'リスト名がありません。';
+
+  @override
+  String get functionErrorRequesterUnknown => '申請者が不明です。';
+
+  @override
+  String get functionErrorInvalidTrackCount => '登録曲数を正しく入力してください。';
+
+  @override
+  String get functionErrorInvalidUserCount => '使用者数を正しく入力してください。';
+
+  @override
+  String get functionErrorInvalidQuota => '上限は 1 バイト以上で指定してください。';
+
+  @override
+  String get functionErrorLastSiteAdmin =>
+      'あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。';
+
+  @override
+  String get functionErrorAlreadyMember => 'すでにこのリストに参加しています。';
+
+  @override
+  String get functionErrorInviteNotFound => '招待が見つかりません。URL をご確認ください。';
+
+  @override
+  String get functionErrorInviteExpired => 'この招待は有効期限が切れています。';
+
+  @override
+  String get functionErrorInviteAlreadyUsed => 'この招待は既に使われています。';
+
+  @override
+  String get functionErrorInviteRevoked => 'この招待は取り消されています。';
+
+  @override
+  String get functionErrorInviteRoleNotAllowed => '招待でリスト管理者は付与できません。';
+
+  @override
+  String get functionErrorRoleNotAllowed =>
+      '役割は Super User か Read Only を指定してください。';
+
+  @override
+  String get functionErrorMissingField => '入力が足りません。';
+
+  @override
+  String get functionErrorFieldTooLong => '入力が長すぎます。';
+
+  @override
+  String functionErrorListNameTaken(String listName) {
+    return '「$listName」は既に使われているか、申請中です。';
+  }
+
+  @override
   String get errorGeneric => 'エラーが発生しました。しばらくしてからもう一度お試しください。';
 
   @override
