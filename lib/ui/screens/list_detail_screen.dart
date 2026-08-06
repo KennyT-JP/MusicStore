@@ -13,6 +13,7 @@ import '../../domain/item_query.dart';
 import '../../domain/permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/playback_provider.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
 import 'requests_screens.dart';
@@ -397,7 +398,17 @@ class _ItemRow extends StatelessWidget {
     ].join(' · ');
 
     return ListTile(
-      leading: _SeqBadge(seq: item.seq),
+      // **左に再生の操作を置く（仕様書 8 章）。**
+      // 連番も残す。欠番が分かる形は一覧の要（6.2）なので、
+      // 再生ボタンで置き換えず横に並べる。
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PlaybackButtons(item: item),
+          const SizedBox(width: 4),
+          _SeqBadge(seq: item.seq),
+        ],
+      ),
       title: Text(item.displayLabel(), overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, overflow: TextOverflow.ellipsis),
       trailing: Icon(
@@ -433,5 +444,71 @@ class _SeqBadge extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// 再生・一時停止・停止（仕様書 8 章）。
+///
+/// **ファイルの項目にだけ出す。** URL の項目は外部のページなので、
+/// ここで音として鳴らすことはできない（項目詳細から開く）。
+///
+/// 出し分けの規則：
+///
+/// | いまの状況 | 出すもの |
+/// | --- | --- |
+/// | 止まっている | 再生 |
+/// | 鳴っている | 一時停止・停止 |
+/// | 一時停止 | 再生・停止 |
+///
+/// 一時停止中にも停止を出すのは、途中で止めたものを頭に戻す手段が
+/// なくなるため。
+class _PlaybackButtons extends ConsumerWidget {
+  const _PlaybackButtons({required this.item});
+
+  final ListItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    if (item.kind != ItemKind.file) return const SizedBox.shrink();
+
+    final playback = ref.watch(playbackProvider);
+    final controller = ref.read(playbackProvider.notifier);
+    final playing = playback.isPlaying(item.id);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: playing ? l10n.pausePlayback : l10n.startPlayback,
+          icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+          onPressed: () => playing
+              ? controller.pause()
+              : _play(context, ref, controller),
+        ),
+        if (playback.isActive(item.id))
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: l10n.stopPlayback,
+            icon: const Icon(Icons.stop),
+            onPressed: controller.stop,
+          ),
+      ],
+    );
+  }
+
+  Future<void> _play(
+    BuildContext context,
+    WidgetRef ref,
+    PlaybackController controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppL10n.of(context);
+    try {
+      await controller.play(item);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.playbackFailed)));
+    }
   }
 }

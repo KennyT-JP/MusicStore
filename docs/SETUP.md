@@ -794,7 +794,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 203 件
+flutter test      # 233 件
 flutter analyze
 
 cd functions && npm test   # 76 件（サーバー側のドメインロジック・通知）

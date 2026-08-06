@@ -281,6 +281,18 @@ class AppL10nEn extends AppL10n {
   String get openList => 'Open list';
 
   @override
+  String get startPlayback => 'Play';
+
+  @override
+  String get pausePlayback => 'Pause';
+
+  @override
+  String get stopPlayback => 'Stop';
+
+  @override
+  String get playbackFailed => 'Could not play this. Please try again.';
+
+  @override
   String copyInviteUrlAs(String role) {
     return 'Copy invite URL: $role';
   }

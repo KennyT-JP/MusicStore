@@ -23,6 +23,7 @@
 | Web 配信 | Firebase Hosting |
 | 状態管理 | Riverpod |
 | ルーティング | go_router |
+| 音源の再生 | just_audio |
 
 ## 開発の始め方
 
@@ -99,6 +100,7 @@ lib/
     display_name.dart      表示名の解決と初期値の決定（3.4 / 3.5 / 5.4）
     local_date.dart        タイムゾーンを持たない日付（6.2）
     concurrent_edit.dart   同時編集の検出（6.3）
+    playback.dart          再生・一時停止・停止の移り変わり（8.1）
   data/
     firestore_paths.dart   Firestore / Storage のパス定義（13.2 / 13.7）
     models/                Firestore のドキュメントに対応するモデル
@@ -152,7 +154,7 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 203 件
+flutter test                        # 233 件
 cd rules-test && npm test           # 111 件（Firestore ルール 98 件・Storage 13 件）
 cd functions && npm test            # 76 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 47 件（要エミュレータ）

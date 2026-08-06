@@ -1,0 +1,132 @@
+/// 再生の状態遷移（仕様書 8 章）
+///
+/// 停止と一時停止の違いが仕様の要。
+///
+/// - **停止**：先頭に巻き戻る。次に再生すると頭から
+/// - **一時停止**：その位置で止まる。次に再生するとその位置から
+///
+/// 端末の音を鳴らさずに確かめられるよう、規則だけを切り出してある。
+library;
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:music_list_app/domain/playback.dart';
+
+const _a = 'item-a';
+const _b = 'item-b';
+
+void main() {
+  group('再生ボタン', () {
+    test('止まっている状態から押すと、先頭から始まる', () {
+      final result = PlaybackPolicy.play(const PlaybackState(), _a);
+
+      expect(result.command, PlaybackCommand.startFromBeginning);
+      expect(result.state.itemId, _a);
+      expect(result.state.status, PlaybackStatus.playing);
+    });
+
+    test('一時停止していた同じ曲なら、その位置から続く（仕様 7）', () {
+      const paused = PlaybackState(itemId: _a, status: PlaybackStatus.paused);
+
+      final result = PlaybackPolicy.play(paused, _a);
+
+      expect(result.command, PlaybackCommand.resume);
+      expect(result.state.status, PlaybackStatus.playing);
+    });
+
+    test('停止していた同じ曲は、先頭から始まる（仕様 7）', () {
+      const stopped = PlaybackState(itemId: _a, status: PlaybackStatus.stopped);
+
+      final result = PlaybackPolicy.play(stopped, _a);
+
+      expect(result.command, PlaybackCommand.startFromBeginning);
+    });
+
+    test('別の曲を押したら、その曲を先頭から', () {
+      // 一時停止していたのが別の曲でも、位置は引き継がない。
+      const paused = PlaybackState(itemId: _a, status: PlaybackStatus.paused);
+
+      final result = PlaybackPolicy.play(paused, _b);
+
+      expect(result.command, PlaybackCommand.startFromBeginning);
+      expect(result.state.itemId, _b);
+    });
+
+    test('鳴っている曲をもう一度押したら、先頭に戻して鳴らし直す', () {
+      const playing = PlaybackState(itemId: _a, status: PlaybackStatus.playing);
+
+      expect(
+        PlaybackPolicy.play(playing, _a).command,
+        PlaybackCommand.startFromBeginning,
+      );
+    });
+  });
+
+  group('一時停止と停止', () {
+    const playing = PlaybackState(itemId: _a, status: PlaybackStatus.playing);
+
+    test('一時停止はその位置で止める', () {
+      final result = PlaybackPolicy.pause(playing);
+
+      expect(result.command, PlaybackCommand.pause);
+      expect(result.state.status, PlaybackStatus.paused);
+      expect(result.state.itemId, _a, reason: '対象は変わらない');
+    });
+
+    test('停止は先頭へ戻す', () {
+      final result = PlaybackPolicy.stop(playing);
+
+      expect(result.command, PlaybackCommand.stop);
+      expect(result.state.status, PlaybackStatus.stopped);
+    });
+
+    test('停止しても対象は残す（行から再生ボタンが消えないように）', () {
+      expect(PlaybackPolicy.stop(playing).state.itemId, _a);
+    });
+
+    test('一時停止中でも停止できる（頭に戻す手段を残す）', () {
+      const paused = PlaybackState(itemId: _a, status: PlaybackStatus.paused);
+
+      final result = PlaybackPolicy.stop(paused);
+
+      expect(result.state.status, PlaybackStatus.stopped);
+    });
+
+    test('最後まで鳴り終わったら、停止と同じ状態になる', () {
+      final after = PlaybackPolicy.completed(playing);
+
+      expect(after.status, PlaybackStatus.stopped);
+      // もう一度押せば先頭から始まる。
+      expect(
+        PlaybackPolicy.play(after, _a).command,
+        PlaybackCommand.startFromBeginning,
+      );
+    });
+  });
+
+  group('ボタンの出し分け', () {
+    test('鳴っている曲だけが「鳴っている」', () {
+      const state = PlaybackState(itemId: _a, status: PlaybackStatus.playing);
+
+      expect(state.isPlaying(_a), isTrue);
+      expect(state.isPlaying(_b), isFalse);
+    });
+
+    test('鳴っている曲と一時停止中の曲に、停止ボタンを出す', () {
+      const playing = PlaybackState(itemId: _a, status: PlaybackStatus.playing);
+      const paused = PlaybackState(itemId: _a, status: PlaybackStatus.paused);
+      const stopped = PlaybackState(itemId: _a, status: PlaybackStatus.stopped);
+
+      expect(playing.isActive(_a), isTrue);
+      expect(paused.isActive(_a), isTrue);
+      expect(stopped.isActive(_a), isFalse, reason: '止まっていれば要らない');
+      expect(playing.isActive(_b), isFalse, reason: '他の行には出さない');
+    });
+
+    test('何も選んでいなければ、どの行も対象でない', () {
+      const none = PlaybackState();
+
+      expect(none.isPlaying(_a), isFalse);
+      expect(none.isActive(_a), isFalse);
+    });
+  });
+}

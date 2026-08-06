@@ -595,6 +595,30 @@ abstract class AppL10n {
   /// **'リストを開く'**
   String get openList;
 
+  /// No description provided for @startPlayback.
+  ///
+  /// In ja, this message translates to:
+  /// **'再生'**
+  String get startPlayback;
+
+  /// No description provided for @pausePlayback.
+  ///
+  /// In ja, this message translates to:
+  /// **'一時停止'**
+  String get pausePlayback;
+
+  /// No description provided for @stopPlayback.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止'**
+  String get stopPlayback;
+
+  /// No description provided for @playbackFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'再生できませんでした。もう一度お試しください。'**
+  String get playbackFailed;
+
   /// No description provided for @copyInviteUrlAs.
   ///
   /// In ja, this message translates to:

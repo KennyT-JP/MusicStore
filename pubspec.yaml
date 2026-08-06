@@ -26,6 +26,7 @@ dependencies:
   go_router: ^17.3.0
   # flutter_localizations が固定するバージョンに合わせる
   intl: ^0.20.2
+  just_audio: ^0.10.6
   url_launcher: ^6.3.2
 
 dev_dependencies:

@@ -272,6 +272,18 @@ class AppL10nJa extends AppL10n {
   String get openList => 'リストを開く';
 
   @override
+  String get startPlayback => '再生';
+
+  @override
+  String get pausePlayback => '一時停止';
+
+  @override
+  String get stopPlayback => '停止';
+
+  @override
+  String get playbackFailed => '再生できませんでした。もう一度お試しください。';
+
+  @override
   String copyInviteUrlAs(String role) {
     return '招待 URL をコピー：$role';
   }
