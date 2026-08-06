@@ -20,6 +20,8 @@
  *    このプロジェクトでは、処理を .mjs に寄せる方針にしている（SETUP.md）。
  */
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { connect } from 'node:net';
 
 const env = { ...process.env };
 delete env.JAVA_TOOL_OPTIONS;
@@ -49,6 +51,76 @@ const script = 'vitest run';
  * 引数の配列と shell を同時に使わないので、Node の DEP0190 警告も出ない。
  */
 const isWindows = process.platform === 'win32';
+
+// ---------------------------------------------------------------------------
+// 先にポートの空きを見る
+//
+// このテストは自前でエミュレータを起動して、終わったら落とす。
+// 開発用のエミュレータ（scripts/dev-emulators）を別のウィンドウで動かしたまま
+// だと、ポートが埋まっていて起動できない。
+//
+// firebase が出す「port taken」は、**何が原因でどうすればよいのかが読み取れない**。
+// ここで先に見て、止め方まで案内する。
+// ---------------------------------------------------------------------------
+
+/** そのポートで誰かが待ち受けているか。 */
+function portInUse(port) {
+  return new Promise((resolve) => {
+    const socket = connect({ port, host: '127.0.0.1' });
+    const done = (inUse) => {
+      socket.destroy();
+      resolve(inUse);
+    };
+    socket.once('connect', () => done(true));
+    socket.once('error', () => done(false));
+    socket.setTimeout(1000, () => done(false));
+  });
+}
+
+const ports = readEmulatorPorts();
+const taken = [];
+for (const { name, port } of ports) {
+  if (await portInUse(port)) taken.push(`${name}（${port}）`);
+}
+
+if (taken.length > 0) {
+  console.error('');
+  console.error(`ポートがすでに使われています: ${taken.join('、')}`);
+  console.error('');
+  console.error('  エミュレータを別のウィンドウで動かしていませんか。');
+  console.error('  そのウィンドウで Ctrl+C を押して止めてから、もう一度実行してください。');
+  console.error('');
+  console.error('  ウィンドウが見当たらない場合は、残ったプロセスを落とします。');
+  if (isWindows) {
+    console.error(`    netstat -ano | findstr :${ports[0].port}`);
+    console.error('    taskkill /PID <いちばん右の数字> /F');
+  } else {
+    console.error(`    lsof -i :${ports[0].port}`);
+    console.error('    kill <PID>');
+  }
+  console.error('');
+  process.exit(1);
+}
+
+/** firebase.json から、このテストが使うエミュレータのポートを読む。 */
+function readEmulatorPorts() {
+  const fallback = [
+    { name: 'firestore', port: 8080 },
+    { name: 'storage', port: 9199 },
+  ];
+  try {
+    const config = JSON.parse(
+      readFileSync(new URL('../firebase.json', import.meta.url), 'utf8')
+    );
+    return fallback.map(({ name, port }) => ({
+      name,
+      port: config.emulators?.[name]?.port ?? port,
+    }));
+  } catch {
+    // 読めなくても本題ではない。既定値で進める。
+    return fallback;
+  }
+}
 
 const child = isWindows
   ? spawn(`firebase ${options.join(' ')} "${script}"`, {
