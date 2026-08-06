@@ -2,6 +2,7 @@
 
 メンバーが個々に録音した音源や、YouTube 等で見つけた楽曲を、1 つのリストに集約して共有するアプリです。まず Web 版を開発し、将来的に Android / iOS への展開も見据えています。
 
+- **作業の決めごと**：[CLAUDE.md](CLAUDE.md) — **配信の前には必ずテストを全件通す**
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
