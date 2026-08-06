@@ -15,6 +15,7 @@ import '../../domain/display_name.dart';
 import '../../domain/permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
 
@@ -228,9 +229,10 @@ class _DeletedNotice extends StatelessWidget {
           if (purgeAt != null) ...[
             const SizedBox(height: 8),
             Text(
-              l10n.restorableUntil(
-                '${purgeAt.year}-${purgeAt.month}-${purgeAt.day}',
-              ),
+              // **書き方を揃える。** ここだけゼロ埋めが無く、
+              // 同じアプリの中で 2026-8-6 と 2026/08/06 が混ざっていた
+              // （監査 第2回）。
+              l10n.restorableUntil(formatDateTime(purgeAt)),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

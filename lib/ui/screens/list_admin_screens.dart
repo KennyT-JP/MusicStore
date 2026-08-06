@@ -19,7 +19,9 @@ import '../../domain/quota.dart';
 import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../routes.dart';
+import '../share_url.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
 import '../widgets/role_chip.dart';
@@ -191,7 +193,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                   const SizedBox(height: 8),
                   Text(
                     // 有効期限は受諾した時点で判定される（仕様書 3.3）。
-                    l10n.inviteExpiryNote(_formatDateTime(_expiresAt!)),
+                    l10n.inviteExpiryNote(formatDateTime(_expiresAt!)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 4),
@@ -744,15 +746,3 @@ class _ShareUrlCard extends StatelessWidget {
 /// アプリ内のパスから、人に渡せる URL を組み立てる（仕様書 5.3 / 3.3）。
 ///
 /// Flutter Web は既定でハッシュ方式の URL を使うため、`#` を挟む。
-String buildShareUrl(String path) {
-  final base = Uri.base;
-  return '${base.origin}${base.path}#$path';
-}
-
-/// 投稿日時などのシステム日時は、見る人の現地時刻で表示する（仕様書 6.2）。
-String _formatDateTime(DateTime value) {
-  final local = value.toLocal();
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${local.year}/${two(local.month)}/${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
-}

@@ -281,6 +281,17 @@ class AppL10nEn extends AppL10n {
   String get openList => 'Open list';
 
   @override
+  String copyInviteUrlAs(String role) {
+    return 'Copy invite URL: $role';
+  }
+
+  @override
+  String get inviteUrlCopied => 'Invite URL copied.';
+
+  @override
+  String get inviteUrlCopyFailed => 'Could not create the invite URL.';
+
+  @override
   String get removeMemberBody =>
       'This member will be removed from the list.\n\nTheir items and comments stay, but their name will be shown as \"Former member\". They can request to join again.';
 

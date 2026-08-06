@@ -595,6 +595,24 @@ abstract class AppL10n {
   /// **'リストを開く'**
   String get openList;
 
+  /// No description provided for @copyInviteUrlAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待 URL をコピー：{role}'**
+  String copyInviteUrlAs(String role);
+
+  /// No description provided for @inviteUrlCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待 URL をコピーしました。'**
+  String get inviteUrlCopied;
+
+  /// No description provided for @inviteUrlCopyFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待 URL を作れませんでした。'**
+  String get inviteUrlCopyFailed;
+
   /// No description provided for @removeMemberBody.
   ///
   /// In ja, this message translates to:

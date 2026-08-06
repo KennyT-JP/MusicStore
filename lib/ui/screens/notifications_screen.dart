@@ -13,6 +13,7 @@ import '../../data/models/app_user.dart';
 import '../../data/models/requests.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
 
@@ -113,7 +114,7 @@ class _NotificationTile extends ConsumerWidget {
       ),
       subtitle: notification.createdAt == null
           ? null
-          : Text(_formatDateTime(notification.createdAt!)),
+          : Text(formatDateTime(notification.createdAt!)),
       trailing: notification.isRead
           ? null
           : Icon(Icons.circle, size: 8, color: theme.colorScheme.primary),
@@ -189,10 +190,3 @@ class _NotificationTile extends ConsumerWidget {
       };
 }
 
-/// 投稿日時などのシステム日時は、見る人の現地時刻で表示する（仕様書 6.2）。
-String _formatDateTime(DateTime utc) {
-  final local = utc.toLocal();
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${local.year}/${two(local.month)}/${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
-}

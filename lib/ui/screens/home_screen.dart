@@ -5,15 +5,21 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/repositories/functions_repository.dart';
 import '../../domain/permissions.dart';
 import '../../domain/quota.dart';
+import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../routes.dart';
+import '../share_url.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_message.dart';
 import '../widgets/role_chip.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -126,6 +132,15 @@ class _ListCard extends ConsumerWidget {
                     ),
                   ),
                   RoleChip(role: entry.role),
+                  // **招待の導線をここにも置く（仕様書 3.3）。**
+                  // 以前はメンバー管理画面まで行かないと招待できず、
+                  // 人を呼ぶたびに 3 画面ぶん移動する必要があった。
+                  //
+                  // 付与する役割は選んだ時点で決まる。あとから
+                  // 「どちらで招待したか」を思い出せるようにするため、
+                  // 役割を項目名に出す。
+                  if (Permissions.canCreateInvite(access))
+                    _InviteMenu(listId: entry.list.id),
                 ],
               ),
               const SizedBox(height: 8),
@@ -203,5 +218,88 @@ class _QuotaBar extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// 招待 URL をコピーするメニュー（仕様書 3.3）。
+///
+/// 発行した URL は**1 回しか使えず、既定 24 時間で切れる**。
+/// 押した時点で招待が作られるので、配る直前に押してもらう。
+class _InviteMenu extends ConsumerStatefulWidget {
+  const _InviteMenu({required this.listId});
+
+  final String listId;
+
+  @override
+  ConsumerState<_InviteMenu> createState() => _InviteMenuState();
+}
+
+class _InviteMenuState extends ConsumerState<_InviteMenu> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+
+    return PopupMenuButton<ListRole>(
+      enabled: !_busy,
+      icon: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.more_vert),
+      tooltip: l10n.createInvite,
+      onSelected: _copyInviteUrl,
+      itemBuilder: (context) => [
+        // 招待で付与できるのは Super User と Read Only だけ（仕様書 3.3）。
+        PopupMenuItem(
+          value: ListRole.superUser,
+          child: Text(l10n.copyInviteUrlAs(l10n.roleSuperUser)),
+        ),
+        PopupMenuItem(
+          value: ListRole.readOnly,
+          child: Text(l10n.copyInviteUrlAs(l10n.roleReadOnly)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _copyInviteUrl(ListRole role) async {
+    final l10n = AppL10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _busy = true);
+    try {
+      final invite = await ref
+          .read(functionsRepositoryProvider)
+          .createInvite(listId: widget.listId, role: role);
+
+      final url = buildShareUrl(AppRoutes.invite(invite.inviteId));
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+
+      // **有効期限と 1 回限りであることを必ず添える。**
+      // URL だけ渡されると、あとで使おうとして切れていることに気づけない。
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${l10n.inviteUrlCopied}\n'
+            '${l10n.inviteExpiryNote(formatDateTime(invite.expiresAt))}',
+          ),
+        ),
+      );
+    } on FunctionsCallException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(describeFunctionsError(context, e))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.inviteUrlCopyFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

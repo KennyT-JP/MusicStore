@@ -272,6 +272,17 @@ class AppL10nJa extends AppL10n {
   String get openList => 'リストを開く';
 
   @override
+  String copyInviteUrlAs(String role) {
+    return '招待 URL をコピー：$role';
+  }
+
+  @override
+  String get inviteUrlCopied => '招待 URL をコピーしました。';
+
+  @override
+  String get inviteUrlCopyFailed => '招待 URL を作れませんでした。';
+
+  @override
   String get removeMemberBody =>
       'このメンバーをリストから外します。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。あらためて参加申請することもできます。';
 
