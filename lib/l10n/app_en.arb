@@ -28,6 +28,7 @@
 
   "verifyEmailTitle": "Check your email",
   "verifyEmailBody": "We sent a verification email to {email}. Open the link in that email to start using the app.",
+  "verifyEmailAutoDetect": "Once you open the link, this page moves on by itself.",
   "verifyEmailResend": "Resend verification email",
   "verifyEmailRecheck": "I have verified, continue",
 

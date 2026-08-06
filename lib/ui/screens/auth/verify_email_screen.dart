@@ -4,6 +4,8 @@
 /// Google 連携での登録は確認不要のため、この画面を通らない。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,6 +26,53 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   String? _message;
   String? _error;
 
+  /// 確認が済んだかを繰り返し確かめるためのもの。
+  ///
+  /// **メールのリンクは別のタブ（別の端末のこともある）で開かれる。**
+  /// 開いた側で確認が済んでも、この画面は何も知らない。以前は利用者が
+  /// 「確認が済んだので次へ」を押すまで待ち続けていた。
+  ///
+  /// リンクを踏んだら、こちら側も気づいて自動で先へ進めるようにする。
+  Timer? _poll;
+
+  /// 自動で確かめる間隔。
+  ///
+  /// 短くしすぎると Auth への問い合わせが増える。リンクを踏んでから
+  /// 数秒で進めば、待たされている感じはしない。
+  static const _pollInterval = Duration(seconds: 3);
+
+  @override
+  void initState() {
+    super.initState();
+    _poll = Timer.periodic(_pollInterval, (_) => _checkQuietly());
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  /// 裏で確かめる。まだなら何も言わない。
+  ///
+  /// 押したときの確認（_recheck）と違い、**済んでいないことを画面に
+  /// 出さない**。3 秒ごとに「まだです」と出ると落ち着かないため。
+  Future<void> _checkQuietly() async {
+    if (_busy) return;
+    try {
+      final verified = await ref
+          .read(authRepositoryProvider)
+          .reloadEmailVerification();
+      if (!mounted || !verified) return;
+      _poll?.cancel();
+      // ユーザー情報が更新されると authStateProvider が変わり、
+      // ルーターのリダイレクトが本来の画面へ運ぶ（仕様書 14.3）。
+      ref.invalidate(firebaseUserProvider);
+    } catch (_) {
+      // 通信が一時的に切れただけかもしれない。次の周期で試す。
+    }
+  }
+
   Future<void> _resend() async {
     setState(() {
       _busy = true;
@@ -31,7 +80,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       _message = null;
     });
     try {
-      await ref.read(authRepositoryProvider).resendVerificationEmail();
+      await ref
+          .read(authRepositoryProvider)
+          .resendVerificationEmail(
+            languageCode: Localizations.localeOf(context).languageCode,
+          );
       if (mounted) setState(() => _message = AppL10n.of(context).verificationResent);
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
@@ -81,6 +134,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             const SizedBox(height: 16),
           ],
           Text(l10n.verifyEmailBody(email)),
+          const SizedBox(height: 8),
+          Text(
+            l10n.verifyEmailAutoDetect,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           if (_message != null) ...[
             const SizedBox(height: 16),
             Text(

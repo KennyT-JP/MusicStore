@@ -81,6 +81,10 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String get verifyEmailAutoDetect =>
+      'Once you open the link, this page moves on by itself.';
+
+  @override
   String get verifyEmailResend => 'Resend verification email';
 
   @override

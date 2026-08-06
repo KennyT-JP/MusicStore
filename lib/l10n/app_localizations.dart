@@ -235,6 +235,12 @@ abstract class AppL10n {
   /// **'{email} 宛に確認メールを送りました。メール内のリンクを開くと、ご利用いただけます。'**
   String verifyEmailBody(String email);
 
+  /// No description provided for @verifyEmailAutoDetect.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクを開くと、この画面も自動で次に進みます。'**
+  String get verifyEmailAutoDetect;
+
   /// No description provided for @verifyEmailResend.
   ///
   /// In ja, this message translates to:

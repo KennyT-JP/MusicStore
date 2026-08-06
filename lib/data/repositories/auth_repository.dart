@@ -61,6 +61,7 @@ class AuthRepository {
     required String email,
     required String password,
     required String displayName,
+    required String languageCode,
   }) async {
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
@@ -76,11 +77,28 @@ class AuthRepository {
     // displayName は reload するまで空のまま。渡さずに user から読むと、
     // 「まだ空」と判断してメールアドレスの @ より前を採用してしまう。
     await _ensureUserDocument(user, displayName: displayName);
+
+    // **メールの言語は送る直前に指定する（仕様書 2 章）。**
+    // 指定しないと Firebase の既定（英語）で届く。画面が日本語なのに
+    // 英語のメールが来るのは分かりにくい。判断は「いま画面に出ている
+    // 言語」で行う。登録時点ではまだ利用者の設定が無いため。
+    await _applyLanguage(languageCode);
     await user.sendEmailVerification();
   }
 
+  /// 送信するメールの言語を Firebase Auth に伝える（仕様書 2 章）。
+  ///
+  /// 対応していない言語コードを渡すと例外になるため、扱う 2 つに絞る。
+  /// それ以外は Firebase の既定（英語）に任せる。
+  Future<void> _applyLanguage(String languageCode) async {
+    await _auth.setLanguageCode(
+      const {'ja', 'en'}.contains(languageCode) ? languageCode : 'en',
+    );
+  }
+
   /// 確認メールを再送する（仕様書 3.1）。
-  Future<void> resendVerificationEmail() async {
+  Future<void> resendVerificationEmail({required String languageCode}) async {
+    await _applyLanguage(languageCode);
     await _auth.currentUser?.sendEmailVerification();
   }
 
@@ -93,7 +111,11 @@ class AuthRepository {
   }
 
   /// パスワード再設定のリンクを送る（仕様書 3.1）。
-  Future<void> sendPasswordResetEmail(String email) async {
+  Future<void> sendPasswordResetEmail(
+    String email, {
+    required String languageCode,
+  }) async {
+    await _applyLanguage(languageCode);
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
 

@@ -80,6 +80,9 @@ class AppL10nJa extends AppL10n {
   }
 
   @override
+  String get verifyEmailAutoDetect => 'リンクを開くと、この画面も自動で次に進みます。';
+
+  @override
   String get verifyEmailResend => '確認メールを再送する';
 
   @override

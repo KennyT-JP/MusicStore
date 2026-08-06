@@ -40,6 +40,7 @@
       "email": { "type": "String" }
     }
   },
+  "verifyEmailAutoDetect": "リンクを開くと、この画面も自動で次に進みます。",
   "verifyEmailResend": "確認メールを再送する",
   "verifyEmailRecheck": "確認が済んだので次へ",
 

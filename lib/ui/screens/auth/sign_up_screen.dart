@@ -151,6 +151,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         email: _email.text,
         password: _password.text,
         displayName: _name.text,
+        // いま画面に出ている言語で確認メールを送る（仕様書 2 章）。
+        languageCode: Localizations.localeOf(context).languageCode,
       ),
     );
   }

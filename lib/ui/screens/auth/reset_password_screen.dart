@@ -43,7 +43,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     try {
       await ref
           .read(authRepositoryProvider)
-          .sendPasswordResetEmail(_email.text);
+          .sendPasswordResetEmail(
+            _email.text,
+            languageCode: Localizations.localeOf(context).languageCode,
+          );
       if (mounted) setState(() => _sent = true);
     } on FirebaseAuthException catch (e) {
       // アカウントの有無を外部に漏らさないため、
