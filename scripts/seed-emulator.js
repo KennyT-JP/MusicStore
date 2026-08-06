@@ -119,20 +119,25 @@ async function main() {
     quotaBytes: 1073741824,
     notifiedNotice80: false,
     notifiedWarning90: false,
+    // 項目数はサーバーが持つ（監査 S6）。削除済みは数えない。
+    itemCount: 2,
   });
 
   await db.doc(`lists/${LIST_ID}/members/${uids.listAdmin}`).set({
+    uid: uids.listAdmin,
     role: 'listAdmin',
     via: 'founder',
     joinedAt: new Date(),
   });
   await db.doc(`lists/${LIST_ID}/members/${uids.superUser}`).set({
+    uid: uids.superUser,
     role: 'superUser',
     via: 'request',
     joinedAt: new Date(),
     addedBy: uids.listAdmin,
   });
   await db.doc(`lists/${LIST_ID}/members/${uids.readOnly}`).set({
+    uid: uids.readOnly,
     role: 'readOnly',
     via: 'invite',
     joinedAt: new Date(),

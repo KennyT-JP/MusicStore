@@ -16,14 +16,19 @@ class ListRepository {
 
   /// 自分が参加しているリストの ID と役割（仕様書 13.3）。
   ///
-  /// `members` に対する collectionGroup クエリで、ドキュメント ID が
-  /// 自分の uid のものを集める。
+  /// `members` に対する collectionGroup クエリで、自分の uid のものを集める。
+  ///
+  /// **`FieldPath.documentId` では引けない。** コレクショングループを
+  /// ドキュメント ID で引く場合、値は完全なドキュメントパスでなければならず、
+  /// 素の uid は「セグメント数が奇数」として拒否される。**この誤りのために、
+  /// ホームの参加リスト一覧は一度も動いていなかった。**
+  /// メンバーのドキュメントが持つ `uid` 項目で引く（監査 S14 と同じ制約）。
   Stream<List<({String listId, ListMember member})>> watchMyMemberships(
     String uid,
   ) {
     return _db
         .collectionGroup(FirestorePaths.members)
-        .where(FieldPath.documentId, isEqualTo: uid)
+        .where('uid', isEqualTo: uid)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -72,7 +77,7 @@ class ListRepository {
   /// `members` と同じく collectionGroup で横断的に引く。
   Stream<List<JoinRequest>> watchMyJoinRequests(String uid) => _db
       .collectionGroup(FirestorePaths.joinRequests)
-      .where(FieldPath.documentId, isEqualTo: uid)
+      .where('uid', isEqualTo: uid)
       .snapshots()
       .map(
         (snapshot) => snapshot.docs

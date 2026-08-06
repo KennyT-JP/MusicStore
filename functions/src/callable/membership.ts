@@ -49,6 +49,9 @@ export const submitJoinRequest = onCall({ region: REGION }, async (request) => {
   }
 
   await requestRef.set({
+    // 自分の申請を横断的に引くために持たせる（ドキュメント ID だけでは
+    // コレクショングループを引けない／監査 S14 と同じ制約）。
+    uid,
     status: 'pending',
     requestedAt: FieldValue.serverTimestamp(),
     // 却下後の再申請では前回の判断を消す。

@@ -31,5 +31,25 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "//fieldOverrides": "コレクショングループを単一フィールドで引くには、その範囲の索引を明示する必要がある（自動で作られるのはコレクション範囲のみ）。ホームの参加リスト一覧と自分の参加申請がこれに当たる。既定のコレクション範囲の索引も、上書きで消えないよう並べてある。",
+  "fieldOverrides": [
+    {
+      "collectionGroup": "members",
+      "fieldPath": "uid",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "joinRequests",
+      "fieldPath": "uid",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

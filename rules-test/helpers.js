@@ -132,14 +132,17 @@ export async function seed(env) {
     });
 
     await db.doc(`lists/${LIST_ID}/members/${UID.listAdmin}`).set({
+      uid: UID.listAdmin,
       role: 'listAdmin',
       via: 'founder',
     });
     await db.doc(`lists/${LIST_ID}/members/${UID.superUser}`).set({
+      uid: UID.superUser,
       role: 'superUser',
       via: 'request',
     });
     await db.doc(`lists/${LIST_ID}/members/${UID.readOnly}`).set({
+      uid: UID.readOnly,
       role: 'readOnly',
       via: 'invite',
     });

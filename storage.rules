@@ -14,13 +14,18 @@ service firebase.storage {
     // メール確認が済んでいること（3.1）。firestore.rules と同じ規則。
     // 画面のリダイレクトだけでは守れないため、ここでも確かめる（監査 S3）。
     function isVerified() {
+      // `.get()` を使うと、コレクショングループの list 評価で
+      // 「Null value error」になる場合がある。`in` で存在を確かめてから読む。
       return isSignedIn()
-        && request.auth.token.get('email_verified', false) == true;
+        && 'email_verified' in request.auth.token
+        && request.auth.token.email_verified == true;
     }
 
     // クレームが無いユーザーでも評価エラーにならないよう get() で既定値を置く。
     function isSiteAdmin() {
-      return isVerified() && request.auth.token.get('siteAdmin', false) == true;
+      return isVerified()
+        && 'siteAdmin' in request.auth.token
+        && request.auth.token.siteAdmin == true;
     }
 
     function uid() {

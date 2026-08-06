@@ -11,12 +11,15 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
   getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import {
@@ -776,6 +779,54 @@ describe('監査 S1：項目に他リストのファイルパスを書けない'
         createdBy: UID.superUser,
         status: 'purged',
       }),
+    );
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// ホームの参加リスト一覧（仕様書 14.2）
+//
+// **回帰テスト。** 以前は collectionGroup を documentId() で引いており、
+// 「値は完全なドキュメントパスでなければならない」という制約に触れて
+// 常に失敗していた。そのためリストを作ってもホームに出なかった。
+// メンバーが持つ uid 項目で引く。
+// ---------------------------------------------------------------------------
+
+describe('自分の参加リストを引く', () => {
+  test('メンバーは自分の members を collectionGroup で引ける', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertSucceeds(
+      getDocs(
+        query(
+          collectionGroup(c, 'members'),
+          where('uid', '==', UID.superUser),
+        ),
+      ),
+    );
+  });
+
+  test('サイト管理者も自分の members を引ける（兼任できる）', async () => {
+    const c = db(asSiteAdmin(env));
+    await assertSucceeds(
+      getDocs(
+        query(
+          collectionGroup(c, 'members'),
+          where('uid', '==', UID.siteAdmin),
+        ),
+      ),
+    );
+  });
+
+  test('自分の参加申請も引ける', async () => {
+    const c = db(asUser(env, UID.outsider));
+    await assertSucceeds(
+      getDocs(
+        query(
+          collectionGroup(c, 'joinRequests'),
+          where('uid', '==', UID.outsider),
+        ),
+      ),
     );
   });
 });
