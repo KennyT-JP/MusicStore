@@ -91,6 +91,10 @@ export const approveListRequest = onCall(
 
       // 承認されると申請者がそのリストのリスト管理者になる（仕様書 5.1）。
       tx.set(db.doc(paths.listMember(listRef.id, requestedBy)), {
+        // **uid を持たせる。** 退会時に「この人が入っているリスト」を
+        // 引くために要る。collectionGroup では documentId() に完全パスしか
+        // 渡せないため、ドキュメント ID だけでは横断的に引けない（監査 S14）。
+        uid: requestedBy,
         role: 'listAdmin',
         via: 'founder',
         joinedAt: FieldValue.serverTimestamp(),

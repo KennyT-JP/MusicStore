@@ -146,17 +146,17 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 181 件
-cd rules-test && npm test           # 71 件（Firestore ルール 66 件を含む）
+flutter test                        # 183 件
+cd rules-test && npm test           # 95 件（Firestore ルール 82 件・Storage 13 件）
 cd functions && npm test            # 29 件（サーバー側のドメインロジック・通知）
-cd functions && npm run test:integration  # 18 件（要エミュレータ）
+cd functions && npm run test:integration  # 41 件（要エミュレータ）
 ```
 
 **権限と容量の規則は Dart と TypeScript の両方にあります。** 画面の出し分けは Flutter 側、
 サーバー側の判定は Functions 側が使います。同じ内容のテストを両方に置いてあるので、
 片方を変えたらもう片方も直してください。
 
-**Storage ルールの一部は自動テストで検証できません。** `storage.rules` はメンバー判定に Firestore を参照しますが、Storage エミュレータがこれに対応していないためです（本番では動きます）。該当箇所はステージング環境での手動確認で補います。確認項目は [docs/SETUP.md](docs/SETUP.md) にチェックリストとしてまとめてあります。
+**Storage ルールも自動テストで検証しています。** 以前は「Storage エミュレータが `firestore.exists()` に対応していない」という理由で 8 件をスキップしていましたが、**2026-08-06 の監査で実際に試したところ誤りでした**（[docs/DEVLOG.md](docs/DEVLOG.md) 参照）。現在はスキップなしです。
 
 ## 現在の状態
 

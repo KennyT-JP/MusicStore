@@ -3,7 +3,7 @@
  */
 import { getAuth } from 'firebase-admin/auth';
 import * as logger from 'firebase-functions/logger';
-import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
@@ -106,16 +106,18 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
   // 投稿は残るが、members から消えることで表示が
   // 「退会したユーザー」に切り替わる（仕様書 13.3）。
   //
-  // **`where('__name__', '==', uid)` は成立しない。** collectionGroup の
-  // `__name__` はフルパスとの比較になるため、素の uid では一件も
-  // 一致しない。しかも `.catch(() => null)` で握り潰していたため、
-  // 退会しても members が残り続けていた（監査 S14）。
-  // FieldPath.documentId() と、ドキュメント ID の完全一致で引く。
+  // **`where('__name__', '==', uid)` は成立しない。** collectionGroup を
+  // documentId() で引く場合、値は完全なドキュメントパスでなければならず、
+  // 素の uid は「セグメント数が奇数」として拒否される。しかも
+  // `.catch(() => null)` で握り潰していたため、退会しても members が
+  // 残り続けていることに気づけなかった（監査 S14）。
+  //
+  // メンバーのドキュメントに uid を持たせ、その項目で引く。
   const memberships = await db
     .collectionGroup('members')
-    .where(FieldPath.documentId(), '>=', uid)
+    .where('uid', '==', uid)
     .get()
-    .then((snapshot) => snapshot.docs.filter((doc) => doc.id === uid))
+    .then((snapshot) => snapshot.docs)
     .catch((error) => {
       logger.error('参加中のリストを引けませんでした', {
         uid,

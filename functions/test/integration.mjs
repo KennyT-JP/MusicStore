@@ -31,6 +31,26 @@ async function signUp(tag) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: `${tag}-${stamp}@example.com`, password: 'password', returnSecureToken: true }),
   });
+  const user = await r.json();
+
+  // **メール確認済みにしてからトークンを取り直す。**
+  // 呼び出し可能関数は email_verified を確かめる（仕様書 3.1／監査 S3）。
+  // 確認していないアカウントのトークンでは、以降がすべて弾かれる。
+  await fetch(
+    `${AUTH}/identitytoolkit.googleapis.com/v1/projects/demo-musiclist/accounts:update`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ localId: user.localId, emailVerified: true }),
+  });
+
+  return { ...user, ...(await refresh(user)) };
+}
+
+/** メール確認をしていない利用者（3.1 の検証用）。 */
+async function signUpUnverified(tag) {
+  const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=k`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: `${tag}-${stamp}@example.com`, password: 'password', returnSecureToken: true }),
+  });
   return r.json();
 }
 async function refresh(user) {
@@ -154,6 +174,131 @@ if (listId) {
 
   const jm = await doc(`lists/${listId}/members/${joiner.localId}`);
   check('承認した役割で登録される', sv(jm, 'role') === 'readOnly', sv(jm, 'role'));
+}
+
+// ---------------------------------------------------------------------------
+// 2026-08-06 の監査 S11 で追加。
+//
+// 22 本の関数のうち 14 本がテスト 0 件だった。とくに壊れても気づけず、
+// かつ復旧できない処理から先に埋める。
+// ---------------------------------------------------------------------------
+
+{
+  // 前のブロックのローカル変数は見えないので取り直す。
+  const applicantFresh = await refresh(applicant);
+  const joiner = { localId: (await call('listSiteUsers', {}, siteAdmin.idToken))
+    .body?.result?.users?.find((u) => u.email?.startsWith('join-'))?.uid };
+
+  // --- メール確認が済むまで呼べない（3.1／監査 S3） ---
+  const unverified = await signUpUnverified('unv');
+  let r = await call('submitListRequest',
+    { listName: `未確認${stamp}`, purpose: 'x', estimatedTrackCount: 1, expectedUserCount: 1 },
+    unverified.idToken);
+  check('メール未確認では申請できない（3.1）',
+        r.body?.error?.status === 'PERMISSION_DENIED', r.body?.error?.status);
+
+  // --- リスト作成申請の却下（5.2.1） ---
+  const rejectApplicant = await signUp('rej');
+  r = await call('submitListRequest',
+    { listName: `却下される${stamp}`, purpose: 'x', estimatedTrackCount: 1, expectedUserCount: 1 },
+    rejectApplicant.idToken);
+  const rejectId = r.body?.result?.requestId;
+  check('却下用の申請を作れる', !!rejectId);
+
+  r = await call('rejectListRequest', { requestId: rejectId, reason: '重複' }, siteAdmin.idToken);
+  check('リスト作成申請を却下できる（5.2.1）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // **却下したら名前の予約を解放すること。** 解放し忘れると、その名前が
+  // 永久に使えなくなる（監査で無検証だった箇所）。
+  const nameDoc = await doc(`listNames/${`却下される${stamp}`.toLowerCase()}`);
+  check('却下で名前の予約が解放される（13.3）', nameDoc === null, nameDoc ? '残っている' : '解放済み');
+
+  r = await call('rejectListRequest', { requestId: rejectId, reason: '再' }, siteAdmin.idToken);
+  check('同じ申請は二度却下できない',
+        r.body?.error?.status === 'FAILED_PRECONDITION', r.body?.error?.status);
+
+  // --- 参加申請の却下（5.2.1） ---
+  const rejoiner = await signUp('rjn');
+  await call('submitJoinRequest', { listId }, rejoiner.idToken);
+  r = await call('rejectJoinRequest', { listId, uid: rejoiner.localId }, applicantFresh.idToken);
+  check('参加申請を却下できる', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('rejectJoinRequest', { listId, uid: rejoiner.localId }, applicantFresh.idToken);
+  check('処理済みの参加申請は却下できない（監査 低-2）',
+        r.body?.error?.status === 'FAILED_PRECONDITION', r.body?.error?.status);
+
+  // --- 参加申請の連打で通知が積み上がらない（監査 S13） ---
+  const spammer = await signUp('spam');
+  await call('submitJoinRequest', { listId }, spammer.idToken);
+  r = await call('submitJoinRequest', { listId }, spammer.idToken);
+  check('審査中なら再申請しても素通りしない（S13）',
+        r.body?.result?.alreadyPending === true, JSON.stringify(r.body?.result));
+
+  // --- 招待の取消（3.3） ---
+  r = await call('createInvite', { listId, role: 'readOnly' }, applicantFresh.idToken);
+  const revokeToken = r.body?.result?.inviteId ?? r.body?.result?.token;
+  check('取消用の招待を発行できる', !!revokeToken);
+
+  r = await call('revokeInvite', { inviteId: revokeToken }, applicantFresh.idToken);
+  check('招待を取り消せる（3.3）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const revoked = await signUp('rvk');
+  r = await call('acceptInvite', { inviteId: revokeToken }, revoked.idToken);
+  check('取り消した招待は使えない', r.status !== 200, r.body?.error?.status);
+
+  // --- 容量上限の変更（7.2） ---
+  r = await call('setListQuota', { listId, quotaBytes: 2 * 1024 * 1024 * 1024 }, siteAdmin.idToken);
+  check('サイト管理者は容量上限を変えられる（7.2）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const stats = await doc(`lists/${listId}/meta/stats`);
+  check('上限が反映される', sv(stats, 'quotaBytes') === '2147483648', sv(stats, 'quotaBytes'));
+
+  r = await call('setListQuota', { listId, quotaBytes: 1024 }, applicantFresh.idToken);
+  check('リスト管理者は容量上限を変えられない',
+        r.body?.error?.status === 'PERMISSION_DENIED', r.body?.error?.status);
+
+  // --- サイト管理者の一覧と昇格（11.1 / 4.3） ---
+  r = await call('listSiteUsers', {}, siteAdmin.idToken);
+  check('サイト管理者は利用者を一覧できる（11.1）',
+        Array.isArray(r.body?.result?.users), typeof r.body?.result?.users);
+
+  r = await call('listSiteUsers', {}, applicantFresh.idToken);
+  check('一般利用者は一覧できない',
+        r.body?.error?.status === 'PERMISSION_DENIED', r.body?.error?.status);
+
+  const second = await signUp('sa2');
+  r = await call('grantSiteAdmin', { uid: second.localId }, siteAdmin.idToken);
+  check('サイト管理者を増やせる（4.3）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // 2 人になったので降格できるようになる（4.5）。
+  r = await call('revokeSiteAdmin', { uid: second.localId }, siteAdmin.idToken);
+  check('2 人いれば降格できる（4.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // --- 管理者不在リストへの指名（5.6） ---
+  r = await call('assignListAdmin', { listId, uid: joiner.localId }, siteAdmin.idToken);
+  check('サイト管理者はリスト管理者を指名できる（5.6）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const promoted = await doc(`lists/${listId}/members/${joiner.localId}`);
+  check('指名で listAdmin になる', sv(promoted, 'role') === 'listAdmin', sv(promoted, 'role'));
+
+  // --- 退会（3.5） ---
+  const leaver = await signUp('lv');
+  await call('submitJoinRequest', { listId }, leaver.idToken);
+  await call('approveJoinRequest', { listId, uid: leaver.localId, role: 'readOnly' }, applicantFresh.idToken);
+
+  r = await call('withdrawAccount', {}, leaver.idToken);
+  check('退会できる（3.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // **退会したらメンバーから消えること。** collectionGroup のクエリが
+  // 成立しておらず、失敗も握り潰されていた（監査 S14）。
+  const leftMember = await doc(`lists/${listId}/members/${leaver.localId}`);
+  check('退会でメンバーから消える（監査 S14）', leftMember === null,
+        leftMember ? '残っている' : '消えている');
+
+  const leftUser = await doc(`users/${leaver.localId}`);
+  check('退会しても users は残る（3.5）',
+        leftUser !== null && sv(leftUser, 'isWithdrawn') === true,
+        String(sv(leftUser, 'isWithdrawn')));
 }
 
 console.log(`\n=== ${results.filter(Boolean).length} / ${results.length} 成功 ===`);

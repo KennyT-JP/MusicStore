@@ -103,6 +103,7 @@ export const approveJoinRequest = onCall(
       }
 
       tx.set(db.doc(paths.listMember(listId, targetUid)), {
+        uid: targetUid,
         role,
         via: 'request',
         joinedAt: FieldValue.serverTimestamp(),
@@ -243,6 +244,7 @@ export const acceptInvite = onCall({ region: REGION }, async (request) => {
     }
 
     tx.set(memberRef, {
+      uid,
       role: data.role,
       via: 'invite',
       joinedAt: FieldValue.serverTimestamp(),
