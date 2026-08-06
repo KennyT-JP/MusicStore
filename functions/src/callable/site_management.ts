@@ -9,6 +9,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
+import { shouldResetNotice, shouldResetWarning } from '../domain/quota';
 import { requireSiteAdmin, requireString } from './access';
 
 /**
@@ -91,13 +92,20 @@ export const setListQuota = onCall({ region: REGION }, async (request) => {
 
   // 上限を上げた結果しきい値を下回ることがあるので、通知フラグも戻す。
   // 次に超えたときに改めて通知されるようにするため（仕様書 7.3）。
-  const used = Number(snapshot.data()?.usedBytes ?? 0);
-  const ratio = quotaBytes > 0 ? used / quotaBytes : 1;
+  //
+  // **しきい値をここに書かない。** 以前は 0.8 / 0.9 をベタ書きしており、
+  // domain/quota.ts の値を変えてもここだけ古いまま残る状態だった（監査 S15）。
+  const status = {
+    usedBytes: Number(snapshot.data()?.usedBytes ?? 0),
+    quotaBytes: Math.trunc(quotaBytes),
+  };
+  const noticeSent = snapshot.data()?.notifiedNotice80 === true;
+  const warningSent = snapshot.data()?.notifiedWarning90 === true;
 
   await statsRef.update({
-    quotaBytes: Math.trunc(quotaBytes),
-    ...(ratio <= 0.8 ? { notifiedNotice80: false } : {}),
-    ...(ratio <= 0.9 ? { notifiedWarning90: false } : {}),
+    quotaBytes: status.quotaBytes,
+    ...(shouldResetNotice(status, noticeSent) ? { notifiedNotice80: false } : {}),
+    ...(shouldResetWarning(status, warningSent) ? { notifiedWarning90: false } : {}),
   });
 
   return { ok: true };

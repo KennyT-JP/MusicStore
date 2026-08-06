@@ -37,7 +37,18 @@ export const submitJoinRequest = onCall({ region: REGION }, async (request) => {
   }
 
   // ドキュメント ID を申請者の uid にすることで二重申請を防ぐ（仕様書 13.3）。
-  await db.doc(paths.listJoinRequest(listId, uid)).set({
+  //
+  // **すでに審査中なら何もしない。** ドキュメントは上書きされるだけなので
+  // 実害が無いように見えるが、呼ぶたびに管理者へ通知が作られる。通知は
+  // 本人でも消せないため、連打すると片付けられない通知が積み上がる
+  // （監査 S13）。
+  const requestRef = db.doc(paths.listJoinRequest(listId, uid));
+  const existing = await requestRef.get();
+  if (existing.exists && existing.data()?.status === 'pending') {
+    return { ok: true, alreadyPending: true };
+  }
+
+  await requestRef.set({
     status: 'pending',
     requestedAt: FieldValue.serverTimestamp(),
     // 却下後の再申請では前回の判断を消す。
@@ -122,13 +133,27 @@ export const rejectJoinRequest = onCall({ region: REGION }, async (request) => {
   const adminUid = await requireListAdmin(request, listId);
   const targetUid = requireString(request.data, 'uid', { maxLength: 200 });
 
-  await getFirestore()
-    .doc(paths.listJoinRequest(listId, targetUid))
-    .update({
-      status: 'rejected',
-      decidedBy: adminUid,
-      decidedAt: FieldValue.serverTimestamp(),
-    });
+  // **状態を確かめてから書く。** 承認・却下の他の関数は pending 以外を
+  // 弾いているのに、ここだけ無条件に update していた。ドキュメントが
+  // 無ければ例外になり、処理済みでも上書きしてしまう（監査 低-2）。
+  const ref = getFirestore().doc(paths.listJoinRequest(listId, targetUid));
+  const snapshot = await ref.get();
+
+  if (!snapshot.exists) {
+    throw new HttpsError('not-found', '対象の申請が見つかりません。');
+  }
+  if (snapshot.data()?.status !== 'pending') {
+    throw new HttpsError(
+      'failed-precondition',
+      'この申請はすでに処理されています。'
+    );
+  }
+
+  await ref.update({
+    status: 'rejected',
+    decidedBy: adminUid,
+    decidedAt: FieldValue.serverTimestamp(),
+  });
 
   return { ok: true };
 });

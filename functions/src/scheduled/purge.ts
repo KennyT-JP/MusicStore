@@ -18,6 +18,14 @@ import { isPathOwnedByItem } from '../domain/paths';
  * 時間切れで途中終了しても、次の実行で続きを片づけられるようにする。
  */
 const MAX_ITEMS_PER_RUN = 500;
+/**
+ * 1 回の実行で走査するオブジェクトの上限。
+ *
+ * 削除件数だけを絞っても、走査そのものが総ファイル数に比例すると
+ * いずれ実行時間の上限を超えて毎回途中で落ちる（監査 S8）。
+ */
+const MAX_SCANNED_PER_RUN = 2000;
+
 const MAX_ORPHANS_PER_RUN = 500;
 
 export const purgeDeletedFiles = onSchedule(
@@ -135,16 +143,30 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
   const bucket = getStorage().bucket();
   const cutoff = Date.now() - graceHours * 60 * 60 * 1000;
 
-  const [files] = await bucket.getFiles({ prefix: 'lists/' });
+  // **一括取得しない。** 以前は prefix 配下の全オブジェクトを一度に
+  // メモリへ載せていたため、孤児が 0 件でも総ファイル数に比例して
+  // 重くなり、いずれ実行時間の上限で毎回落ちるようになる（監査 S8）。
+  // ページ単位で受け取り、走査した件数にも上限を置く。
+  const [files] = await bucket.getFiles({
+    prefix: 'lists/',
+    maxResults: MAX_SCANNED_PER_RUN,
+    autoPaginate: false,
+  });
+
   let count = 0;
+  let scanned = 0;
 
   for (const file of files) {
     if (count >= MAX_ORPHANS_PER_RUN) break;
+    if (scanned >= MAX_SCANNED_PER_RUN) break;
+    scanned++;
 
     const parsed = parseItemStoragePath(file.name);
     if (!parsed) continue;
 
     const created = Date.parse(String(file.metadata.timeCreated ?? ''));
+    // **猶予期間内のものは Firestore を読む前に弾く。** 以前は正常な
+    // ファイル 1 件ごとに読み取りが走っていた（監査 S8）。
     if (!Number.isFinite(created) || created > cutoff) continue;
 
     try {
@@ -176,6 +198,13 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
         error,
       });
     }
+  }
+
+  if (scanned >= MAX_SCANNED_PER_RUN) {
+    logger.info('走査の上限に達しました。残りは次回に持ち越します', {
+      scanned,
+      deleted: count,
+    });
   }
 
   return count;

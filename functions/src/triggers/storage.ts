@@ -5,18 +5,27 @@
  * クライアントからは書けないため、この数字が正となる。
  */
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import * as logger from 'firebase-functions/logger';
 import { onObjectDeleted, onObjectFinalized } from 'firebase-functions/v2/storage';
 
 import { STORAGE_REGION, paths, parseItemStoragePath } from '../config';
 import {
+  type QuotaLevel,
   levelToNotify,
   shouldResetNotice,
   shouldResetWarning,
 } from '../domain/quota';
 import { listAdminUids, notifySafely } from '../notifications';
 
-/** ファイルが保存されたら加算し、しきい値を超えたら通知する。 */
+/**
+ * ファイルが保存されたら加算し、しきい値を超えたら通知する。
+ *
+ * **上限を超えていたら、そのファイルを消す。**
+ * ルールからは合計使用量を参照できないため、上限の強制はここでしか行えない。
+ * クライアント側のチェック（7.5）は画面を経由しない呼び出しには効かず、
+ * Storage の SDK を直接叩けば無視できる（監査 S5）。
+ */
 export const onFileUploaded = onObjectFinalized(
   { region: STORAGE_REGION },
   async (event) => {
@@ -26,7 +35,29 @@ export const onFileUploaded = onObjectFinalized(
     const size = Number(event.data.size ?? 0);
     if (!Number.isFinite(size) || size <= 0) return;
 
-    await applyDelta(parsed.listId, size);
+    const result = await applyDelta(parsed.listId, size);
+
+    if (result?.exceeded) {
+      logger.warn('容量の上限を超えたためアップロードを取り消します', {
+        path: event.data.name,
+        listId: parsed.listId,
+        usedBytes: result.usedBytes,
+        quotaBytes: result.quotaBytes,
+      });
+
+      // 消した結果は onFileDeleted が拾って usedBytes を戻す。
+      // ここで自分で減算すると二重に引かれる。
+      await getStorage()
+        .bucket(event.data.bucket)
+        .file(event.data.name)
+        .delete({ ignoreNotFound: true })
+        .catch((error) => {
+          logger.error('超過ファイルの削除に失敗しました', {
+            path: event.data.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    }
   }
 );
 
@@ -50,11 +81,22 @@ export const onFileDeleted = onObjectDeleted(
  * 集計と通知フラグの更新はトランザクションで行う。
  * 同時にアップロードされても数字がずれないようにするため。
  */
-async function applyDelta(listId: string, deltaBytes: number): Promise<void> {
+interface DeltaOutcome {
+  level: QuotaLevel | null;
+  /** 上限を超えたか。超えていればアップロードを取り消す（7.5）。 */
+  exceeded: boolean;
+  usedBytes: number;
+  quotaBytes: number;
+}
+
+async function applyDelta(
+  listId: string,
+  deltaBytes: number
+): Promise<DeltaOutcome | null> {
   const db = getFirestore();
   const statsRef = db.doc(paths.listStats(listId));
 
-  const outcome = await db.runTransaction(async (tx) => {
+  const outcome = await db.runTransaction<DeltaOutcome | null>(async (tx) => {
     const snapshot = await tx.get(statsRef);
     if (!snapshot.exists) {
       // リストが削除された直後などに起こりうる。集計対象がないので何もしない。
@@ -86,15 +128,25 @@ async function applyDelta(listId: string, deltaBytes: number): Promise<void> {
       ...(resetWarning ? { notifiedWarning90: false } : {}),
     });
 
-    return { level };
+    return {
+      level,
+      // 加算のときだけ判定する。削除で減った結果を超過とは呼ばない。
+      exceeded: deltaBytes > 0 && quotaBytes > 0 && after > quotaBytes,
+      usedBytes: after,
+      quotaBytes,
+    };
   });
 
-  if (!outcome?.level) return;
+  if (!outcome) return null;
 
-  // 通知はトランザクションの外で行う。トランザクションが再試行されたときに
-  // 通知を重複して作らないようにするため。
-  await notifySafely(() => listAdminUids(listId), {
-    type: outcome.level === 'warning' ? 'quotaWarning' : 'quotaNotice',
-    listId,
-  });
+  if (outcome.level) {
+    // 通知はトランザクションの外で行う。トランザクションが再試行されたときに
+    // 通知を重複して作らないようにするため。
+    await notifySafely(() => listAdminUids(listId), {
+      type: outcome.level === 'warning' ? 'quotaWarning' : 'quotaNotice',
+      listId,
+    });
+  }
+
+  return outcome;
 }

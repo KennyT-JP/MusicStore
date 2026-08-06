@@ -2,7 +2,8 @@
  * サイト管理者の昇格・降格と退会（仕様書 4.4 / 4.5 / 3.5）
  */
 import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import * as logger from 'firebase-functions/logger';
+import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
@@ -104,23 +105,47 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
   // 参加中のリストから抜ける（仕様書 5.4）。
   // 投稿は残るが、members から消えることで表示が
   // 「退会したユーザー」に切り替わる（仕様書 13.3）。
+  //
+  // **`where('__name__', '==', uid)` は成立しない。** collectionGroup の
+  // `__name__` はフルパスとの比較になるため、素の uid では一件も
+  // 一致しない。しかも `.catch(() => null)` で握り潰していたため、
+  // 退会しても members が残り続けていた（監査 S14）。
+  // FieldPath.documentId() と、ドキュメント ID の完全一致で引く。
   const memberships = await db
     .collectionGroup('members')
-    .where('__name__', '==', uid)
+    .where(FieldPath.documentId(), '>=', uid)
     .get()
-    .catch(() => null);
+    .then((snapshot) => snapshot.docs.filter((doc) => doc.id === uid))
+    .catch((error) => {
+      logger.error('参加中のリストを引けませんでした', {
+        uid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    });
 
-  if (memberships) {
-    await Promise.all(
-      memberships.docs.map((doc) => doc.ref.delete().catch(() => undefined))
+  if (memberships === null) {
+    // ここで先へ進むと、members に残ったまま Auth だけ消える。
+    throw new HttpsError(
+      'internal',
+      '参加中のリストを確認できませんでした。時間をおいて試してください。'
     );
   }
 
-  await db.doc(paths.user(uid)).update({
-    isWithdrawn: true,
-    withdrawnAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+  await Promise.all(
+    memberships.map((doc) => doc.ref.delete().catch(() => undefined))
+  );
+
+  // **users ドキュメントが無い場合に update は失敗する。**
+  // その先の Auth 削除まで到達できなくなるため set(merge) にする。
+  await db.doc(paths.user(uid)).set(
+    {
+      isWithdrawn: true,
+      withdrawnAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 
   // Auth のアカウントを消す。以後このメールアドレスで再登録できる。
   await getAuth().deleteUser(uid);
