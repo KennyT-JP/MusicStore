@@ -121,4 +121,15 @@ class StoragePaths {
 ///
 /// 重複チェックのためにドキュメント ID として使うので、
 /// 大文字小文字と前後の空白の違いを吸収する。
-String normalizeListName(String name) => name.trim().toLowerCase();
+///
+/// **スラッシュは `_` に置き換える。** Firestore のドキュメント ID に
+/// スラッシュを入れると、そこでパスが区切られてしまう。`foo/bar` は
+/// `listNames/foo` の下の階層になり、`listNames/foo` とは別の場所に
+/// できるため重複チェックをすり抜ける。
+///
+/// **サーバー側（functions/src/domain/paths.ts）と同じ結果になること。**
+/// 以前はこちらだけ置き換えを忘れており、同じ名前を別々に正規化していた
+/// （監査 第2回）。そのうえ、揃っていることを確かめるはずのテストが
+/// スラッシュを含まない入力しか渡しておらず、食い違いを隠していた。
+String normalizeListName(String name) =>
+    name.trim().toLowerCase().replaceAll('/', '_');

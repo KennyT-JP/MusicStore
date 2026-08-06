@@ -147,11 +147,34 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
   // メモリへ載せていたため、孤児が 0 件でも総ファイル数に比例して
   // 重くなり、いずれ実行時間の上限で毎回落ちるようになる（監査 S8）。
   // ページ単位で受け取り、走査した件数にも上限を置く。
-  const [files] = await bucket.getFiles({
+  //
+  // **続きの位置を持ち越す。** 以前は `pageToken` を渡しておらず、
+  // 毎回バケットの先頭 2000 件しか見ていなかった。オブジェクト名は
+  // `lists/{listId}/…` の辞書順なので、総数が上限を超えると
+  // **後ろのリストの孤児は永久に消えない**。ログには
+  // 「残りは次回に持ち越します」と出るため、監視していても気づけない
+  // （監査 第2回）。
+  const cursorRef = db.doc(paths.siteConfig);
+  const savedToken = (await cursorRef.get()).data()?.orphanScanPageToken;
+  const pageToken = typeof savedToken === 'string' && savedToken
+    ? savedToken
+    : undefined;
+
+  const [files, nextQuery] = await bucket.getFiles({
     prefix: 'lists/',
     maxResults: MAX_SCANNED_PER_RUN,
     autoPaginate: false,
+    ...(pageToken ? { pageToken } : {}),
   });
+
+  // 続きがあれば次回の開始位置を保存し、無ければ消して先頭へ戻す。
+  // 一巡したら最初から見直す。ファイルは増減するため。
+  const nextToken =
+    (nextQuery as { pageToken?: string } | null)?.pageToken ?? null;
+  await cursorRef.set(
+    { orphanScanPageToken: nextToken },
+    { merge: true }
+  );
 
   let count = 0;
   let scanned = 0;
@@ -200,8 +223,13 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
     }
   }
 
-  if (scanned >= MAX_SCANNED_PER_RUN) {
-    logger.info('走査の上限に達しました。残りは次回に持ち越します', {
+  if (nextToken) {
+    logger.info('走査の上限に達しました。続きは次回から見ます', {
+      scanned,
+      deleted: count,
+    });
+  } else {
+    logger.info('バケットを一巡しました。次回は先頭から見ます', {
       scanned,
       deleted: count,
     });

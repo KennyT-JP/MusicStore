@@ -25,7 +25,11 @@ import {
   shouldResetNotice,
   shouldResetWarning,
 } from '../src/domain/quota';
-import { normalizeListName, parseItemStoragePath } from '../src/domain/paths';
+import {
+  isPathOwnedByItem,
+  normalizeListName,
+  parseItemStoragePath,
+} from '../src/domain/paths';
 
 const readOnly: ListAccess = { isSiteAdmin: false, role: 'readOnly' };
 const superUser: ListAccess = { isSiteAdmin: false, role: 'superUser' };
@@ -183,8 +187,92 @@ describe('リスト名の正規化（5.1）', () => {
     expect(normalizeListName('PRACTICE')).toBe('practice');
   });
 
+  /// **回帰テスト（監査 第2回）。**
+  ///
+  /// 「Dart 側と同じ結果になること」というテストが、
+  /// **スラッシュを含まない入力しか渡していなかった**。両者が一致する
+  /// 唯一の領域だけを確かめており、食い違いをそのまま隠していた。
+  /// Dart 側はスラッシュを置き換えておらず、`a/b` という名前で
+  /// ドキュメント参照が壊れる状態だった。
+  ///
+  /// 揃っていることを確かめるテストは、**揃っていない可能性がある入力**を
+  /// 通さなければ意味がない。
   test('Dart 側の normalizeListName と同じ結果になること', () => {
     // lib/data/firestore_paths.dart の normalizeListName と揃える。
-    expect(normalizeListName('練習音源')).toBe('練習音源');
+    // 変えるときは必ず両方を直し、test/domain/list_name_test.dart も見ること。
+    const cases: [string, string][] = [
+      ['練習音源', '練習音源'],
+      ['  Practice  ', 'practice'],
+      ['PRACTICE', 'practice'],
+      // ここが抜けていた。スラッシュはパスの区切りになるため潰す。
+      ['a/b', 'a_b'],
+      ['A/B/C', 'a_b_c'],
+      ['  Foo / Bar  ', 'foo _ bar'],
+      ['/leading', '_leading'],
+      ['trailing/', 'trailing_'],
+    ];
+    for (const [input, expected] of cases) {
+      expect(normalizeListName(input)).toBe(expected);
+    }
+  });
+});
+
+/**
+ * ファイルの持ち主の検証（仕様書 13.7 / 監査 S1）
+ *
+ * **定期削除がファイルを消す前に必ず通す関数。** 項目の `file.storagePath`
+ * はクライアントが書けるため、他人のリストのパスを書いておくと、
+ * サーバーの権限でそのファイルを消させられる。
+ *
+ * 第 1 回監査で最も重大とされた欠陥に対する防御そのものが、
+ * **テスト 0 件だった**（監査 第2回）。
+ */
+describe('ファイルの持ち主の検証（13.7 / S1）', () => {
+  test('自分の項目のパスなら通る', () => {
+    expect(isPathOwnedByItem('lists/L1/items/I1/take01.mp3', 'L1', 'I1')).toBe(
+      true
+    );
+  });
+
+  test('入れ子のファイル名でも通る', () => {
+    expect(isPathOwnedByItem('lists/L1/items/I1/a/b.mp3', 'L1', 'I1')).toBe(
+      true
+    );
+  });
+
+  test('別のリストのパスは通さない', () => {
+    expect(isPathOwnedByItem('lists/L2/items/I1/x.mp3', 'L1', 'I1')).toBe(false);
+  });
+
+  test('別の項目のパスは通さない', () => {
+    expect(isPathOwnedByItem('lists/L1/items/I2/x.mp3', 'L1', 'I1')).toBe(false);
+  });
+
+  test('lists 配下でないパスは通さない', () => {
+    expect(isPathOwnedByItem('other/L1/items/I1/x.mp3', 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem('lists/L1/x/I1/y.mp3', 'L1', 'I1')).toBe(false);
+  });
+
+  test('ファイル名が無いパスは通さない', () => {
+    expect(isPathOwnedByItem('lists/L1/items/I1/', 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem('lists/L1/items/I1', 'L1', 'I1')).toBe(false);
+  });
+
+  test('文字列でない値・空文字は通さない', () => {
+    expect(isPathOwnedByItem(null, 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem(undefined, 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem(123, 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem({}, 'L1', 'I1')).toBe(false);
+    expect(isPathOwnedByItem('', 'L1', 'I1')).toBe(false);
+  });
+
+  test('先頭に別のリストのパスを紛れ込ませても通さない', () => {
+    // `lists/L1/items/I1/` で始まるように見せかけた別リストのパス。
+    expect(
+      isPathOwnedByItem('lists/L1x/items/I1/x.mp3', 'L1', 'I1')
+    ).toBe(false);
+    expect(
+      isPathOwnedByItem('../lists/L1/items/I1/x.mp3', 'L1', 'I1')
+    ).toBe(false);
   });
 });

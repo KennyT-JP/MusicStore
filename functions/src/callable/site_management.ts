@@ -137,11 +137,18 @@ export const assignListAdmin = onCall({ region: REGION }, async (request) => {
   const member = await memberRef.get();
 
   if (member.exists) {
-    await memberRef.update({ role: 'listAdmin' });
+    // 既存のメンバーにも uid を入れ直す。移行前に作られた行や、
+    // この関数が以前に作った行には uid が無い。
+    await memberRef.update({ role: 'listAdmin', uid: targetUid });
   } else {
     await memberRef.set({
+      // **uid を必ず入れる。** メンバーを横断で引くクエリは
+      // ドキュメント ID ではなくこの項目で絞る（仕様書 13.3）。
+      // ここだけ入れ忘れており、指名されたリスト管理者は
+      // ホームにそのリストが出ず、退会してもメンバーから外れなかった。
+      uid: targetUid,
       role: 'listAdmin',
-      via: 'request',
+      via: 'assigned',
       joinedAt: FieldValue.serverTimestamp(),
       addedBy: actorUid,
     });

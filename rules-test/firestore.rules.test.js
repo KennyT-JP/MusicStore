@@ -720,6 +720,32 @@ describe('監査 S3：メール確認が済むまで何もできない（3.1）'
       setDoc(doc(unverified, 'users/u-brand-new'), { displayName: '新規' }),
     );
   });
+
+  // **回帰テスト（監査 第2回）。**
+  //
+  // 「作れる」だけを確かめていて、「読める」を一度も試していなかった。
+  // 登録処理は「読んで、無ければ作る」順で動くため、読みが拒否されると
+  // その先の確認メール送信に到達しない。メールが届かないまま
+  // 「エラーが発生しました」とだけ出る状態が配信されていた。
+  //
+  // 作れるのに読めない、という食い違いを二度と作らないために、
+  // 両方を並べて確かめる。
+  test('未確認でも自分のユーザードキュメントは読める（登録処理は書く前に読む）', async () => {
+    const unverified = db(asUnverified(env, 'u-brand-new'));
+    await assertSucceeds(getDoc(doc(unverified, 'users/u-brand-new')));
+  });
+
+  test('未確認では他人のユーザードキュメントは読めない', async () => {
+    const unverified = db(asUnverified(env, 'u-brand-new'));
+    await assertFails(getDoc(doc(unverified, `users/${UID.listAdmin}`)));
+  });
+
+  test('未確認では他人のユーザードキュメントを作れない', async () => {
+    const unverified = db(asUnverified(env, 'u-brand-new'));
+    await assertFails(
+      setDoc(doc(unverified, 'users/u-someone-else'), { displayName: '偽' }),
+    );
+  });
 });
 
 describe('監査 S1：項目に他リストのファイルパスを書けない', () => {

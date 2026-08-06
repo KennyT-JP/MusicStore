@@ -110,6 +110,50 @@ describe('Firestore を参照せずに決まるルール', () => {
 // ---------------------------------------------------------------------------
 
 describe('メンバー判定を伴うルール', () => {
+  // **この確認が落ちたら、以降の「〜できない」はすべて信用できない。**
+  //
+  // storage.rules は `firestore.exists()` で Firestore を参照する。
+  // この参照が失敗すると、ライブラリ側は握り潰して「見つからない」を返すため、
+  // **メンバー判定が常に false になる**。つまり全員が拒否される。
+  //
+  // その状態では「Read Only はアップロードできない」「未参加者は読めない」
+  // といった否定側の 4 件が**すべて緑になる**。土台が壊れているほど
+  // 緑が増えるという、いちばん質の悪い出方になる（監査 第2回）。
+  //
+  // 実際に、ルールの上書き禁止をわざと壊した対照実験で、
+  // 参照が生きていれば検出できた後退が、参照が壊れていると見逃された。
+  //
+  // そこで、否定側を動かす前に「参照が生きていること」を確かめて、
+  // 生きていなければその場で理由を出して止める。
+  beforeAll(async () => {
+    const storage = asUser(env, UID.readOnly).storage();
+    await seed(env);
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(
+        ref(ctx.storage(), filePath('existing.mp3')),
+        new Uint8Array([1, 2, 3]),
+      );
+    });
+
+    try {
+      await getDownloadURL(ref(storage, filePath('existing.mp3')));
+    } catch (error) {
+      throw new Error(
+        [
+          'メンバー判定（storage.rules の firestore.exists()）が働いていません。',
+          'この状態では否定側のテストが「拒否された」ことだけを見て緑になり、',
+          'ルールの後退を見逃します。以降の結果は信用できません。',
+          '',
+          'よくある原因: firebase-tools は NO_PROXY を見ずに 127.0.0.1 宛の',
+          '通信までプロキシへ流します。プロキシがそれを拒否すると、',
+          'Storage のルールランタイムから Firestore を引けなくなります。',
+          '',
+          `元の例外: ${error?.code ?? error}`,
+        ].join('\n'),
+      );
+    }
+  });
+
   test('Read Only も再生・ダウンロードできる（4.2）', async () => {
     const storage = asUser(env, UID.readOnly).storage();
     await assertSucceeds(
