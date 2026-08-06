@@ -15,6 +15,7 @@ import 'package:music_list_app/domain/role.dart';
 import 'package:music_list_app/l10n/app_localizations.dart';
 import 'package:music_list_app/providers/app_providers.dart';
 import 'package:music_list_app/ui/screens/list_detail_screen.dart';
+import 'package:music_list_app/ui/screens/requests_screens.dart';
 
 const _listId = 'list-1';
 
@@ -70,6 +71,45 @@ final _items = [
   ),
 ];
 
+/// 参加状況（[ListAccess]）を直接指定して包む。
+///
+/// 未参加（role が null）の場合の振る舞いを確かめるために使う。
+Widget _wrapWithAccess(Widget child, {required ListAccess access}) {
+  return ProviderScope(
+    overrides: [
+      listProvider(_listId).overrideWith(
+        (ref) => Stream.value(
+          const MusicList(
+            id: _listId,
+            name: '練習音源',
+            createdBy: 'u1',
+            adminCount: 1,
+            memberCount: 3,
+          ),
+        ),
+      ),
+      listItemsProvider(_listId).overrideWith((ref) => Stream.value(_items)),
+      listAccessProvider(_listId).overrideWith((ref) => access),
+      listStatsProvider(_listId).overrideWith((ref) => Stream.value(null)),
+      listMembersProvider(
+        _listId,
+      ).overrideWith((ref) => Stream.value(const [])),
+      myJoinRequestProvider(_listId).overrideWith((ref) => Stream.value(null)),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppL10n.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppL10n.supportedLocales,
+      locale: const Locale('ja'),
+      home: child,
+    ),
+  );
+}
+
 Widget _wrap(Widget child, {required ListRole role, bool siteAdmin = false}) {
   return ProviderScope(
     overrides: [
@@ -111,6 +151,8 @@ void main() {
   setUp(() {
     // 既定の並び替え状態を毎回リセットする。
   });
+
+  _joinRequestRedirectTests();
 
   group('リスト詳細（6.4）', () {
     testWidgets('項目が連番順に並ぶ', (tester) async {
@@ -252,5 +294,42 @@ void main() {
       expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
       expect(find.byType(FloatingActionButton), findsOneWidget);
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 2026-08-06 の監査 S9 の回帰テスト。
+//
+// 共有 URL は誰でも開ける。未参加者がそのまま項目一覧に入ると、ルールに
+// 弾かれて「権限がありません」になっていた。実装済みの参加申請画面
+// （仕様書 5.3）へ繋がっていなかった。
+// ---------------------------------------------------------------------------
+
+void _joinRequestRedirectTests() {
+  testWidgets('未参加者には参加申請の画面を出す（5.3）', (tester) async {
+    await tester.pumpWidget(
+      _wrapWithAccess(
+        const ListDetailScreen(listId: _listId),
+        // メンバー情報は読めたが、このリストには入っていない。
+        access: const ListAccess(isSiteAdmin: false, role: null),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(JoinRequestScreen), findsOneWidget);
+  });
+
+  testWidgets('メンバーには項目一覧を出す', (tester) async {
+    await tester.pumpWidget(
+      _wrapWithAccess(
+        const ListDetailScreen(listId: _listId),
+        access: const ListAccess(isSiteAdmin: false, role: ListRole.readOnly),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(JoinRequestScreen), findsNothing);
+    expect(find.text('サザンオールスターズメドレー'), findsOneWidget);
   });
 }

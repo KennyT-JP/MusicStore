@@ -696,7 +696,10 @@ class _SiteAdminSettingsScreenState
             _loaded = true;
             _inviteHours.text = '${site.inviteExpiryHours}';
             _graceDays.text = '${site.itemPurgeGraceDays}';
-            _quotaMb.text = '${kDefaultQuotaBytes ~/ (1024 * 1024)}';
+            // **定数ではなく設定から読む。** 定数で埋めていたため、
+            // 別の項目を直して保存するたびに容量上限が 1GB へ戻っていた
+            // （監査 S10）。
+            _quotaMb.text = '${site.defaultQuotaBytes ~/ (1024 * 1024)}';
           }
 
           return ListView(

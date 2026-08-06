@@ -20,6 +20,7 @@ import '../data/repositories/item_repository.dart';
 import '../data/repositories/list_repository.dart';
 import '../env/firebase_emulators.dart';
 import '../domain/display_name.dart';
+import '../domain/quota.dart';
 import '../domain/role.dart';
 import '../ui/app_router.dart';
 
@@ -258,11 +259,20 @@ class SiteConfig {
   const SiteConfig({
     this.inviteExpiryHours = 24,
     this.itemPurgeGraceDays = 30,
+    this.defaultQuotaBytes = kDefaultQuotaBytes,
     this.siteAdminCount = 1,
   });
 
   final int inviteExpiryHours;
   final int itemPurgeGraceDays;
+
+  /// 新規リストの容量上限の初期値（仕様書 13.3）。
+  ///
+  /// **読まずに定数で埋めていたため、設定画面で保存するたびに 1GB へ
+  /// 戻っていた**（監査 S10）。サーバーはこの値を見てリストを作るので、
+  /// 画面側も必ずここから読むこと。
+  final int defaultQuotaBytes;
+
   final int siteAdminCount;
 }
 
@@ -277,6 +287,8 @@ final siteConfigProvider = StreamProvider<SiteConfig>(
           inviteExpiryHours: (data['inviteExpiryHours'] as num?)?.toInt() ?? 24,
           itemPurgeGraceDays:
               (data['itemPurgeGraceDays'] as num?)?.toInt() ?? 30,
+          defaultQuotaBytes:
+              (data['defaultQuotaBytes'] as num?)?.toInt() ?? kDefaultQuotaBytes,
           siteAdminCount: (data['siteAdminCount'] as num?)?.toInt() ?? 1,
         );
       }),

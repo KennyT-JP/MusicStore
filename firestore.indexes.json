@@ -1,16 +1,8 @@
 {
   "//": "複合インデックスの定義（仕様書 13.3）。単一フィールドの索引は Firestore が自動で作るので、ここには書かない。書くと『このインデックスは不要』(400 this index is not necessary) で配信が止まる。",
+  "//deleted": "2026-08-06 の監査で、宣言していた 7 件のうち 4 件がどのクエリとも対応していないことが分かった（items status+seq／comments parentId+createdAt／joinRequests status+requestedAt／notifications isRead+createdAt）。書き込みのたびに更新コストと保存料だけが掛かる状態だったため削除した。並び替えや絞り込みを足して索引が要るようになったら、Firestore が実行時のエラーに作成 URL を含めて返すので、それを見て追記すること。",
   "//members": "自分の参加リスト一覧は collectionGroup('members') にドキュメント ID の一致だけを課すクエリで、並び替えを伴わないため定義は不要。条件を増やしたときは、Firestore が実行時のエラーに必要な索引の作成 URL を含めて返すので、それを見てここに追記すること。",
   "indexes": [
-    {
-      "//": "リスト内の項目一覧。削除済みを除いて連番順に並べる（仕様書 6.4）。",
-      "collectionGroup": "items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "seq", "order": "ASCENDING" }
-      ]
-    },
     {
       "//": "猶予期間を過ぎた削除項目の抽出（仕様書 13.4）。定期実行の Cloud Functions が使う。",
       "collectionGroup": "items",
@@ -18,15 +10,6 @@
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "purgeAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "//": "項目のコメントをスレッド順に並べる（仕様書 13.3）。path で親子関係、createdAt で同階層の並び。",
-      "collectionGroup": "comments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "parentId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
@@ -45,24 +28,6 @@
       "fields": [
         { "fieldPath": "requestedBy", "order": "ASCENDING" },
         { "fieldPath": "requestedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "//": "保留中の参加申請をリスト管理者に見せる（仕様書 5.2）。",
-      "collectionGroup": "joinRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "requestedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "//": "通知一覧を新しい順に、未読を絞り込んで表示する（仕様書 14.2）。",
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isRead", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

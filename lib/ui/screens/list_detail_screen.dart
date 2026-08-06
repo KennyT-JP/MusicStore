@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
+import 'requests_screens.dart';
 
 /// 一覧の絞り込み・並び替えの状態。
 ///
@@ -61,6 +62,18 @@ class ListDetailScreen extends ConsumerWidget {
     final l10n = AppL10n.of(context);
     final list = ref.watch(listProvider(listId));
     final access = ref.watch(listAccessProvider(listId));
+
+    // **未参加者はここで参加申請の画面へ振り替える（仕様書 5.3）。**
+    // 共有 URL は誰でも開けるため、そのまま項目一覧を出そうとすると
+    // ルールに弾かれて「権限がありません」になる。実装済みの
+    // JoinRequestScreen へ繋がっていなかった（監査 S9）。
+    //
+    // 参加の判定は自分のメンバー情報が読めるまで待つ。読み込み中に
+    // 振り替えると、メンバーでも一瞬だけ申請画面が出てしまう。
+    final memberships = ref.watch(myMembershipsProvider);
+    if (memberships.hasValue && !access.canView) {
+      return JoinRequestScreen(listId: listId);
+    }
 
     return Scaffold(
       body: AsyncView(
