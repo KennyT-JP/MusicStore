@@ -7,7 +7,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { REGION, paths, readSiteConfig } from '../config';
 import { normalizeListName } from '../domain/paths';
 import { notifySafely, siteAdminUids } from '../notifications';
-import { requireSiteAdmin, requireString } from './access';
+import { requireSiteAdmin, requireString, requireUid } from './access';
 
 /**
  * リスト作成申請を承認する（仕様書 5.1）。
@@ -179,10 +179,8 @@ export const rejectListRequest = onCall({ region: REGION }, async (request) => {
  * 申請中の名前を予約しておく。
  */
 export const submitListRequest = onCall({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError('unauthenticated', 'ログインが必要です。');
-  }
+  // 他の呼び出し可能関数と同じ入口を通す（メール確認まで確かめる／監査 S3）。
+  const uid = requireUid(request);
 
   const listName = requireString(request.data, 'listName', { maxLength: 100 });
   const purpose = requireString(request.data, 'purpose', { maxLength: 1000 });

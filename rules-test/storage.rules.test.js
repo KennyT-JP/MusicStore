@@ -3,25 +3,18 @@
  *
  * ファイル配置は lists/{listId}/items/{itemId}/{ファイル名}。
  *
- * ## エミュレータの制約（重要）
+ * ## かつてスキップしていた経緯（残す）
  *
  * storage.rules は、メンバーかどうかを判定するために Firestore を参照する
- * （`firestore.exists()` / `firestore.get()`）。これは**本番の Cloud Storage
- * では動くが、Storage エミュレータでは動かない**。エミュレータ上では
- * `firestore.exists()` が常に偽となり、すべてのアクセスが拒否される。
+ * （`firestore.exists()` / `firestore.get()`）。以前ここには
+ * 「Storage エミュレータは cross-service の firestore.exists() に対応して
+ * いないため検証できない」と書かれており、8 件を `describe.skip` にしていた。
  *
- * 実際に次を確認済み：
- * - `allow read: if request.auth != null` … 期待どおり許可される
- * - `allow read: if firestore.exists(...)` … メンバーが存在しても拒否される
+ * **これは誤りだった。** 2026-08-06 のゼロベース監査で実際に skip を外して
+ * 実行したところ、8 件すべてが期待どおりに動いた。しかもこの誤った前提は
+ * README・SETUP.md・DEVLOG.md にも転記され、増幅していた。
  *
- * このため、**「メンバーだから許可される」ことを確認するテストは
- * エミュレータでは検証できない**。該当するテストは `describe.skip` にして
- * 理由を明示し、検証環境（ステージング）での手動確認に回す。
- * 手順は docs/SETUP.md を参照。
- *
- * 逆に「拒否される」ことを確認するテストは、エミュレータ上ではすべてが
- * 拒否されるため**通ってしまう**。合格しても保証にはならないので、
- * これらもステージングで併せて確認する。
+ * 教訓：**「〜できない」と書かれた箇所こそ、まず試すこと。**
  */
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
@@ -110,13 +103,13 @@ describe('Firestore を参照せずに決まるルール', () => {
 });
 
 // ---------------------------------------------------------------------------
-// エミュレータでは検証できない（ステージングで手動確認する）
+// メンバー判定を伴うルール
 //
-// Storage エミュレータが cross-service の firestore.exists() に対応して
-// いないため、「メンバーだから許可される」を確認できない。
+// storage.rules から Firestore の members を参照して判定する部分。
+// エミュレータでも検証できる（冒頭の経緯を参照）。
 // ---------------------------------------------------------------------------
 
-describe.skip('メンバー判定を伴うルール（要ステージング確認）', () => {
+describe('メンバー判定を伴うルール', () => {
   test('Read Only も再生・ダウンロードできる（4.2）', async () => {
     const storage = asUser(env, UID.readOnly).storage();
     await assertSucceeds(

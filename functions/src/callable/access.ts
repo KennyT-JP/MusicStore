@@ -8,11 +8,23 @@ import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { paths } from '../config';
 import { type ListAccess, isListAdmin, parseRole } from '../domain/roles';
 
-/** ログイン済みであることを確かめ、uid を返す。 */
+/**
+ * ログイン済みかつメール確認済みであることを確かめ、uid を返す。
+ *
+ * **メール確認は画面のリダイレクトだけでは守れない。** 直接呼べば通って
+ * しまうため、ここでも確かめる（仕様書 3.1／監査 S3）。
+ * Google 連携で入った場合、このクレームは最初から true になる。
+ */
 export function requireUid(request: CallableRequest): string {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError('unauthenticated', 'ログインが必要です。');
+  }
+  if (request.auth?.token?.email_verified !== true) {
+    throw new HttpsError(
+      'permission-denied',
+      'メールアドレスの確認が済んでいません。確認メールのリンクを開いてください。'
+    );
   }
   return uid;
 }
@@ -23,7 +35,10 @@ export function requireUid(request: CallableRequest): string {
  * 呼び出しのトークンに載っているクレームを見る。
  */
 export function isSiteAdminRequest(request: CallableRequest): boolean {
-  return request.auth?.token?.siteAdmin === true;
+  return (
+    request.auth?.token?.siteAdmin === true &&
+    request.auth?.token?.email_verified === true
+  );
 }
 
 export function requireSiteAdmin(request: CallableRequest): string {

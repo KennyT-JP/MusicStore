@@ -45,11 +45,25 @@ export async function createTestEnv() {
  * 判定は Auth のカスタムクレームで行う（仕様書 13.5）。
  */
 export function asSiteAdmin(env) {
-  return env.authenticatedContext(UID.siteAdmin, { siteAdmin: true });
+  return env.authenticatedContext(UID.siteAdmin, {
+    siteAdmin: true,
+    email_verified: true,
+  });
 }
 
+/**
+ * 通常の利用者。
+ *
+ * **メール確認済みとして扱う。** ルールが `email_verified` を見るため
+ * （仕様書 3.1／監査 S3）、指定しないとすべて拒否される。
+ */
 export function asUser(env, uid) {
-  return env.authenticatedContext(uid);
+  return env.authenticatedContext(uid, { email_verified: true });
+}
+
+/** メール確認がまだ済んでいない利用者（3.1）。 */
+export function asUnverified(env, uid) {
+  return env.authenticatedContext(uid, { email_verified: false });
 }
 
 export function asAnonymous(env) {

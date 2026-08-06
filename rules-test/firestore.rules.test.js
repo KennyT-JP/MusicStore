@@ -26,6 +26,7 @@ import {
   UID,
   asAnonymous,
   asSiteAdmin,
+  asUnverified,
   asUser,
   createTestEnv,
   seed,
@@ -663,5 +664,118 @@ describe('定義していないパス', () => {
     const siteAdmin = db(asSiteAdmin(env));
     await assertFails(getDoc(doc(siteAdmin, 'secrets/anything')));
     await assertFails(setDoc(doc(siteAdmin, 'secrets/anything'), { a: 1 }));
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// 2026-08-06 のゼロベース監査で見つけた穴。再発させないための回帰テスト。
+// ---------------------------------------------------------------------------
+
+describe('監査 S2：users を列挙できない', () => {
+  test('一般利用者は users を一覧できない（全会員のメール収集を防ぐ）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(getDocs(collection(superUser, 'users')));
+  });
+
+  test('ID を指定した取得は許す（表示名の解決に要る）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertSucceeds(getDoc(doc(superUser, `users/${UID.listAdmin}`)));
+  });
+
+  test('サイト管理者は一覧できる（11.1）', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await assertSucceeds(getDocs(collection(siteAdmin, 'users')));
+  });
+});
+
+describe('監査 S3：メール確認が済むまで何もできない（3.1）', () => {
+  test('未確認では他人のユーザー情報を読めない', async () => {
+    const unverified = db(asUnverified(env, UID.superUser));
+    await assertFails(getDoc(doc(unverified, `users/${UID.listAdmin}`)));
+  });
+
+  test('未確認ではリストを読めない', async () => {
+    const unverified = db(asUnverified(env, UID.superUser));
+    await assertFails(getDoc(doc(unverified, `lists/${LIST_ID}`)));
+  });
+
+  test('未確認では項目を追加できない', async () => {
+    const unverified = db(asUnverified(env, UID.superUser));
+    await assertFails(
+      setDoc(doc(unverified, `lists/${LIST_ID}/items/new-item`), {
+        seq: 99,
+        createdBy: UID.superUser,
+        status: 'active',
+      }),
+    );
+  });
+
+  test('未確認でも自分のユーザードキュメントは作れる（登録直後のため）', async () => {
+    const unverified = db(asUnverified(env, 'u-brand-new'));
+    await assertSucceeds(
+      setDoc(doc(unverified, 'users/u-brand-new'), { displayName: '新規' }),
+    );
+  });
+});
+
+describe('監査 S1：項目に他リストのファイルパスを書けない', () => {
+  test('自分のリスト配下のパスなら保存できる', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertSucceeds(
+      setDoc(doc(superUser, `lists/${LIST_ID}/items/ok-item`), {
+        seq: 50,
+        createdBy: UID.superUser,
+        status: 'active',
+        file: { storagePath: `lists/${LIST_ID}/items/ok-item/song.mp3` },
+      }),
+    );
+  });
+
+  test('他リストのパスは拒否する（定期削除に消させないため）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(
+      setDoc(doc(superUser, `lists/${LIST_ID}/items/evil-item`), {
+        seq: 51,
+        createdBy: UID.superUser,
+        status: 'active',
+        file: { storagePath: 'lists/list-2/items/victim/precious.mp3' },
+      }),
+    );
+  });
+
+  test('別の項目のパスも拒否する', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(
+      setDoc(doc(superUser, `lists/${LIST_ID}/items/evil-item-2`), {
+        seq: 52,
+        createdBy: UID.superUser,
+        status: 'active',
+        file: { storagePath: `lists/${LIST_ID}/items/other-item/x.mp3` },
+      }),
+    );
+  });
+
+  test('previousFiles はクライアントから書けない（Functions のみ）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(
+      setDoc(doc(superUser, `lists/${LIST_ID}/items/evil-item-3`), {
+        seq: 53,
+        createdBy: UID.superUser,
+        status: 'active',
+        previousFiles: [{ storagePath: 'lists/list-2/items/victim/old.mp3' }],
+      }),
+    );
+  });
+
+  test('status に任意の文字列を入れられない', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(
+      setDoc(doc(superUser, `lists/${LIST_ID}/items/evil-item-4`), {
+        seq: 54,
+        createdBy: UID.superUser,
+        status: 'purged',
+      }),
+    );
   });
 });

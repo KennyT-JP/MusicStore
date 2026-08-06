@@ -10,6 +10,7 @@ import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 import { REGION, paths, parseItemStoragePath, readSiteConfig } from '../config';
+import { isPathOwnedByItem } from '../domain/paths';
 
 /**
  * 1 回の実行で処理する上限。
@@ -64,22 +65,42 @@ async function purgeExpiredItems(): Promise<number> {
 
   for (const doc of expired.docs) {
     const data = doc.data();
-    const storagePath = data.file?.storagePath;
+
+    // ドキュメントのパスから、この項目が属するリストと項目 ID を得る。
+    // lists/{listId}/items/{itemId}
+    const listId = doc.ref.parent.parent?.id;
+    const itemId = doc.ref.id;
 
     try {
-      if (typeof storagePath === 'string' && storagePath) {
-        // ignoreNotFound を付け、既に消えている場合も失敗にしない。
-        await bucket.file(storagePath).delete({ ignoreNotFound: true });
+      if (!listId) {
+        logger.warn('リスト ID を特定できないため飛ばします', {
+          path: doc.ref.path,
+        });
+        continue;
       }
-      // 差し替えで置き換えられた旧ファイルもここで消す（仕様書 13.4）。
-      const previous = data.previousFiles;
-      if (Array.isArray(previous)) {
-        for (const old of previous) {
-          const path = old?.storagePath;
-          if (typeof path === 'string' && path) {
-            await bucket.file(path).delete({ ignoreNotFound: true });
-          }
+
+      // **消す前に、そのパスがこの項目のものか必ず確かめる。**
+      // storagePath はクライアントが書けるため、他人のリストのパスを
+      // 書き込んでおけば、サーバーの権限でそのファイルを消させられる
+      // （監査 S1）。ルール側でも塞いでいるが、消す側でも確かめる。
+      const candidates: unknown[] = [
+        data.file?.storagePath,
+        ...(Array.isArray(data.previousFiles)
+          ? data.previousFiles.map((old: { storagePath?: unknown }) => old?.storagePath)
+          : []),
+      ];
+
+      for (const candidate of candidates) {
+        if (candidate == null) continue;
+        if (!isPathOwnedByItem(candidate, listId, itemId)) {
+          logger.error('項目に属さないファイルパスを検出しました（削除しません）', {
+            path: doc.ref.path,
+            storagePath: String(candidate),
+          });
+          continue;
         }
+        // ignoreNotFound を付け、既に消えている場合も失敗にしない。
+        await bucket.file(candidate).delete({ ignoreNotFound: true });
       }
 
       // 消し終えた印を付け、次回以降の対象から外す。

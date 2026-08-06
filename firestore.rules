@@ -15,10 +15,25 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // メール確認が済んでいること（3.1）。
+    //
+    // **画面のリダイレクトだけでは守れない。** 直接 API を叩けば通ってしまう。
+    // 「確認が済むまでアプリは使えない」を実際に担保するのはここ（監査 S3）。
+    // Google 連携で入った場合、このクレームは最初から true になる。
+    //
+    // 以降、users の作成を除くすべての判定はこちらを使う。未確認のうちは
+    // 自分のユーザードキュメントを作れるだけで、他は何も読めない・書けない。
+    function isVerified() {
+      return isSignedIn()
+        && request.auth.token.get('email_verified', false) == true;
+    }
+
     // サイト管理者は Auth のカスタムクレームで判定する（13.5）。
     // ルールから追加の読み取りが発生しないため、高速かつ課金もない。
+    //
+    // クレームが無いユーザーでも評価エラーにならないよう get() で既定値を置く。
     function isSiteAdmin() {
-      return isSignedIn() && request.auth.token.siteAdmin == true;
+      return isVerified() && request.auth.token.get('siteAdmin', false) == true;
     }
 
     function uid() {
@@ -30,7 +45,7 @@ service cloud.firestore {
     }
 
     function isMember(listId) {
-      return isSiteAdmin() || (isSignedIn() && exists(memberPath(listId)));
+      return isSiteAdmin() || (isVerified() && exists(memberPath(listId)));
     }
 
     function memberRole(listId) {
@@ -39,7 +54,7 @@ service cloud.firestore {
 
     function isListAdmin(listId) {
       return isSiteAdmin() ||
-        (isSignedIn() &&
+        (isVerified() &&
          exists(memberPath(listId)) &&
          memberRole(listId) == 'listAdmin');
     }
@@ -47,7 +62,7 @@ service cloud.firestore {
     // Super User 以上。上位は下位を包含する（4.1）。
     function canWrite(listId) {
       return isListAdmin(listId) ||
-        (isSignedIn() &&
+        (isVerified() &&
          exists(memberPath(listId)) &&
          memberRole(listId) == 'superUser');
     }
@@ -57,12 +72,18 @@ service cloud.firestore {
     // -----------------------------------------------------------------
 
     match /users/{userId} {
-      // 表示名の解決に必要なため、ログイン済みなら誰でも読める（13.3）。
-      allow read: if isSignedIn();
+      // 表示名の解決に必要なため、ID 直接指定の取得は許す（13.3）。
+      allow get: if isVerified();
 
-      // 本人のみ。退会フラグと通知設定の書き換えは Functions に任せる。
+      // **一覧としての取得は禁じる。** 許すと全会員のメールアドレスと表示名を
+      // 一括で収集できてしまう（監査 S2）。表示名の解決は ID 指定の取得を
+      // 人数ぶん行う（lib/data/repositories/list_repository.dart の fetchUsers）。
+      allow list: if isSiteAdmin();
+
+      // 登録直後はまだメール確認が済んでいないため、ここだけ isSignedIn で許す。
+      // 作れるのは自分のドキュメントだけ。
       allow create: if isSignedIn() && uid() == userId;
-      allow update: if isSignedIn() && uid() == userId
+      allow update: if isVerified() && uid() == userId
         && !request.resource.data.diff(resource.data)
              .affectedKeys()
              .hasAny(['isWithdrawn', 'withdrawnAt']);
@@ -71,10 +92,10 @@ service cloud.firestore {
       allow delete: if false;
 
       match /notifications/{notificationId} {
-        allow read: if isSignedIn() && uid() == userId;
+        allow read: if isVerified() && uid() == userId;
 
         // 既読の更新だけを本人に許す。作成は Functions のみ（13.4）。
-        allow update: if isSignedIn() && uid() == userId
+        allow update: if isVerified() && uid() == userId
           && request.resource.data.diff(resource.data)
                .affectedKeys().hasOnly(['isRead']);
         allow create, delete: if false;
@@ -89,7 +110,7 @@ service cloud.firestore {
       // 未参加者にもリスト名だけは見せる（5.3）。共有 URL から到達できるように
       // ID 直接指定の取得は許す。使用容量などの内部情報は meta/stats に
       // 分けてあるため、このドキュメント自体は公開してよい。
-      allow get: if isSignedIn();
+      allow get: if isVerified();
 
       // ただし**一覧としての取得は禁じる**。許すと未参加者が全リスト名を
       // 列挙できてしまい、「全リストの一覧を公開する画面は作らない」（5.3）に反する。
@@ -125,7 +146,7 @@ service cloud.firestore {
 
       match /members/{memberUid} {
         // 自分の行は、メンバーかどうかの判定のために本人も読める。
-        allow read: if isMember(listId) || (isSignedIn() && uid() == memberUid);
+        allow read: if isMember(listId) || (isVerified() && uid() == memberUid);
 
         // 追加は承認・招待受諾（Functions）のみ。
         allow create: if false;
@@ -134,7 +155,7 @@ service cloud.firestore {
 
         // 除外はリスト管理者以上、離脱は本人（5.4）。
         allow delete: if isListAdmin(listId) ||
-          (isSignedIn() && uid() == memberUid);
+          (isVerified() && uid() == memberUid);
       }
 
       // ---------------------------------------------------------------
@@ -143,18 +164,18 @@ service cloud.firestore {
 
       match /joinRequests/{requesterUid} {
         allow read: if isListAdmin(listId) ||
-          (isSignedIn() && uid() == requesterUid);
+          (isVerified() && uid() == requesterUid);
 
         // 申請者は役割を選べない（5.2）。pending 以外での作成も認めない。
         // 却下後の再申請は同じドキュメントの上書きで行う（5.2.1）。
-        allow create, update: if isSignedIn()
+        allow create, update: if isVerified()
           && uid() == requesterUid
           && request.resource.data.status == 'pending'
           && !request.resource.data.keys().hasAny(['assignedRole', 'decidedBy']);
 
         // 承認・却下は Functions が行う。申請の取り下げは本人に許す。
         allow delete: if isListAdmin(listId) ||
-          (isSignedIn() && uid() == requesterUid);
+          (isVerified() && uid() == requesterUid);
       }
 
       // ---------------------------------------------------------------
@@ -164,17 +185,62 @@ service cloud.firestore {
       match /items/{itemId} {
         allow read: if isMember(listId);
 
+        // ファイルの保存先が、この項目の場所であること（13.7）。
+        //
+        // **これを確かめないと、他人のリストのパスを書き込める。**
+        // 定期削除がそのパスを消しに行くため、サーバーの権限で
+        // 他リストの音源を破壊できてしまう（監査 S1）。
+        function fileBelongsHere() {
+          return !('file' in request.resource.data)
+            || request.resource.data.file == null
+            || request.resource.data.file.storagePath is string
+               && request.resource.data.file.storagePath
+                    .matches('^lists/' + listId + '/items/' + itemId + '/.+');
+        }
+
+        // status は 2 値のみ（6.2）。任意の文字列は入れさせない。
+        function statusIsValid() {
+          return !('status' in request.resource.data)
+            || request.resource.data.status in ['active', 'deleted'];
+        }
+
+        // previousFiles は差し替え機能のための受け口で、Functions が書く。
+        // クライアントからは触らせない（監査 S1）。
+        function noPreviousFiles() {
+          return !('previousFiles' in request.resource.data)
+            || request.resource.data.previousFiles == null;
+        }
+
         // 追加は Super User 以上（4.2）。登録者は自分自身に限る。
         allow create: if canWrite(listId)
           && request.resource.data.createdBy == uid()
-          && request.resource.data.seq is int;
+          && request.resource.data.seq is int
+          && request.resource.data.status == 'active'
+          && fileBelongsHere()
+          && noPreviousFiles();
 
         // 編集・削除は本人＋リスト管理者以上（6.3）。
         // 連番は振り直さない（6.2）ので、seq の変更は許可しない。
+        //
+        // 復元（deleted → active）はリスト管理者以上のみ。猶予期間内かどうかは
+        // purgeAt で判定する（6.3）。Dart 側の Permissions.canRestoreItem と
+        // 同じ規則をここでも持つ（画面だけの制限にしない／監査 S12）。
+        function restoreIsAllowed() {
+          return resource.data.status != 'deleted'
+            || request.resource.data.status != 'active'
+            || (isListAdmin(listId)
+                && resource.data.purgeAt is timestamp
+                && resource.data.purgeAt > request.time);
+        }
+
         allow update: if (isListAdmin(listId) ||
             (canWrite(listId) && resource.data.createdBy == uid()))
           && request.resource.data.seq == resource.data.seq
-          && request.resource.data.createdBy == resource.data.createdBy;
+          && request.resource.data.createdBy == resource.data.createdBy
+          && statusIsValid()
+          && fileBelongsHere()
+          && noPreviousFiles()
+          && restoreIsAllowed();
 
         // 物理削除はしない。status を 'deleted' にするソフト削除（6.2）。
         allow delete: if false;
@@ -203,7 +269,7 @@ service cloud.firestore {
     match /listNames/{nameLower} {
       // ID 直接指定でのみ到達させる。list による列挙は許可しない。
       // 列挙できると未参加者が全リスト名を知れてしまい、5.3 に反する。
-      allow get: if isSignedIn();
+      allow get: if isVerified();
       allow list: if false;
       allow write: if false;
     }
@@ -214,9 +280,9 @@ service cloud.firestore {
 
     match /listRequests/{requestId} {
       allow read: if isSiteAdmin() ||
-        (isSignedIn() && resource.data.requestedBy == uid());
+        (isVerified() && resource.data.requestedBy == uid());
 
-      allow create: if isSignedIn()
+      allow create: if isVerified()
         && request.resource.data.requestedBy == uid()
         && request.resource.data.status == 'pending';
 
@@ -230,7 +296,7 @@ service cloud.firestore {
 
     match /invites/{inviteId} {
       // ID を知っている人だけが到達できる。ID は推測できない値にする（13.3）。
-      allow get: if isSignedIn();
+      allow get: if isVerified();
       allow list: if false;
 
       // 発行・受諾とも Functions のみ。
@@ -243,7 +309,7 @@ service cloud.firestore {
     // -----------------------------------------------------------------
 
     match /siteConfig/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isVerified();
 
       // siteAdminCount は Functions が持つ（4.5）。
       allow write: if isSiteAdmin()

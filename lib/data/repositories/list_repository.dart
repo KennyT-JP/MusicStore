@@ -67,26 +67,24 @@ class ListRepository {
   /// 表示名の解決に使うユーザー情報をまとめて引く（仕様書 13.3）。
   ///
   /// 項目・コメントには uid のみを持たせているため、表示時にここで解決する。
+  ///
+  /// **ID を 1 件ずつ指定して取得する。** 以前は `whereIn` を使っていたが、
+  /// これは Firestore のルール上「一覧取得」に当たる。一覧を許すと
+  /// 全会員のメールアドレスと表示名を一括で収集できてしまうため、
+  /// `users` の一覧はサイト管理者だけに絞った（監査 S2）。
+  /// 読み取るドキュメント数は `whereIn` と同じで、課金も変わらない。
   Future<Map<String, AppUser>> fetchUsers(Iterable<String> uids) async {
     final unique = uids.where((u) => u.isNotEmpty).toSet().toList();
     if (unique.isEmpty) return const {};
 
-    final result = <String, AppUser>{};
-    // whereIn は 1 回あたり 30 件までなので分割する。
-    for (var i = 0; i < unique.length; i += 30) {
-      final chunk = unique.sublist(
-        i,
-        i + 30 > unique.length ? unique.length : i + 30,
-      );
-      final snapshot = await _db
-          .collection(FirestorePaths.users)
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
-      for (final doc in snapshot.docs) {
-        result[doc.id] = AppUser.fromDoc(doc);
-      }
-    }
-    return result;
+    final snapshots = await Future.wait(
+      unique.map((uid) => _db.doc(FirestorePaths.user(uid)).get()),
+    );
+
+    return {
+      for (final doc in snapshots)
+        if (doc.exists) doc.id: AppUser.fromDoc(doc),
+    };
   }
 
   Stream<AppUser?> watchUser(String uid) => _db

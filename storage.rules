@@ -11,8 +11,16 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    // メール確認が済んでいること（3.1）。firestore.rules と同じ規則。
+    // 画面のリダイレクトだけでは守れないため、ここでも確かめる（監査 S3）。
+    function isVerified() {
+      return isSignedIn()
+        && request.auth.token.get('email_verified', false) == true;
+    }
+
+    // クレームが無いユーザーでも評価エラーにならないよう get() で既定値を置く。
     function isSiteAdmin() {
-      return isSignedIn() && request.auth.token.siteAdmin == true;
+      return isVerified() && request.auth.token.get('siteAdmin', false) == true;
     }
 
     function uid() {
@@ -25,7 +33,7 @@ service firebase.storage {
 
     function isMember(listId) {
       return isSiteAdmin() ||
-        (isSignedIn() && firestore.exists(memberPath(listId)));
+        (isVerified() && firestore.exists(memberPath(listId)));
     }
 
     function memberRole(listId) {
@@ -34,7 +42,7 @@ service firebase.storage {
 
     function isListAdmin(listId) {
       return isSiteAdmin() ||
-        (isSignedIn() &&
+        (isVerified() &&
          firestore.exists(memberPath(listId)) &&
          memberRole(listId) == 'listAdmin');
     }
@@ -42,7 +50,7 @@ service firebase.storage {
     // Super User 以上（4.2）。
     function canWrite(listId) {
       return isListAdmin(listId) ||
-        (isSignedIn() &&
+        (isVerified() &&
          firestore.exists(memberPath(listId)) &&
          memberRole(listId) == 'superUser');
     }
@@ -57,10 +65,17 @@ service firebase.storage {
       // 容量上限の判定はここでは行わない。ルールからは合計使用量を
       // 参照できないため、アップロード開始前のクライアント側チェック（7.5）と、
       // Cloud Functions での集計・ブロック（13.4）で担保する。
-      allow create: if canWrite(listId);
+      // `resource == null` で「まだ存在しないこと」を確かめる。
+      // これが無いと既存ファイルを上書きできてしまう（下の update 参照）。
+      allow create: if canWrite(listId) && resource == null;
 
       // 差し替えは新しいファイルを別名で保存する（13.7）ため、
       // 既存ファイルの上書きは許可しない。
+      //
+      // **`allow update: if false` だけでは防げない。** 既存パスへの
+      // アップロードは create として評価されるため、上の create を通ってしまう。
+      // 実際に自動テストが失敗して発覚した（監査 S4）。
+      // create 側で「まだ存在しないこと」を明示的に確かめる必要がある。
       allow update: if false;
 
       // 削除は Functions が猶予期間の経過後に行う（13.4）。
