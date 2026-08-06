@@ -69,6 +69,12 @@
   "titleLabel": "Title (optional)",
   "artistLabel": "Artist (optional)",
   "commentLabel": "Comment (optional)",
+  "edit": "Edit",
+  "inviteRevokedDone": "The invite has been revoked.",
+  "inviteExpiryNote": "Valid until {until}. This URL can only be used once.",
+  "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
+  "cancelUpload": "Cancel upload",
+  "revokeInvite": "Revoke invite",
   "save": "Save",
   "cancel": "Cancel",
 

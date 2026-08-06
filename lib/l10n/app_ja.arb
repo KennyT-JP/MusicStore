@@ -99,6 +99,12 @@
   "titleLabel": "曲名（任意）",
   "artistLabel": "アーティスト名（任意）",
   "commentLabel": "コメント（任意）",
+  "edit": "編集",
+  "inviteRevokedDone": "招待を取り消しました。",
+  "inviteExpiryNote": "有効期限：{until} まで。この URL は 1 回しか使えません。",
+  "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
+  "cancelUpload": "アップロードを中止",
+  "revokeInvite": "招待を取り消す",
   "save": "保存",
   "cancel": "キャンセル",
 

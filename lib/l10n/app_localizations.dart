@@ -445,6 +445,36 @@ abstract class AppL10n {
   /// **'コメント（任意）'**
   String get commentLabel;
 
+  /// No description provided for @edit.
+  ///
+  /// In ja, this message translates to:
+  /// **'編集'**
+  String get edit;
+
+  /// No description provided for @inviteRevokedDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待を取り消しました。'**
+  String get inviteRevokedDone;
+
+  /// No description provided for @inviteExpiryNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'有効期限：{until} まで。この URL は 1 回しか使えません。'**
+  String inviteExpiryNote(String until);
+
+  /// No description provided for @cancelUpload.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップロードを中止'**
+  String get cancelUpload;
+
+  /// No description provided for @revokeInvite.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待を取り消す'**
+  String get revokeInvite;
+
   /// No description provided for @save.
   ///
   /// In ja, this message translates to:

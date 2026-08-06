@@ -195,6 +195,23 @@ class AppL10nJa extends AppL10n {
   String get commentLabel => 'コメント（任意）';
 
   @override
+  String get edit => '編集';
+
+  @override
+  String get inviteRevokedDone => '招待を取り消しました。';
+
+  @override
+  String inviteExpiryNote(String until) {
+    return '有効期限：$until まで。この URL は 1 回しか使えません。';
+  }
+
+  @override
+  String get cancelUpload => 'アップロードを中止';
+
+  @override
+  String get revokeInvite => '招待を取り消す';
+
+  @override
   String get save => '保存';
 
   @override

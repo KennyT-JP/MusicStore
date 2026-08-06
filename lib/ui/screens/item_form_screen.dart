@@ -6,6 +6,7 @@
 library;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -52,6 +53,9 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
   bool _loaded = false;
 
   bool _busy = false;
+
+  /// 進行中のアップロード。中止できるように保持する（仕様書 7.5）。
+  UploadTask? _uploadTask;
   double? _uploadProgress;
   String? _error;
 
@@ -192,6 +196,17 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
                   l10n.uploadProgress((_uploadProgress! * 100).round()),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 8),
+                // **中止できるようにする（仕様書 7.5 / 14.4）。**
+                // 進捗は出していたが止める手段が無く、大きな音源を選んで
+                // しまうと完了まで待つしかなかった（監査 S16）。
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _uploadTask == null ? null : _cancelUpload,
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: Text(l10n.cancelUpload),
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
               FilledButton(
@@ -284,6 +299,17 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     setState(() => _date = LocalDate(picked.year, picked.month, picked.day));
   }
 
+  /// アップロードを中止する（仕様書 7.5 / 14.4）。
+  Future<void> _cancelUpload() async {
+    await _uploadTask?.cancel();
+    if (mounted) {
+      setState(() {
+        _uploadTask = null;
+        _uploadProgress = null;
+      });
+    }
+  }
+
   Future<void> _pickFile() async {
     final result = await FilePicker.pickFiles(withData: true);
     if (result == null || result.files.isEmpty) return;
@@ -321,6 +347,9 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         await _saveNew(repo, uid, isFileTab, l10n);
       }
       if (mounted) _close();
+    } on UploadCanceledException {
+      // 中止は失敗ではないので、エラーとして見せない（仕様書 7.5）。
+      if (mounted) setState(() => _error = null);
     } on QuotaExceededException {
       if (mounted) setState(() => _error = l10n.quotaExceeded);
     } on ConcurrentEditException {
@@ -332,6 +361,7 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         setState(() {
           _busy = false;
           _uploadProgress = null;
+          _uploadTask = null;
         });
       }
     }
@@ -366,6 +396,9 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         artist: _artist.text,
         onProgress: (fraction) {
           if (mounted) setState(() => _uploadProgress = fraction);
+        },
+        onTaskStarted: (task) {
+          if (mounted) setState(() => _uploadTask = task);
         },
       );
     } else {

@@ -129,6 +129,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
   bool _busy = false;
   String? _error;
   String? _inviteUrl;
+  String? _inviteId;
   DateTime? _expiresAt;
 
   @override
@@ -185,9 +186,21 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                   const SizedBox(height: 8),
                   Text(
                     // 有効期限は受諾した時点で判定される（仕様書 3.3）。
-                    '有効期限：${_formatDateTime(_expiresAt!)}まで。'
-                    'この URL は 1 回しか使えません。',
+                    l10n.inviteExpiryNote(_formatDateTime(_expiresAt!)),
                     style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  // **取消の導線（仕様書 3.3）。** revokeInvite は実装済み
+                  // だったが、画面から呼ぶ場所が無かった（監査 S16）。
+                  // 誤って渡した URL を無効にできないと、取り消す手段が
+                  // 「期限切れを待つ」しかなくなる。
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _busy ? null : _revoke,
+                      icon: const Icon(Icons.link_off),
+                      label: Text(l10n.revokeInvite),
+                    ),
                   ),
                 ],
               ),
@@ -196,6 +209,40 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
         ],
       ],
     );
+  }
+
+  /// 発行した招待 URL を無効にする（仕様書 3.3）。
+  Future<void> _revoke() async {
+    final id = _inviteId;
+    if (id == null) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(functionsRepositoryProvider).revokeInvite(id);
+      if (mounted) {
+        setState(() {
+          _inviteUrl = null;
+          _inviteId = null;
+          _expiresAt = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppL10n.of(context).inviteRevoked)),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is FunctionsCallException
+              ? error.message
+              : AppL10n.of(context).errorGeneric,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _create() async {
@@ -211,6 +258,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
       if (mounted) {
         setState(() {
           _inviteUrl = buildShareUrl(AppRoutes.invite(result.inviteId));
+          _inviteId = result.inviteId;
           _expiresAt = result.expiresAt;
         });
       }

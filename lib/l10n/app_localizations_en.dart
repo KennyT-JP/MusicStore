@@ -197,6 +197,23 @@ class AppL10nEn extends AppL10n {
   String get commentLabel => 'Comment (optional)';
 
   @override
+  String get edit => 'Edit';
+
+  @override
+  String get inviteRevokedDone => 'The invite has been revoked.';
+
+  @override
+  String inviteExpiryNote(String until) {
+    return 'Valid until $until. This URL can only be used once.';
+  }
+
+  @override
+  String get cancelUpload => 'Cancel upload';
+
+  @override
+  String get revokeInvite => 'Revoke invite';
+
+  @override
   String get save => 'Save';
 
   @override

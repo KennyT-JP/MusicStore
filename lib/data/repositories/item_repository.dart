@@ -28,6 +28,17 @@ class QuotaExceededException implements Exception {
 /// アップロードの進捗。
 typedef UploadProgressCallback = void Function(double fraction);
 
+/// アップロードを利用者が中止したときに投げる（仕様書 7.5 / 14.4）。
+///
+/// 通信の失敗と区別するために専用の型にしている。中止は失敗ではないので、
+/// 画面ではエラーとして見せない。
+class UploadCanceledException implements Exception {
+  const UploadCanceledException();
+
+  @override
+  String toString() => 'UploadCanceledException';
+}
+
 /// 項目とコメントの読み書き。
 class ItemRepository {
   ItemRepository(this._db, this._storage);
@@ -97,6 +108,7 @@ class ItemRepository {
     String? title,
     String? artist,
     UploadProgressCallback? onProgress,
+    void Function(UploadTask task)? onTaskStarted,
   }) async {
     // アップロードを始める前に容量を確認する。無駄な通信と課金を避ける。
     final decision = QuotaPolicy.canStartUpload(
@@ -125,7 +137,19 @@ class ItemRepository {
         }
       });
     }
-    await task;
+
+    // **中止できるように、進行中のタスクを呼び出し元へ渡す（仕様書 7.5 / 14.4）。**
+    // 以前は task を await するだけで、外から止める手段が無かった（監査 S16）。
+    // 大きな音源のアップロードを始めてしまうと、完了まで待つしかなかった。
+    onTaskStarted?.call(task);
+
+    try {
+      await task;
+    } on FirebaseException catch (e) {
+      // 中止したときは canceled が返る。失敗ではないので専用の例外にする。
+      if (e.code == 'canceled') throw const UploadCanceledException();
+      rethrow;
+    }
 
     return _createItem(
       listId: listId,

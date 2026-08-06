@@ -543,6 +543,13 @@ class _CommentTile extends ConsumerWidget {
                 children: [
                   if (onReply != null)
                     TextButton(onPressed: onReply, child: Text(l10n.reply)),
+                  // **編集の導線（仕様書 9）。** updateComment は実装済み
+                  // だったが、呼ぶ場所が無かった（監査 S16）。
+                  if (canEdit)
+                    TextButton(
+                      onPressed: () => _editComment(context, ref),
+                      child: Text(l10n.edit),
+                    ),
                   if (canEdit)
                     TextButton(
                       onPressed: () => ref
@@ -560,6 +567,52 @@ class _CommentTile extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+extension _CommentEditing on _CommentTile {
+  /// コメントを編集する（仕様書 9）。
+  Future<void> _editComment(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final controller = TextEditingController(text: comment.body);
+
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.edit),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          minLines: 1,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.commentLabel),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+
+    if (edited == null || edited.isEmpty || edited == comment.body) return;
+
+    await ref
+        .read(itemRepositoryProvider)
+        .updateComment(
+          listId: listId,
+          itemId: itemId,
+          commentId: comment.id,
+          body: edited,
+          // 開いた時点の更新日時を渡し、その間に他の人が直していたら
+          // 弾く（仕様書 6.3 と同じ扱い）。
+          openedWith: comment.updatedAt,
+        );
   }
 }
 
