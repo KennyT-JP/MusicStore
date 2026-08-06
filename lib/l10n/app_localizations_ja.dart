@@ -212,6 +212,63 @@ class AppL10nJa extends AppL10n {
   String get revokeInvite => '招待を取り消す';
 
   @override
+  String get authInvalidEmail => 'メールアドレスの形式が正しくありません。';
+
+  @override
+  String get authUserDisabled => 'このアカウントは無効になっています。';
+
+  @override
+  String get authWrongCredential => 'メールアドレスまたはパスワードが違います。';
+
+  @override
+  String get authEmailInUse => 'このメールアドレスはすでに使われています。ログインしてください。';
+
+  @override
+  String get authWeakPassword => 'パスワードが短すぎます。6 文字以上にしてください。';
+
+  @override
+  String get authTooManyRequests => '試行回数が多すぎます。しばらく待ってからお試しください。';
+
+  @override
+  String get authPopupClosed => 'ログインがキャンセルされました。';
+
+  @override
+  String get authNetworkFailed => 'ネットワークに接続できませんでした。通信状況をご確認ください。';
+
+  @override
+  String get requestSubmitted => '申請しました。';
+
+  @override
+  String get requestSubmittedBody => 'サイト管理者が確認して承認するまでお待ちください。';
+
+  @override
+  String get listNameLabel => 'リスト名';
+
+  @override
+  String get listNameHelper => '既にあるリストと同じ名前は使えません';
+
+  @override
+  String get listNameRequired => 'リスト名を入力してください';
+
+  @override
+  String get estimatedTrackCountLabel => '概算の登録曲数';
+
+  @override
+  String get expectedUserCountLabel => '使用者数';
+
+  @override
+  String get purposeLabel => '作成目的';
+
+  @override
+  String get purposeRequired => '作成目的を入力してください';
+
+  @override
+  String get nonNegativeNumberRequired => '0 以上の数値を入力してください';
+
+  @override
+  String get openList => 'リストを開く';
+
+  @override
   String get save => '保存';
 
   @override

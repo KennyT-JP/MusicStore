@@ -214,6 +214,69 @@ class AppL10nEn extends AppL10n {
   String get revokeInvite => 'Revoke invite';
 
   @override
+  String get authInvalidEmail => 'That email address is not valid.';
+
+  @override
+  String get authUserDisabled => 'This account has been disabled.';
+
+  @override
+  String get authWrongCredential =>
+      'The email address or password is incorrect.';
+
+  @override
+  String get authEmailInUse =>
+      'That email address is already in use. Please sign in instead.';
+
+  @override
+  String get authWeakPassword =>
+      'That password is too short. Use at least 6 characters.';
+
+  @override
+  String get authTooManyRequests =>
+      'Too many attempts. Please wait a while and try again.';
+
+  @override
+  String get authPopupClosed => 'Sign-in was cancelled.';
+
+  @override
+  String get authNetworkFailed =>
+      'Could not reach the network. Please check your connection.';
+
+  @override
+  String get requestSubmitted => 'Request submitted.';
+
+  @override
+  String get requestSubmittedBody =>
+      'Please wait for a site administrator to review and approve it.';
+
+  @override
+  String get listNameLabel => 'List name';
+
+  @override
+  String get listNameHelper => 'A name already in use is not allowed';
+
+  @override
+  String get listNameRequired => 'Please enter a list name';
+
+  @override
+  String get estimatedTrackCountLabel => 'Estimated number of tracks';
+
+  @override
+  String get expectedUserCountLabel => 'Expected number of users';
+
+  @override
+  String get purposeLabel => 'Purpose';
+
+  @override
+  String get purposeRequired => 'Please enter a purpose';
+
+  @override
+  String get nonNegativeNumberRequired => 'Please enter a number of 0 or more';
+
+  @override
+  String get openList => 'Open list';
+
+  @override
   String get save => 'Save';
 
   @override

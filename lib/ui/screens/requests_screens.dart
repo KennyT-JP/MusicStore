@@ -56,10 +56,9 @@ class _RequestListScreenState extends ConsumerState<RequestListScreen> {
       return Scaffold(
         body: EmptyState(
           icon: Icons.check_circle_outline,
-          title: '申請しました。',
+          title: l10n.requestSubmitted,
           description:
-              'サイト管理者が確認して承認するまでお待ちください。'
-              '状態は「${l10n.myRequests}」で確認できます。',
+              '${l10n.requestSubmittedBody}\n${l10n.myRequests}',
           action: FilledButton(
             onPressed: () => context.go(AppRoutes.myRequests),
             child: Text(l10n.myRequests),
@@ -90,46 +89,46 @@ class _RequestListScreenState extends ConsumerState<RequestListScreen> {
                   ],
                   TextFormField(
                     controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: 'リスト名',
+                    decoration: InputDecoration(
+                      labelText: l10n.listNameLabel,
                       border: OutlineInputBorder(),
-                      helperText: '既にあるリストと同じ名前は使えません',
+                      helperText: l10n.listNameHelper,
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'リスト名を入力してください'
+                        ? l10n.listNameRequired
                         : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _tracks,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '概算の登録曲数',
+                    decoration: InputDecoration(
+                      labelText: l10n.estimatedTrackCountLabel,
                       border: OutlineInputBorder(),
                     ),
-                    validator: _positiveNumber,
+                    validator: (v) => _positiveNumber(l10n, v),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _users,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '使用者数',
+                    decoration: InputDecoration(
+                      labelText: l10n.expectedUserCountLabel,
                       border: OutlineInputBorder(),
                     ),
-                    validator: _positiveNumber,
+                    validator: (v) => _positiveNumber(l10n, v),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _purpose,
                     minLines: 3,
                     maxLines: 6,
-                    decoration: const InputDecoration(
-                      labelText: '作成目的',
+                    decoration: InputDecoration(
+                      labelText: l10n.purposeLabel,
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
-                        ? '作成目的を入力してください'
+                        ? l10n.purposeRequired
                         : null,
                   ),
                   const SizedBox(height: 24),
@@ -151,9 +150,9 @@ class _RequestListScreenState extends ConsumerState<RequestListScreen> {
     );
   }
 
-  String? _positiveNumber(String? value) {
+  String? _positiveNumber(AppL10n l10n, String? value) {
     final n = int.tryParse((value ?? '').trim());
-    if (n == null || n < 0) return '0 以上の数値を入力してください';
+    if (n == null || n < 0) return l10n.nonNegativeNumberRequired;
     return null;
   }
 
@@ -281,7 +280,7 @@ class _RequestCard extends StatelessWidget {
                 child: FilledButton.tonal(
                   onPressed: () =>
                       context.go(AppRoutes.list(request.createdListId!)),
-                  child: const Text('リストを開く'),
+                  child: Text(l10n.openList),
                 ),
               )
             else if (request.status == RequestStatus.rejected)

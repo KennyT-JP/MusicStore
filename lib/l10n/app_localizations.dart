@@ -475,6 +475,120 @@ abstract class AppL10n {
   /// **'招待を取り消す'**
   String get revokeInvite;
 
+  /// No description provided for @authInvalidEmail.
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスの形式が正しくありません。'**
+  String get authInvalidEmail;
+
+  /// No description provided for @authUserDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアカウントは無効になっています。'**
+  String get authUserDisabled;
+
+  /// No description provided for @authWrongCredential.
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスまたはパスワードが違います。'**
+  String get authWrongCredential;
+
+  /// No description provided for @authEmailInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'このメールアドレスはすでに使われています。ログインしてください。'**
+  String get authEmailInUse;
+
+  /// No description provided for @authWeakPassword.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードが短すぎます。6 文字以上にしてください。'**
+  String get authWeakPassword;
+
+  /// No description provided for @authTooManyRequests.
+  ///
+  /// In ja, this message translates to:
+  /// **'試行回数が多すぎます。しばらく待ってからお試しください。'**
+  String get authTooManyRequests;
+
+  /// No description provided for @authPopupClosed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログインがキャンセルされました。'**
+  String get authPopupClosed;
+
+  /// No description provided for @authNetworkFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ネットワークに接続できませんでした。通信状況をご確認ください。'**
+  String get authNetworkFailed;
+
+  /// No description provided for @requestSubmitted.
+  ///
+  /// In ja, this message translates to:
+  /// **'申請しました。'**
+  String get requestSubmitted;
+
+  /// No description provided for @requestSubmittedBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイト管理者が確認して承認するまでお待ちください。'**
+  String get requestSubmittedBody;
+
+  /// No description provided for @listNameLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名'**
+  String get listNameLabel;
+
+  /// No description provided for @listNameHelper.
+  ///
+  /// In ja, this message translates to:
+  /// **'既にあるリストと同じ名前は使えません'**
+  String get listNameHelper;
+
+  /// No description provided for @listNameRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト名を入力してください'**
+  String get listNameRequired;
+
+  /// No description provided for @estimatedTrackCountLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'概算の登録曲数'**
+  String get estimatedTrackCountLabel;
+
+  /// No description provided for @expectedUserCountLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用者数'**
+  String get expectedUserCountLabel;
+
+  /// No description provided for @purposeLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成目的'**
+  String get purposeLabel;
+
+  /// No description provided for @purposeRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成目的を入力してください'**
+  String get purposeRequired;
+
+  /// No description provided for @nonNegativeNumberRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'0 以上の数値を入力してください'**
+  String get nonNegativeNumberRequired;
+
+  /// No description provided for @openList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを開く'**
+  String get openList;
+
   /// No description provided for @save.
   ///
   /// In ja, this message translates to:

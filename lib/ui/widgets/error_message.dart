@@ -45,26 +45,28 @@ class ErrorMessage extends StatelessWidget {
 /// アカウントの有無を外部に漏らすため、まとめて同じ文言にする。
 String describeAuthError(BuildContext context, FirebaseAuthException e) {
   final l10n = AppL10n.of(context);
+  // **文言はすべて l10n を通す（監査 S20）。** ここは日本語を直書きして
+  // おり、英語表示に切り替えてもログイン失敗時だけ日本語が出ていた。
   switch (e.code) {
     case 'invalid-email':
-      return 'メールアドレスの形式が正しくありません。';
+      return l10n.authInvalidEmail;
     case 'user-disabled':
-      return 'このアカウントは無効になっています。';
+      return l10n.authUserDisabled;
     case 'user-not-found':
     case 'wrong-password':
     case 'invalid-credential':
-      return 'メールアドレスまたはパスワードが違います。';
+      return l10n.authWrongCredential;
     case 'email-already-in-use':
-      return 'このメールアドレスはすでに使われています。ログインしてください。';
+      return l10n.authEmailInUse;
     case 'weak-password':
-      return 'パスワードが短すぎます。6 文字以上にしてください。';
+      return l10n.authWeakPassword;
     case 'too-many-requests':
-      return '試行回数が多すぎます。しばらく待ってからお試しください。';
+      return l10n.authTooManyRequests;
     case 'popup-closed-by-user':
     case 'cancelled-popup-request':
-      return 'ログインがキャンセルされました。';
+      return l10n.authPopupClosed;
     case 'network-request-failed':
-      return 'ネットワークに接続できませんでした。通信状況をご確認ください。';
+      return l10n.authNetworkFailed;
     default:
       return l10n.errorGeneric;
   }
