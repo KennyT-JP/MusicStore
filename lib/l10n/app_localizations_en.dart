@@ -277,6 +277,46 @@ class AppL10nEn extends AppL10n {
   String get openList => 'Open list';
 
   @override
+  String get removeMemberBody =>
+      'This member will be removed from the list.\n\nTheir items and comments stay, but their name will be shown as \"Former member\". They can request to join again.';
+
+  @override
+  String get leaveListBody =>
+      'You will leave this list.\n\nYour items and comments stay, but your name will be shown as \"Former member\".';
+
+  @override
+  String get noPendingRequests => 'There are no pending requests.';
+
+  @override
+  String get chooseApprovalRole => 'Choose the role to grant';
+
+  @override
+  String deleteListBody(String name) {
+    return 'This will delete \"$name\".\n\nThere is no backup, so deleted content cannot be restored.';
+  }
+
+  @override
+  String get usedCapacity => 'Storage used';
+
+  @override
+  String get quotaOver90 =>
+      'Over 90% of the limit. Ask a site administrator to raise it.';
+
+  @override
+  String get quotaOver80 => 'Over 80% of the limit.';
+
+  @override
+  String get quotaGraceNote =>
+      'Files from deleted items are kept for a while, so deleting does not free space immediately.';
+
+  @override
+  String get shareUrl => 'Share URL';
+
+  @override
+  String get shareUrlNote =>
+      'Anyone with this URL can request to join. They cannot see the contents until approved.';
+
+  @override
   String get save => 'Save';
 
   @override

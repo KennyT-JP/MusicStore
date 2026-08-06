@@ -269,6 +269,43 @@ class AppL10nJa extends AppL10n {
   String get openList => 'リストを開く';
 
   @override
+  String get removeMemberBody =>
+      'このメンバーをリストから外します。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。あらためて参加申請することもできます。';
+
+  @override
+  String get leaveListBody =>
+      'このリストから抜けます。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。';
+
+  @override
+  String get noPendingRequests => '保留中の申請はありません。';
+
+  @override
+  String get chooseApprovalRole => '承認する役割を選んでください';
+
+  @override
+  String deleteListBody(String name) {
+    return '「$name」を削除します。\n\nバックアップは取っていないため、削除した内容は元に戻せません。';
+  }
+
+  @override
+  String get usedCapacity => '使用容量';
+
+  @override
+  String get quotaOver90 => '上限の 90% を超えています。上限の引き上げはサイト管理者に依頼してください。';
+
+  @override
+  String get quotaOver80 => '上限の 80% を超えています。';
+
+  @override
+  String get quotaGraceNote => '削除した項目のファイルは一定期間保持されるため、削除してもすぐには空きが増えません。';
+
+  @override
+  String get shareUrl => '共有 URL';
+
+  @override
+  String get shareUrlNote => 'この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。';
+
+  @override
   String get save => '保存';
 
   @override

@@ -361,10 +361,8 @@ class _MemberTile extends ConsumerWidget {
         builder: (context) => AlertDialog(
           title: Text(l10n.removeMember),
           // 除外しても投稿は残る（仕様書 5.4）。
-          content: const Text(
-            'このメンバーをリストから外します。\n\n'
-            '登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。'
-            'あらためて参加申請することもできます。',
+          content: Text(
+l10n.removeMemberBody,
           ),
           actions: [
             TextButton(
@@ -391,9 +389,8 @@ class _MemberTile extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.leaveList),
-        content: const Text(
-          'このリストから抜けます。\n\n'
-          '登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。',
+        content: Text(
+l10n.leaveListBody,
         ),
         actions: [
           TextButton(
@@ -438,9 +435,9 @@ class ListJoinRequestsScreen extends ConsumerWidget {
               _AdminHeader(listId: listId, title: l10n.joinRequests),
               const SizedBox(height: 16),
               if (items.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: Text('保留中の申請はありません。')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: Text(l10n.noPendingRequests)),
                 ),
               for (final request in items) _JoinRequestCard(request: request),
             ],
@@ -478,7 +475,7 @@ class _JoinRequestCard extends ConsumerWidget {
             const SizedBox(height: 16),
             // 承認時に役割を決める。申請者は選べない（仕様書 5.2）。
             Text(
-              '承認する役割を選んでください',
+              l10n.chooseApprovalRole,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -608,9 +605,7 @@ class ListSettingsScreen extends ConsumerWidget {
         title: Text(l10n.deleteList),
         // バックアップを持たないため、復旧できないことを明示する（仕様書 12.3）。
         content: Text(
-          '「$name」を削除します。\n\n'
-          '${l10n.deleteListWarning}\n\n'
-          'バックアップは取っていないため、削除した内容は元に戻せません。',
+          '${l10n.deleteListBody(name)}\n\n${l10n.deleteListWarning}',
         ),
         actions: [
           TextButton(
@@ -658,7 +653,7 @@ class _QuotaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('使用容量', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.usedCapacity, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             LinearProgressIndicator(
               value: quota.ratio.clamp(0.0, 1.0),
@@ -684,8 +679,8 @@ class _QuotaCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 quota.level == QuotaLevel.warning
-                    ? '上限の 90% を超えています。上限の引き上げはサイト管理者に依頼してください。'
-                    : '上限の 80% を超えています。',
+                    ? l10n.quotaOver90
+                    : l10n.quotaOver80,
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: color),
@@ -694,8 +689,7 @@ class _QuotaCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               // 猶予期間中は容量が減らない（仕様書 6.3 / 13.4）。
-              '削除した項目のファイルは一定期間保持されるため、'
-              '削除してもすぐには空きが増えません。',
+              l10n.quotaGraceNote,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -713,6 +707,7 @@ class _ShareUrlCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
     final url = buildShareUrl(AppRoutes.list(listId));
 
     return Card(
@@ -722,14 +717,13 @@ class _ShareUrlCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('共有 URL', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.shareUrl, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             SelectableText(url, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             Text(
               // 未参加者が開くと参加申請の画面になる（仕様書 5.3）。
-              'この URL を渡すと、受け取った人は参加を申請できます。'
-              '中身は承認するまで見えません。',
+              l10n.shareUrlNote,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

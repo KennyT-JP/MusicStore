@@ -589,6 +589,72 @@ abstract class AppL10n {
   /// **'リストを開く'**
   String get openList;
 
+  /// No description provided for @removeMemberBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このメンバーをリストから外します。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。あらためて参加申請することもできます。'**
+  String get removeMemberBody;
+
+  /// No description provided for @leaveListBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストから抜けます。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。'**
+  String get leaveListBody;
+
+  /// No description provided for @noPendingRequests.
+  ///
+  /// In ja, this message translates to:
+  /// **'保留中の申請はありません。'**
+  String get noPendingRequests;
+
+  /// No description provided for @chooseApprovalRole.
+  ///
+  /// In ja, this message translates to:
+  /// **'承認する役割を選んでください'**
+  String get chooseApprovalRole;
+
+  /// No description provided for @deleteListBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を削除します。\n\nバックアップは取っていないため、削除した内容は元に戻せません。'**
+  String deleteListBody(String name);
+
+  /// No description provided for @usedCapacity.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用容量'**
+  String get usedCapacity;
+
+  /// No description provided for @quotaOver90.
+  ///
+  /// In ja, this message translates to:
+  /// **'上限の 90% を超えています。上限の引き上げはサイト管理者に依頼してください。'**
+  String get quotaOver90;
+
+  /// No description provided for @quotaOver80.
+  ///
+  /// In ja, this message translates to:
+  /// **'上限の 80% を超えています。'**
+  String get quotaOver80;
+
+  /// No description provided for @quotaGraceNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除した項目のファイルは一定期間保持されるため、削除してもすぐには空きが増えません。'**
+  String get quotaGraceNote;
+
+  /// No description provided for @shareUrl.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有 URL'**
+  String get shareUrl;
+
+  /// No description provided for @shareUrlNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。'**
+  String get shareUrlNote;
+
   /// No description provided for @save.
   ///
   /// In ja, this message translates to:
