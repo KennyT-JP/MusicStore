@@ -97,7 +97,11 @@ class _ListCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    final items = ref.watch(listItemsProvider(entry.list.id));
+    // **項目数はサーバーが持つ値を使う（監査 S6）。**
+    // 以前は listItemsProvider（全項目の常時購読）を件数表示のためだけに
+    // 張っていた。参加リスト M 件 × 平均項目 N 件で、画面を開くだけで
+    // M 本の接続と M×N 件の読み取りが発生していた。
+    final stats = ref.watch(listStatsProvider(entry.list.id));
     final access = ref.watch(listAccessProvider(entry.list.id));
 
     // 容量はリスト管理者以上にのみ見せる（仕様書 7.4）。
@@ -132,9 +136,7 @@ class _ListCard extends ConsumerWidget {
                 children: [
                   Text(
                     // 削除済みは件数に含めない。
-                    l10n.itemCount(
-                      items.value?.where((i) => !i.isDeleted).length ?? 0,
-                    ),
+                    l10n.itemCount(stats.value?.itemCount ?? 0),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (entry.list.hasNoAdmin)

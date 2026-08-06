@@ -52,6 +52,7 @@ class ListStats {
     required this.nextSeq,
     required this.usedBytes,
     required this.quotaBytes,
+    this.itemCount = 0,
     this.notifiedNotice80 = false,
     this.notifiedWarning90 = false,
   });
@@ -61,6 +62,13 @@ class ListStats {
 
   final int usedBytes;
   final int quotaBytes;
+
+  /// 削除済みを除いた項目数（仕様書 14.2）。
+  ///
+  /// **画面が数えるのではなく、サーバーが持つ。** 以前はホーム画面が
+  /// 件数を出すためだけに全項目を購読しており、参加リストの数だけ
+  /// 常時接続が張られていた（監査 S6）。更新は onItemWritten が行う。
+  final int itemCount;
   final bool notifiedNotice80;
   final bool notifiedWarning90;
 
@@ -73,6 +81,7 @@ class ListStats {
       nextSeq: (data['nextSeq'] as num?)?.toInt() ?? 1,
       usedBytes: (data['usedBytes'] as num?)?.toInt() ?? 0,
       quotaBytes: (data['quotaBytes'] as num?)?.toInt() ?? kDefaultQuotaBytes,
+      itemCount: (data['itemCount'] as num?)?.toInt() ?? 0,
       notifiedNotice80: data['notifiedNotice80'] as bool? ?? false,
       notifiedWarning90: data['notifiedWarning90'] as bool? ?? false,
     );

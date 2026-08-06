@@ -31,6 +31,7 @@ initializeApp();
 export { onFileUploaded, onFileDeleted } from './triggers/storage';
 export {
   onItemCreated,
+  onItemWritten,
   onCommentCreated,
   onMemberWritten,
   onListDeleted,

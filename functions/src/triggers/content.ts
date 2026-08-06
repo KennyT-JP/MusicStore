@@ -8,6 +8,8 @@ import {
   onDocumentWritten,
 } from 'firebase-functions/v2/firestore';
 
+import * as logger from 'firebase-functions/logger';
+
 import { REGION, paths } from '../config';
 import { listAdminUids, notifySafely, siteAdminUids } from '../notifications';
 
@@ -97,6 +99,46 @@ export const onCommentCreated = onDocumentCreated(
  * adminCount が 0 になったリストは「管理者不在」として
  * サイト管理画面で抽出できるようにする（仕様書 5.6）。
  */
+/**
+ * 項目の増減を stats.itemCount に反映する（仕様書 7.4 / 14.2）。
+ *
+ * **ホーム画面が件数を出すためだけに全項目を購読していた**（監査 S6）。
+ * 参加リスト M 件 × 平均項目 N 件で、画面を開くだけで M 本の常時接続と
+ * M×N 件の読み取りが発生していた。件数はサーバー側で持たせる。
+ *
+ * 削除はソフト削除（status を deleted にする）なので、
+ * **作成・削除だけでなく status の変化も見る**必要がある。
+ * 差分で増減させるのは、全件数え直しが項目数に比例して重くなるため。
+ */
+export const onItemWritten = onDocumentWritten(
+  { region: REGION, document: 'lists/{listId}/items/{itemId}' },
+  async (event) => {
+    const { listId } = event.params;
+
+    const wasActive = event.data?.before.exists
+      ? event.data.before.data()?.status !== 'deleted'
+      : false;
+    const isActive = event.data?.after.exists
+      ? event.data.after.data()?.status !== 'deleted'
+      : false;
+
+    if (wasActive === isActive) return; // 件数に影響しない更新
+
+    const delta = isActive ? 1 : -1;
+    const statsRef = getFirestore().doc(paths.listStats(listId));
+
+    await statsRef
+      .update({ itemCount: FieldValue.increment(delta) })
+      .catch((error) => {
+        // リストごと削除された直後などに起こりうる。集計対象が無いだけ。
+        logger.info('itemCount を更新できませんでした', {
+          listId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }
+);
+
 export const onMemberWritten = onDocumentWritten(
   { region: REGION, document: 'lists/{listId}/members/{uid}' },
   async (event) => {
