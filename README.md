@@ -5,6 +5,9 @@
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
+- **監査の記録**：[docs/AUDIT-2026-08-06.md](docs/AUDIT-2026-08-06.md)
+- **監査の追加確認項目**：[docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — **見つけられなかった**欠陥から起こしたもの
+- **バックログ**：[docs/BACKLOG.md](docs/BACKLOG.md)
 
 ## 技術スタック
 
@@ -146,8 +149,8 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 183 件
-cd rules-test && npm test           # 95 件（Firestore ルール 82 件・Storage 13 件）
+flutter test                        # 193 件
+cd rules-test && npm test           # 98 件（Firestore ルール 85 件・Storage 13 件）
 cd functions && npm test            # 29 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 41 件（要エミュレータ）
 ```
