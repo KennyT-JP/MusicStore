@@ -90,6 +90,65 @@ async function setDoc(path, fields) {
 const sv = (d, k) => d?.fields?.[k]?.stringValue ?? d?.fields?.[k]?.integerValue ?? d?.fields?.[k]?.booleanValue;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * 始める前に、相手が「このテストの想定どおりのエミュレータ」か確かめる。
+ *
+ * **噛み合っていないまま走らせると、意味の無い PASS が混ざる。**
+ * 実際に、エミュレータが別のプロジェクト ID で立ち上がっていたときに
+ * 24 件が FAIL する一方で、「本人には届かない」「参加していない人には
+ * 届かない」といった**何も起きていないだけの確認が PASS になった**。
+ * 緑の表示は「確かめた」という意味でなければならない。
+ *
+ * よくある原因は `--project demo-musiclist` の付け忘れ。付け忘れると
+ * `.firebaserc` の既定（検証環境）で立ち上がり、関数の URL も
+ * カスタムクレームの付与先も変わってしまう。
+ */
+async function preflight() {
+  const stop = (...lines) => {
+    console.error('');
+    for (const line of lines) console.error(line);
+    console.error('');
+    console.error('  別のウィンドウで、次を実行したままにしてください:');
+    console.error('    cd functions');
+    console.error('    npm run serve');
+    console.error('');
+    process.exit(1);
+  };
+
+  // 1. 関数エミュレータが、このプロジェクト ID で関数を配っているか。
+  //    トークンを付けずに呼ぶので、正しければ「未認証」が返る。
+  //    プロジェクトが違えば、そんな関数は無いので 404 になる。
+  let res;
+  try {
+    res = await call('submitListRequest', {});
+  } catch (error) {
+    stop(`関数エミュレータへ接続できません（${FN}）。`, `  ${error.message}`);
+  }
+  if (res.status === 404) {
+    stop(
+      '関数エミュレータは動いていますが、プロジェクト ID が違います。',
+      '',
+      '  このテストは demo-musiclist を相手にしています。',
+      '  --project demo-musiclist を付けずに起動すると、.firebaserc の既定',
+      '  （検証環境 music-storage-dev）で立ち上がり、噛み合いません。'
+    );
+  }
+
+  // 2. Auth エミュレータが同じプロジェクトか。
+  //    サイト管理者のクレームを付けるのに使う。
+  const auth = await fetch(
+    `${AUTH}/emulator/v1/projects/demo-musiclist/config`
+  ).catch(() => null);
+  if (!auth || !auth.ok) {
+    stop(
+      'Auth エミュレータが demo-musiclist で動いていません。',
+      `  応答: ${auth ? auth.status : '接続できません'}`
+    );
+  }
+}
+
+await preflight();
+
 // 実行のたびに初期化する。前回のサイト管理者が残っていると
 // 「最後の 1 人」の判定が変わってしまうため。
 await fetch(`${AUTH}/emulator/v1/projects/demo-musiclist/accounts`, { method: 'DELETE' });
@@ -107,7 +166,13 @@ const claimRes = await fetch(
   method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
   body: JSON.stringify({ localId: siteAdmin.localId, customAttributes: JSON.stringify({ siteAdmin: true }) }),
 });
-console.log('claim set:', claimRes.status);
+if (!claimRes.ok) {
+  console.error('');
+  console.error(`サイト管理者のクレームを付けられませんでした（${claimRes.status}）。`);
+  console.error('  以降の確認はすべて意味を持たないので、ここで止めます。');
+  console.error('');
+  process.exit(1);
+}
 siteAdmin = { ...siteAdmin, ...(await refresh(siteAdmin)) };
 
 // --- リスト作成申請 → 承認（5.1） ---
@@ -121,7 +186,18 @@ r = await call('approveListRequest', { requestId }, siteAdmin.idToken);
 const listId = r.body?.result?.listId;
 check('サイト管理者は承認できる', !!listId, JSON.stringify(r.body).slice(0, 120));
 
-if (listId) {
+// **リストが作れなければ、以降はすべて土台が無い。**
+// そのまま走らせると `lists/undefined/...` を相手にすることになり、
+// 「何も起きなかった」ことを「期待どおり起きなかった」と読み違える。
+if (!listId) {
+  console.error('');
+  console.error('リストを作れなかったため、ここで止めます。');
+  console.error('  以降の確認は土台が無く、結果を信用できません。');
+  console.error('');
+  process.exit(1);
+}
+
+{
   const l = await doc(`lists/${listId}`);
   check('リストが作られる', !!l && sv(l, 'name') === `バンド練習${stamp}`);
   const stats = await doc(`lists/${listId}/meta/stats`);
