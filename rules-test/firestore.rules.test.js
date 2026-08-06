@@ -830,3 +830,77 @@ describe('自分の参加リストを引く', () => {
     );
   });
 });
+
+
+// ---------------------------------------------------------------------------
+// 項目の追加（仕様書 6.2）
+//
+// **回帰テスト。** 連番の採番はクライアント側のトランザクションで行うのに、
+// meta/stats の書き込みを全面禁止していたため、項目の追加が一度も
+// 成功しなかった。コメントには「連番はトランザクション」と書いてあった。
+// ---------------------------------------------------------------------------
+
+describe('連番の採番（6.2）', () => {
+  test('Super User は nextSeq を 1 進められる', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertSucceeds(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), { nextSeq: 3 }),
+    );
+  });
+
+  test('Read Only は進められない', async () => {
+    const c = db(asUser(env, UID.readOnly));
+    await assertFails(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), { nextSeq: 3 }),
+    );
+  });
+
+  test('2 以上飛ばせない（欠番を作れない）', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertFails(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), { nextSeq: 4 }),
+    );
+  });
+
+  test('戻せない（振り直せない）', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertFails(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), { nextSeq: 1 }),
+    );
+  });
+
+  test('使用容量は書き換えられない（Functions のみ）', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertFails(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), { usedBytes: 0 }),
+    );
+  });
+
+  test('nextSeq と一緒に容量も書くことはできない', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertFails(
+      updateDoc(doc(c, `lists/${LIST_ID}/meta/stats`), {
+        nextSeq: 3,
+        usedBytes: 0,
+      }),
+    );
+  });
+
+  test('日本語のファイル名でも項目を追加できる（13.7）', async () => {
+    const c = db(asUser(env, UID.superUser));
+    await assertSucceeds(
+      setDoc(doc(c, `lists/${LIST_ID}/items/jp-name`), {
+        seq: 10,
+        createdBy: UID.superUser,
+        status: 'active',
+        kind: 'file',
+        file: {
+          storagePath: `lists/${LIST_ID}/items/jp-name/顔写真3.png`,
+          fileName: '顔写真3.png',
+          sizeBytes: 924672,
+          contentType: 'image/png',
+        },
+      }),
+    );
+  });
+});

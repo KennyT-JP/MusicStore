@@ -818,6 +818,28 @@ file: {
 - 定期実行の Cloud Functions が、**対応する項目が存在せず、かつアップロードから `orphanFileGraceHours`（初期値 24 時間）以上経過した**ファイルを削除する。
 - 猶予時間を置いているのは、**アップロード完了から項目作成までの短い間に消してしまわないため**。
 
+#### 連番の採番はクライアントが行う（6.2）
+
+`lists/{listId}/meta/stats` の `nextSeq` を、**項目の追加と同じトランザクションで
+1 進める**。サーバー側で採番すると、追加のたびに関数の起動を待つことになり、
+体感が落ちるため。
+
+そのためルールは、この 1 点だけをクライアントに許す。
+
+```
+allow update: if docId == 'stats'
+  && canWrite(listId)
+  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextSeq'])
+  && request.resource.data.nextSeq == resource.data.nextSeq + 1;
+```
+
+**戻すことも飛ばすこともできない**ので、「連番は振り直さない・欠番は残す」（6.2）は
+ここで守られる。容量（`usedBytes`）や通知フラグは Functions だけが書く。
+
+> **`allow write: if false` にしてはいけない。** 実際にそう書いており、
+> 「連番はトランザクション」というコメントと食い違ったまま、
+> **項目の追加が一度も成功しない状態**になっていた。
+
 #### コレクショングループのクエリ（横断的な取得）
 
 「自分が参加しているリスト」「自分が出した参加申請」のように、**リストをまたいで

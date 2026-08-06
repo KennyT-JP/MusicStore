@@ -166,9 +166,23 @@ service cloud.firestore {
       match /meta/{docId} {
         allow read: if isMember(listId);
 
-        // 連番はトランザクション、容量は Functions が更新する。
-        // クライアントからの直接書き込みは一切許可しない。
-        allow write: if false;
+        // **連番の採番だけはクライアントが行う（6.2）。**
+        // 項目の追加と同じトランザクションで nextSeq を 1 進める。
+        // ここを禁じていたため、項目の追加が一度も成功しなかった。
+        // コメントには「連番はトランザクション」と書きながら、
+        // 書き込みを全面禁止していた（文とルールの食い違い）。
+        //
+        // 許すのは **nextSeq を 1 だけ進めること**に限る。
+        // ほかの項目（容量・通知フラグ）は Functions だけが書く。
+        // 戻したり飛ばしたりできないので、「振り直さない・欠番は残す」
+        // という規則はここで守られる。
+        allow update: if docId == 'stats'
+          && canWrite(listId)
+          && request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(['nextSeq'])
+          && request.resource.data.nextSeq == resource.data.nextSeq + 1;
+
+        allow create, delete: if false;
       }
 
       // ---------------------------------------------------------------
