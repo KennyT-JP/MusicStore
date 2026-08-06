@@ -22,6 +22,7 @@ import {
   levelToNotify,
   quotaLevel,
   ratio,
+  shouldRejectUpload,
   shouldResetNotice,
   shouldResetWarning,
 } from '../src/domain/quota';
@@ -274,5 +275,53 @@ describe('ファイルの持ち主の検証（13.7 / S1）', () => {
     expect(
       isPathOwnedByItem('../lists/L1/items/I1/x.mp3', 'L1', 'I1')
     ).toBe(false);
+  });
+});
+
+/**
+ * 上限を超えたアップロードの扱い（仕様書 7.5 / 監査 S5・第2回）
+ *
+ * **回帰テスト。** 仕様は「すり抜けたぶんは削除せず受け入れる」と
+ * 定めているのに、実装は超過を検知したファイルをすべて消していた。
+ * しかもクライアントは「アップロード完了 → 項目作成」の順で動くため、
+ * 削除と項目作成が競合し、**ファイルの無い項目**が残りえた。
+ *
+ * かといって一切消さないと、画面を経由しない呼び出しで上限を無視できる。
+ * 「すり抜け」と「無視」を分ける。
+ */
+describe('上限を超えたアップロードの扱い（7.5 / S5）', () => {
+  const quotaBytes = 1000;
+
+  test('このファイルで初めて超えたなら残す（すり抜け）', () => {
+    // 900 使っていて 200 のファイル → 1100。超えたが、来る前は 900。
+    expect(
+      shouldRejectUpload({ usedBytesAfter: 1100, sizeBytes: 200, quotaBytes })
+    ).toBe(false);
+  });
+
+  test('ちょうど上限まで使っていた状態からの追加は取り消す', () => {
+    // 1000 使っていて 50 のファイル → 1050。来る前がすでに上限。
+    expect(
+      shouldRejectUpload({ usedBytesAfter: 1050, sizeBytes: 50, quotaBytes })
+    ).toBe(true);
+  });
+
+  test('すでに超えている状態からの追加は取り消す（上限の無視）', () => {
+    expect(
+      shouldRejectUpload({ usedBytesAfter: 2000, sizeBytes: 100, quotaBytes })
+    ).toBe(true);
+  });
+
+  test('1 つのファイルが単独で上限を超えていても残す', () => {
+    // 0 使用のところに 5000 のファイル。開始前チェックをすり抜けた形。
+    expect(
+      shouldRejectUpload({ usedBytesAfter: 5000, sizeBytes: 5000, quotaBytes })
+    ).toBe(false);
+  });
+
+  test('上限が 0 なら常に取り消す（満杯扱い）', () => {
+    expect(
+      shouldRejectUpload({ usedBytesAfter: 1, sizeBytes: 1, quotaBytes: 0 })
+    ).toBe(true);
   });
 });

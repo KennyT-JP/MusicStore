@@ -368,11 +368,19 @@ service cloud.firestore {
     // siteConfig（11.1）
     // -----------------------------------------------------------------
 
+    // **internal はサーバーだけのもの。** 通知の宛先を集めるための
+    // サイト管理者の uid 一覧や、定期削除の走査位置を置く。
+    // 利用者に見せる必要が無いので、読み書きとも一切許可しない
+    // （監査 第2回。以前は誰でも読める global に混ぜようとしていた）。
+    // **ルールは「いずれかが許せば通る」。** internal を禁じる match を
+    // 別に書いても、下の {docId} が許してしまうと読めてしまう。
+    // 除外は許可する側の条件に書く。
     match /siteConfig/{docId} {
-      allow read: if isVerified();
+      allow read: if isVerified() && docId != 'internal';
 
       // siteAdminCount は Functions が持つ（4.5）。
       allow write: if isSiteAdmin()
+        && docId != 'internal'
         && !request.resource.data.diff(resource.data)
              .affectedKeys().hasAny(['siteAdminCount']);
     }

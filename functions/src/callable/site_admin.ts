@@ -10,6 +10,7 @@ import { REGION, paths } from '../config';
 import { canStepDownAsSiteAdmin } from '../domain/roles';
 import {
   countSiteAdmins,
+  scanSiteAdmins,
   isSiteAdminRequest,
   requireSiteAdmin,
   requireString,
@@ -162,8 +163,20 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
  * 判定そのものはサーバー側でも行うので、ここがずれても権限は守られる。
  */
 async function syncSiteAdminCount(): Promise<void> {
-  const count = await countSiteAdmins();
-  await getFirestore()
+  // **uid の一覧も控える。** 通知の宛先を集めるたびに Auth の全ユーザーを
+  // 走査していたため、コメントが 1 件付くだけで利用者数に比例した
+  // 往復が発生していた（監査 第2回）。ここで控えておけば読み取り 1 回で済む。
+  const uids = await scanSiteAdmins();
+  const db = getFirestore();
+
+  // 人数は画面が使うので siteConfig/global に置く。
+  await db
     .doc(paths.siteConfig)
-    .set({ siteAdminCount: count }, { merge: true });
+    .set({ siteAdminCount: uids.length }, { merge: true });
+
+  // uid の一覧は通知の宛先を集めるためだけのもの。利用者に見せる必要が
+  // 無いので、読めない場所に置く。
+  await db
+    .doc(paths.siteInternal)
+    .set({ siteAdminUids: uids }, { merge: true });
 }

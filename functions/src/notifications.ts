@@ -157,13 +157,28 @@ export async function listAdminUids(listId: string): Promise<string[]> {
  * サイト管理者の uid を集める（仕様書 10.2）。
  *
  * サイト管理者は Auth のカスタムクレームで持ち、Firestore には
- * メンバー登録を持たない（仕様書 13.5）。そのため Auth 側を走査する。
+ * メンバー登録を持たない（仕様書 13.5）。
  *
- * **注意**：利用者が増えると全ユーザーの走査が重くなる。
- * サイト管理者は少人数の想定なので現状はこれで足りるが、
- * 遅くなってきたら uid の一覧を siteConfig に持たせる等の見直しが必要。
+ * **昇格・降格・退会のたびに uid の一覧を siteConfig へ控えている。**
+ * 通知のたびに Auth を走査すると、利用者数に比例して重くなるため。
  */
 export async function siteAdminUids(): Promise<string[]> {
+  // **まず siteConfig に控えてある一覧を見る。** 昇格・降格・退会のたびに
+  // 更新している（functions/src/callable/site_admin.ts の syncSiteAdminCount）。
+  // 読み取り 1 回で済む。
+  const cached = (await getFirestore().doc(paths.siteInternal).get()).data()
+    ?.siteAdminUids;
+  if (Array.isArray(cached)) {
+    return cached.filter((uid): uid is string => typeof uid === 'string');
+  }
+
+  // 控えが無い場合だけ Auth を走査する（初回、または移行前のデータ）。
+  //
+  // **以前はこちらを毎回通っていた。** コメントが 1 件付くたびに
+  // 全ユーザーを 1000 件ずつページ送りしており、利用者が増えるほど
+  // 遅くなって、いずれ実行時間の上限に達する。しかも失敗は
+  // notifySafely に飲まれるため、通知が静かに落ちるだけだった（監査 第2回）。
+  logger.info('サイト管理者の一覧が控えられていません。Auth を走査します');
   const { getAuth } = await import('firebase-admin/auth');
   const admins: string[] = [];
   let pageToken: string | undefined;

@@ -77,3 +77,35 @@ export function shouldResetWarning(
 ): boolean {
   return warningAlreadySent && ratio(after) <= WARNING_THRESHOLD;
 }
+
+/**
+ * アップロード済みのファイルを取り消すべきか（仕様書 7.5 / 監査 S5）。
+ *
+ * 仕様 7.5 は「同時アップロードなどで開始時のチェックをすり抜けて上限を
+ * 超えた場合も、**アップロード済みのファイルは削除せず受け入れ**、
+ * 以後のアップロードをブロックする」と定めている。
+ * 一方、監査 S5 は「上限のサーバー側強制が無い」ことを重大としている。
+ *
+ * **両立させるには「すり抜け」と「無視」を区別する。**
+ *
+ * - このファイルを足して初めて上限を超えた（＝すり抜け）
+ *   → **残す。** 利用者の正当なアップロードを消さない。以後はブロックされる。
+ * - 足す前からすでに上限を超えていた（＝ブロックされているはずなのに来た）
+ *   → **取り消す。** 画面を経由しない呼び出しで上限を無視できてしまうため。
+ *
+ * 以前は前者も削除しており、仕様と逆だった。さらに、クライアントは
+ * 「アップロード完了 → 項目作成」の順で動くため、削除と項目作成が競合し、
+ * **ファイルの無い項目**が一覧に残りえた（監査 第2回）。
+ */
+export function shouldRejectUpload(params: {
+  /** このファイルを足したあとの使用量。 */
+  usedBytesAfter: number;
+  /** このファイルの大きさ。 */
+  sizeBytes: number;
+  quotaBytes: number;
+}): boolean {
+  const { usedBytesAfter, sizeBytes, quotaBytes } = params;
+  if (quotaBytes <= 0) return true; // 上限 0 は満杯扱い（ratio と同じ考え方）
+  const before = usedBytesAfter - sizeBytes;
+  return before >= quotaBytes;
+}

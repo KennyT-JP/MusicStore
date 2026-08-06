@@ -13,6 +13,7 @@ import { STORAGE_REGION, paths, parseItemStoragePath } from '../config';
 import {
   type QuotaLevel,
   levelToNotify,
+  shouldRejectUpload,
   shouldResetNotice,
   shouldResetWarning,
 } from '../domain/quota';
@@ -21,7 +22,7 @@ import { listAdminUids, notifySafely } from '../notifications';
 /**
  * ファイルが保存されたら加算し、しきい値を超えたら通知する。
  *
- * **上限を超えていたら、そのファイルを消す。**
+ * **上限を無視した呼び出しだけ、そのファイルを消す。**
  * ルールからは合計使用量を参照できないため、上限の強制はここでしか行えない。
  * クライアント側のチェック（7.5）は画面を経由しない呼び出しには効かず、
  * Storage の SDK を直接叩けば無視できる（監査 S5）。
@@ -37,27 +38,49 @@ export const onFileUploaded = onObjectFinalized(
 
     const result = await applyDelta(parsed.listId, size);
 
-    if (result?.exceeded) {
-      logger.warn('容量の上限を超えたためアップロードを取り消します', {
+    if (!result) return;
+
+    if (!result.exceeded) return;
+
+    // **すり抜けたぶんは残す（仕様書 7.5）。**
+    // このファイルで初めて上限を超えたなら、利用者の正当な
+    // アップロードなので消さない。以後のアップロードはブロックされる。
+    if (
+      !shouldRejectUpload({
+        usedBytesAfter: result.usedBytes,
+        sizeBytes: size,
+        quotaBytes: result.quotaBytes,
+      })
+    ) {
+      logger.info('上限を超えましたが、このファイルは受け入れます（7.5）', {
         path: event.data.name,
         listId: parsed.listId,
         usedBytes: result.usedBytes,
         quotaBytes: result.quotaBytes,
       });
-
-      // 消した結果は onFileDeleted が拾って usedBytes を戻す。
-      // ここで自分で減算すると二重に引かれる。
-      await getStorage()
-        .bucket(event.data.bucket)
-        .file(event.data.name)
-        .delete({ ignoreNotFound: true })
-        .catch((error) => {
-          logger.error('超過ファイルの削除に失敗しました', {
-            path: event.data.name,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
+      return;
     }
+
+    // 足す前からすでに超えていた＝ブロックされているはずの呼び出し。
+    logger.warn('上限を超えた状態でのアップロードを取り消します', {
+      path: event.data.name,
+      listId: parsed.listId,
+      usedBytes: result.usedBytes,
+      quotaBytes: result.quotaBytes,
+    });
+
+    // 消した結果は onFileDeleted が拾って usedBytes を戻す。
+    // ここで自分で減算すると二重に引かれる。
+    await getStorage()
+      .bucket(event.data.bucket)
+      .file(event.data.name)
+      .delete({ ignoreNotFound: true })
+      .catch((error) => {
+        logger.error('超過ファイルの削除に失敗しました', {
+          path: event.data.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
   }
 );
 

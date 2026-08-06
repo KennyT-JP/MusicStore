@@ -24,6 +24,19 @@
  * ホーム画面が件数表示のためだけに全項目を購読していたのをやめ、
  * サーバー側が持つ値を使うようにした。**既存のリストには itemCount が
  * 無いため、入れておかないと項目があっても 0 件と表示される。**
+ *
+ * ### 3. joinRequests に uid を足す（監査 第2回）
+ *
+ * members とまったく同じ理由。自分の参加申請一覧は
+ * `collectionGroup('joinRequests').where('uid', ...)` で引くため、
+ * uid の無い行は**申請者からも見えず、ルールの判定にも合致しない**。
+ * アプリの中に復旧手段が無い。
+ *
+ * ### 4. stats が無いリストを作る（監査 第2回）
+ *
+ * stats が無いと項目追加のトランザクションが NOT_FOUND で失敗し、
+ * **そのリストには曲を 1 曲も追加できない**。以前は「無い」ことを
+ * 報告するだけで直していなかった。
  */
 import { existsSync } from 'node:fs';
 
@@ -72,6 +85,9 @@ initializeApp({
 
 const db = getFirestore();
 
+/// stats を新しく作るときの容量上限（siteConfig の既定と揃える）。
+const DEFAULT_QUOTA_BYTES = 1073741824; // 1GB
+
 async function main() {
   const lists = await db.collection('lists').get();
   console.log(`リスト: ${lists.size} 件`);
@@ -79,6 +95,8 @@ async function main() {
   let memberFixed = 0;
   let memberOk = 0;
   let statsFixed = 0;
+  let joinRequestFixed = 0;
+  let statsCreated = 0;
 
   for (const list of lists.docs) {
     // --- 1. members に uid を足す ---
@@ -93,6 +111,16 @@ async function main() {
       memberFixed++;
     }
 
+    // --- 3. joinRequests に uid を足す ---
+    // members と同じ理由。無いと申請者本人の一覧に出ない。
+    const joinRequests = await list.ref.collection('joinRequests').get();
+    for (const request of joinRequests.docs) {
+      if (request.data().uid === request.id) continue;
+      console.log(`  uid を追加: ${request.ref.path}`);
+      if (!dryRun) await request.ref.update({ uid: request.id });
+      joinRequestFixed++;
+    }
+
     // --- 2. stats に itemCount を入れる ---
     // 削除済み（status === 'deleted'）は数えない（仕様書 6.2）。
     const items = await list.ref.collection('items').get();
@@ -103,8 +131,27 @@ async function main() {
     const statsRef = list.ref.collection('meta').doc('stats');
     const stats = await statsRef.get();
 
+    // **無ければ作る。** 以前は報告するだけで飛ばしていたが、stats が
+    // 無いリストは項目追加のトランザクションが失敗するため、
+    // **曲を 1 曲も追加できない**（監査 第2回）。
     if (!stats.exists) {
-      console.log(`  ! stats が無いため飛ばします: ${list.id}`);
+      const nextSeq = items.empty
+        ? 1
+        : Math.max(
+            ...items.docs.map((doc) => Number(doc.data().seq) || 0)
+          ) + 1;
+      console.log(
+        `  stats を作成: ${list.id}（itemCount=${itemCount} nextSeq=${nextSeq}）`
+      );
+      if (!dryRun) {
+        await statsRef.set({
+          itemCount,
+          nextSeq,
+          usedBytes: 0,
+          quotaBytes: DEFAULT_QUOTA_BYTES,
+        });
+      }
+      statsCreated++;
       continue;
     }
     if (stats.data()?.itemCount === itemCount) continue;
@@ -116,8 +163,10 @@ async function main() {
 
   console.log('');
   console.log('結果');
-  console.log(`  members に uid を追加 : ${memberFixed} 件（すでに正しい: ${memberOk} 件）`);
-  console.log(`  stats の itemCount    : ${statsFixed} 件`);
+  console.log(`  members に uid を追加      : ${memberFixed} 件（すでに正しい: ${memberOk} 件）`);
+  console.log(`  joinRequests に uid を追加 : ${joinRequestFixed} 件`);
+  console.log(`  stats の itemCount         : ${statsFixed} 件`);
+  console.log(`  stats を新しく作成         : ${statsCreated} 件`);
   if (dryRun) console.log('\n下見のみでした。実行するには --dry-run を外してください。');
 }
 

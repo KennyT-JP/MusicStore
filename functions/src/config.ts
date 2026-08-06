@@ -67,6 +67,11 @@ export const paths = {
   listRequest: (requestId: string) => `listRequests/${requestId}`,
   invite: (inviteId: string) => `invites/${inviteId}`,
   siteConfig: 'siteConfig/global',
+
+  /// **サーバーだけが読み書きする値の置き場（監査 第2回）。**
+  /// siteConfig/global は利用者も読めるため、通知の宛先の一覧や
+  /// 走査の途中位置といった内部の値を混ぜない。
+  siteInternal: 'siteConfig/internal',
 } as const;
 
 /** サイト設定の既定値（仕様書 13.3）。 */

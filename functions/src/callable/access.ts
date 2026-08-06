@@ -84,21 +84,29 @@ export async function requireListAdmin(
 }
 
 /**
- * 現在のサイト管理者の人数を数え直す（仕様書 4.5）。
+ * 現在のサイト管理者を Auth から数え直す（仕様書 4.5）。
  *
  * siteConfig の値がずれても正しく判定できるよう、Auth 側を数える。
+ *
+ * **全ユーザーの走査になるため、頻繁に呼んではいけない。**
+ * 昇格・降格・退会のときだけ呼び、結果は siteConfig に控える。
  */
-export async function countSiteAdmins(): Promise<number> {
-  let count = 0;
+export async function scanSiteAdmins(): Promise<string[]> {
+  const uids: string[] = [];
   let pageToken: string | undefined;
   do {
     const page = await getAuth().listUsers(1000, pageToken);
-    count += page.users.filter(
-      (user) => user.customClaims?.siteAdmin === true
-    ).length;
+    for (const user of page.users) {
+      if (user.customClaims?.siteAdmin === true) uids.push(user.uid);
+    }
     pageToken = page.pageToken;
   } while (pageToken);
-  return count;
+  return uids;
+}
+
+/** 現在のサイト管理者の人数（仕様書 4.5）。 */
+export async function countSiteAdmins(): Promise<number> {
+  return (await scanSiteAdmins()).length;
 }
 
 /** 文字列の入力を取り出す。空や型違いは弾く。 */

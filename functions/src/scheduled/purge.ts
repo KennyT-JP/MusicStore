@@ -154,7 +154,7 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
   // **後ろのリストの孤児は永久に消えない**。ログには
   // 「残りは次回に持ち越します」と出るため、監視していても気づけない
   // （監査 第2回）。
-  const cursorRef = db.doc(paths.siteConfig);
+  const cursorRef = db.doc(paths.siteInternal);
   const savedToken = (await cursorRef.get()).data()?.orphanScanPageToken;
   const pageToken = typeof savedToken === 'string' && savedToken
     ? savedToken

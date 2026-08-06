@@ -393,6 +393,28 @@ describe('サイト管理者（4.2 / 13.5）', () => {
     );
   });
 
+  // **回帰テスト（監査 第2回）。**
+  //
+  // 通知の宛先を集めるためのサイト管理者 uid 一覧と、定期削除の走査位置を
+  // サーバー側で持つことにした。siteConfig/global は利用者も読めるため、
+  // これらは読めない場所（siteConfig/internal）へ分けている。
+  test('内部用のサイト設定はサイト管理者でも読めない', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await assertFails(getDoc(doc(siteAdmin, 'siteConfig/internal')));
+  });
+
+  test('内部用のサイト設定は誰も書けない', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await assertFails(
+      setDoc(doc(siteAdmin, 'siteConfig/internal'), { siteAdminUids: ['x'] }),
+    );
+  });
+
+  test('一般の利用者も内部用のサイト設定は読めない', async () => {
+    const member = db(asUser(env, UID.readOnly));
+    await assertFails(getDoc(doc(member, 'siteConfig/internal')));
+  });
+
   test('サイト管理者でなければサイト設定を変更できない', async () => {
     const listAdmin = db(asUser(env, UID.listAdmin));
     await assertFails(
