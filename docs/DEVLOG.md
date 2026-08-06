@@ -221,6 +221,17 @@ tertiary は色相を回して作られるため、青を指定しても桃色�
 `Picked up JAVA_TOOL_OPTIONS: ` を出力し、Storage のルールランタイムが落ちる）、
 その書き方が OS で違うため。
 
+その移し替えでもう 1 つ Windows 特有の落とし穴を踏んだ。
+**`spawn` に引数の配列と `shell: true` を同時に渡すと、引数はただ連結され、
+引用符が付かない。** `vitest run` が 2 つの引数として渡り
+「Too many arguments」で止まった。Windows の `firebase` は `firebase.cmd` なので
+shell は外せない。**空白を含む引数があるときは、こちらで引用符まで含めた
+1 本の文字列を組み立てて渡す。** 配列と shell を併用しないので、
+Node の DEP0190 警告も出なくなる。
+
+`scripts/` の他の .mjs も見直したが、空白を含む引数を渡している箇所は
+無かったため、影響はこの 1 か所だけだった。
+
 ## 残っていること
 
 - 本番環境の構築（Firestore・Storage のロケーションを決めきってから作る／12.2）

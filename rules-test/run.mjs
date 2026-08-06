@@ -24,21 +24,39 @@ import { spawn } from 'node:child_process';
 const env = { ...process.env };
 delete env.JAVA_TOOL_OPTIONS;
 
-const args = [
+const options = [
   'emulators:exec',
   '--project',
   'demo-musiclist',
   '--only',
   'firestore,storage',
-  'vitest run',
 ];
 
-// Windows では firebase は firebase.cmd なので shell 経由で起動する。
-const child = spawn('firebase', args, {
-  stdio: 'inherit',
-  env,
-  shell: process.platform === 'win32',
-});
+// エミュレータを立ち上げたうえで実行させたいコマンド。
+// **空白を含む 1 つの引数**として firebase へ渡す必要がある。
+const script = 'vitest run';
+
+/**
+ * Windows と、それ以外で起動の仕方を分ける。
+ *
+ * Windows の firebase は `firebase.cmd` というバッチファイルで、
+ * Node からは shell を通さないと起動できない。ところが shell を使うと、
+ * 引数は**そのまま連結されるだけで引用符が付かない**。
+ * `vitest run` が 2 つの引数として渡り、
+ * 「Too many arguments」で止まっていた。
+ *
+ * そこで Windows では、こちらで引用符まで含めた 1 本の文字列を組み立てる。
+ * 引数の配列と shell を同時に使わないので、Node の DEP0190 警告も出ない。
+ */
+const isWindows = process.platform === 'win32';
+
+const child = isWindows
+  ? spawn(`firebase ${options.join(' ')} "${script}"`, {
+      stdio: 'inherit',
+      env,
+      shell: true,
+    })
+  : spawn('firebase', [...options, script], { stdio: 'inherit', env });
 
 child.on('error', (error) => {
   console.error('firebase コマンドを起動できませんでした:', error.message);
