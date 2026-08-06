@@ -306,6 +306,83 @@ class AppL10nJa extends AppL10n {
   String get shareUrlNote => 'この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。';
 
   @override
+  String get noPendingListRequests => '保留中の申請はありません。';
+
+  @override
+  String get requesterLabel => '申請者';
+
+  @override
+  String get trackCountLabel => '登録曲数';
+
+  @override
+  String trackCountValue(Object count) {
+    return '約 $count 曲';
+  }
+
+  @override
+  String userCountValue(Object count) {
+    return '$count 人';
+  }
+
+  @override
+  String get noListsYet => 'リストはまだありません。';
+
+  @override
+  String get open => '開く';
+
+  @override
+  String get changeQuota => '容量上限を変更';
+
+  @override
+  String changeQuotaBody(Object name) {
+    return '「$name」の上限を MB 単位で入力してください。';
+  }
+
+  @override
+  String siteAdminCountSummary(Object admins, Object total) {
+    return 'サイト管理者 $admins 人 / 全 $total 人';
+  }
+
+  @override
+  String get removeSiteAdmin => '管理者から外す';
+
+  @override
+  String get siteAdminGranted => 'サイト管理者にしました。反映には本人の再ログインが必要です。';
+
+  @override
+  String get siteAdminRevoked => 'サイト管理者から外しました。反映には本人の再ログインが必要です。';
+
+  @override
+  String get inviteExpiryLabel => '招待 URL の有効期限';
+
+  @override
+  String get unitHours => '時間';
+
+  @override
+  String get inviteExpiryHelp => '初期値 24。受諾した時点で期限内かを判定します。';
+
+  @override
+  String get defaultQuotaLabel => '新規リストの容量上限';
+
+  @override
+  String get defaultQuotaHelp => '初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。';
+
+  @override
+  String get purgeGraceLabel => '削除ファイルの保持日数';
+
+  @override
+  String get unitDays => '日';
+
+  @override
+  String get purgeGraceHelp => '初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。';
+
+  @override
+  String get invalidNumber => '数値を正しく入力してください。';
+
+  @override
+  String get saved => '保存しました。';
+
+  @override
   String get save => '保存';
 
   @override
@@ -389,9 +466,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get myJoinRequests => '自分の参加申請';
-
-  @override
-  String get open => '開く';
 
   @override
   String get requestStatusPending => '申請中';

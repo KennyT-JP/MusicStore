@@ -158,9 +158,9 @@ class SiteAdminListRequestsScreen extends ConsumerWidget {
             _SiteAdminHeader(title: l10n.siteAdminListRequests),
             const SizedBox(height: 16),
             if (items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
-                child: Center(child: Text('保留中の申請はありません。')),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text(l10n.noPendingListRequests)),
               ),
             for (final request in items) _ListRequestCard(request: request),
           ],
@@ -202,12 +202,12 @@ class _ListRequestCardState extends ConsumerState<_ListRequestCard> {
             ),
             const SizedBox(height: 8),
             _Field(
-              label: '申請者',
+              label: l10n.requesterLabel,
               value: requester?.displayName ?? request.requestedBy,
             ),
-            _Field(label: '登録曲数', value: '約 ${request.estimatedTrackCount} 曲'),
-            _Field(label: '使用者数', value: '${request.expectedUserCount} 人'),
-            _Field(label: '作成目的', value: request.purpose),
+            _Field(label: l10n.trackCountLabel, value: l10n.trackCountValue(request.estimatedTrackCount)),
+            _Field(label: l10n.expectedUserCountLabel, value: l10n.userCountValue(request.expectedUserCount)),
+            _Field(label: l10n.purposeLabel, value: request.purpose),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -329,9 +329,9 @@ class SiteAdminListsScreen extends ConsumerWidget {
               ],
               for (final list in normal) _SiteListCard(list: list),
               if (items.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: Text('リストはまだありません。')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: Text(l10n.noListsYet)),
                 ),
             ],
           );
@@ -369,7 +369,7 @@ class _SiteListCard extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '${list.memberCount} 人',
+                  l10n.userCountValue(list.memberCount),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -400,11 +400,11 @@ class _SiteListCard extends ConsumerWidget {
               children: [
                 OutlinedButton(
                   onPressed: () => context.go(AppRoutes.list(list.id)),
-                  child: const Text('開く'),
+                  child: Text(l10n.open),
                 ),
                 OutlinedButton(
                   onPressed: () => _editQuota(context, ref, stats),
-                  child: const Text('容量上限を変更'),
+                  child: Text(l10n.changeQuota),
                 ),
                 if (needsAdmin)
                   FilledButton(
@@ -432,11 +432,11 @@ class _SiteListCard extends ConsumerWidget {
     final value = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('容量上限を変更'),
+        title: Text(l10n.changeQuota),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('「${list.name}」の上限を MB 単位で入力してください。'),
+            Text(l10n.changeQuotaBody(list.name)),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
@@ -542,7 +542,7 @@ class SiteAdminUsersScreen extends ConsumerWidget {
               _SiteAdminHeader(title: l10n.siteAdminUsers),
               const SizedBox(height: 8),
               Text(
-                'サイト管理者 $adminCount 人 / 全 ${items.length} 人',
+                l10n.siteAdminCountSummary(adminCount, items.length),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -597,7 +597,7 @@ class _SiteUserTile extends ConsumerWidget {
                 if (user.isSiteAdmin)
                   TextButton(
                     onPressed: isLastAdmin ? null : () => _revoke(context, ref),
-                    child: const Text('管理者から外す'),
+                    child: Text(l10n.removeSiteAdmin),
                   )
                 else
                   TextButton(
@@ -622,7 +622,7 @@ class _SiteUserTile extends ConsumerWidget {
         // 反映には対象ユーザーの再ログインが必要（仕様書 13.5）。
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('サイト管理者にしました。反映には本人の再ログインが必要です。')),
+            SnackBar(content: Text(AppL10n.of(context).siteAdminGranted)),
           );
         }
       });
@@ -632,7 +632,7 @@ class _SiteUserTile extends ConsumerWidget {
         await ref.read(functionsRepositoryProvider).revokeSiteAdmin(user.uid);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('サイト管理者から外しました。反映には本人の再ログインが必要です。')),
+            SnackBar(content: Text(AppL10n.of(context).siteAdminRevoked)),
           );
         }
       });
@@ -709,21 +709,21 @@ class _SiteAdminSettingsScreenState
               const SizedBox(height: 24),
               _SettingField(
                 controller: _inviteHours,
-                label: '招待 URL の有効期限',
-                suffix: '時間',
-                help: '初期値 24。受諾した時点で期限内かを判定します。',
+                label: l10n.inviteExpiryLabel,
+                suffix: l10n.unitHours,
+                help: l10n.inviteExpiryHelp,
               ),
               _SettingField(
                 controller: _quotaMb,
-                label: '新規リストの容量上限',
+                label: l10n.defaultQuotaLabel,
                 suffix: 'MB',
-                help: '初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。',
+                help: l10n.defaultQuotaHelp,
               ),
               _SettingField(
                 controller: _graceDays,
-                label: '削除ファイルの保持日数',
-                suffix: '日',
-                help: '初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。',
+                label: l10n.purgeGraceLabel,
+                suffix: l10n.unitDays,
+                help: l10n.purgeGraceHelp,
               ),
               const SizedBox(height: 24),
               FilledButton(
@@ -750,7 +750,7 @@ class _SiteAdminSettingsScreenState
         grace < 0) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('数値を正しく入力してください。')));
+      ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).invalidNumber)));
       return;
     }
 
@@ -765,7 +765,7 @@ class _SiteAdminSettingsScreenState
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('保存しました。')));
+        ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).saved)));
       }
     } catch (_) {
       if (mounted) {

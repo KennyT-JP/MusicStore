@@ -317,6 +317,88 @@ class AppL10nEn extends AppL10n {
       'Anyone with this URL can request to join. They cannot see the contents until approved.';
 
   @override
+  String get noPendingListRequests => 'There are no pending requests.';
+
+  @override
+  String get requesterLabel => 'Requested by';
+
+  @override
+  String get trackCountLabel => 'Tracks';
+
+  @override
+  String trackCountValue(Object count) {
+    return 'About $count tracks';
+  }
+
+  @override
+  String userCountValue(Object count) {
+    return '$count people';
+  }
+
+  @override
+  String get noListsYet => 'There are no lists yet.';
+
+  @override
+  String get open => 'Open';
+
+  @override
+  String get changeQuota => 'Change storage limit';
+
+  @override
+  String changeQuotaBody(Object name) {
+    return 'Enter the limit for \"$name\" in MB.';
+  }
+
+  @override
+  String siteAdminCountSummary(Object admins, Object total) {
+    return '$admins site administrators of $total users';
+  }
+
+  @override
+  String get removeSiteAdmin => 'Remove as administrator';
+
+  @override
+  String get siteAdminGranted =>
+      'Granted. The change applies after they sign in again.';
+
+  @override
+  String get siteAdminRevoked =>
+      'Removed. The change applies after they sign in again.';
+
+  @override
+  String get inviteExpiryLabel => 'Invite URL expiry';
+
+  @override
+  String get unitHours => 'hours';
+
+  @override
+  String get inviteExpiryHelp =>
+      'Default 24. Checked when the invite is accepted.';
+
+  @override
+  String get defaultQuotaLabel => 'Default storage limit for new lists';
+
+  @override
+  String get defaultQuotaHelp =>
+      'Default 1024 (1GB). Change existing lists from \"Lists and storage\".';
+
+  @override
+  String get purgeGraceLabel => 'Days to keep deleted files';
+
+  @override
+  String get unitDays => 'days';
+
+  @override
+  String get purgeGraceHelp =>
+      'Default 30. List administrators can restore during this period, and the space stays used.';
+
+  @override
+  String get invalidNumber => 'Please enter a valid number.';
+
+  @override
+  String get saved => 'Saved.';
+
+  @override
   String get save => 'Save';
 
   @override
@@ -406,9 +488,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get myJoinRequests => 'Your join requests';
-
-  @override
-  String get open => 'Open';
 
   @override
   String get requestStatusPending => 'Pending';

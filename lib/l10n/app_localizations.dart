@@ -655,6 +655,144 @@ abstract class AppL10n {
   /// **'この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。'**
   String get shareUrlNote;
 
+  /// No description provided for @noPendingListRequests.
+  ///
+  /// In ja, this message translates to:
+  /// **'保留中の申請はありません。'**
+  String get noPendingListRequests;
+
+  /// No description provided for @requesterLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'申請者'**
+  String get requesterLabel;
+
+  /// No description provided for @trackCountLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'登録曲数'**
+  String get trackCountLabel;
+
+  /// No description provided for @trackCountValue.
+  ///
+  /// In ja, this message translates to:
+  /// **'約 {count} 曲'**
+  String trackCountValue(Object count);
+
+  /// No description provided for @userCountValue.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count} 人'**
+  String userCountValue(Object count);
+
+  /// No description provided for @noListsYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストはまだありません。'**
+  String get noListsYet;
+
+  /// No description provided for @open.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get open;
+
+  /// No description provided for @changeQuota.
+  ///
+  /// In ja, this message translates to:
+  /// **'容量上限を変更'**
+  String get changeQuota;
+
+  /// No description provided for @changeQuotaBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」の上限を MB 単位で入力してください。'**
+  String changeQuotaBody(Object name);
+
+  /// No description provided for @siteAdminCountSummary.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイト管理者 {admins} 人 / 全 {total} 人'**
+  String siteAdminCountSummary(Object admins, Object total);
+
+  /// No description provided for @removeSiteAdmin.
+  ///
+  /// In ja, this message translates to:
+  /// **'管理者から外す'**
+  String get removeSiteAdmin;
+
+  /// No description provided for @siteAdminGranted.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイト管理者にしました。反映には本人の再ログインが必要です。'**
+  String get siteAdminGranted;
+
+  /// No description provided for @siteAdminRevoked.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイト管理者から外しました。反映には本人の再ログインが必要です。'**
+  String get siteAdminRevoked;
+
+  /// No description provided for @inviteExpiryLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待 URL の有効期限'**
+  String get inviteExpiryLabel;
+
+  /// No description provided for @unitHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'時間'**
+  String get unitHours;
+
+  /// No description provided for @inviteExpiryHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'初期値 24。受諾した時点で期限内かを判定します。'**
+  String get inviteExpiryHelp;
+
+  /// No description provided for @defaultQuotaLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規リストの容量上限'**
+  String get defaultQuotaLabel;
+
+  /// No description provided for @defaultQuotaHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。'**
+  String get defaultQuotaHelp;
+
+  /// No description provided for @purgeGraceLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除ファイルの保持日数'**
+  String get purgeGraceLabel;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In ja, this message translates to:
+  /// **'日'**
+  String get unitDays;
+
+  /// No description provided for @purgeGraceHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。'**
+  String get purgeGraceHelp;
+
+  /// No description provided for @invalidNumber.
+  ///
+  /// In ja, this message translates to:
+  /// **'数値を正しく入力してください。'**
+  String get invalidNumber;
+
+  /// No description provided for @saved.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存しました。'**
+  String get saved;
+
   /// No description provided for @save.
   ///
   /// In ja, this message translates to:
@@ -816,12 +954,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'自分の参加申請'**
   String get myJoinRequests;
-
-  /// No description provided for @open.
-  ///
-  /// In ja, this message translates to:
-  /// **'開く'**
-  String get open;
 
   /// No description provided for @requestStatusPending.
   ///
