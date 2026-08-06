@@ -54,10 +54,15 @@ class ListMembersScreen extends ConsumerWidget {
             children: [
               _AdminHeader(listId: listId, title: l10n.manageMembers),
               const SizedBox(height: 16),
-              _InviteSection(listId: listId),
+              // **権限のない操作はボタンごと出さない（仕様書 14.5）。**
+              // 判定関数はあるのに呼ばれておらず、Read Only にも招待発行の
+              // 入口が見えていた。押すとサーバーに拒否され、意味の分からない
+              // エラーになる（監査 第2回）。
+              if (Permissions.canCreateInvite(access))
+                _InviteSection(listId: listId),
               const Divider(height: 32),
               Text(
-                '${l10n.members}（${list.length}）',
+                l10n.memberCountHeading(list.length),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -320,15 +325,15 @@ class _MemberTile extends ConsumerWidget {
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'listAdmin',
-                  child: Text('${l10n.changeRole}：${l10n.roleListAdmin}'),
+                  child: Text(l10n.changeRoleTo(l10n.roleListAdmin)),
                 ),
                 PopupMenuItem(
                   value: 'superUser',
-                  child: Text('${l10n.changeRole}：${l10n.roleSuperUser}'),
+                  child: Text(l10n.changeRoleTo(l10n.roleSuperUser)),
                 ),
                 PopupMenuItem(
                   value: 'readOnly',
-                  child: Text('${l10n.changeRole}：${l10n.roleReadOnly}'),
+                  child: Text(l10n.changeRoleTo(l10n.roleReadOnly)),
                 ),
                 if (canRemove)
                   PopupMenuItem(
@@ -484,11 +489,11 @@ class _JoinRequestCard extends ConsumerWidget {
               children: [
                 FilledButton(
                   onPressed: () => _approve(context, ref, ListRole.superUser),
-                  child: Text('${l10n.approve}：${l10n.roleSuperUser}'),
+                  child: Text(l10n.approveAs(l10n.roleSuperUser)),
                 ),
                 FilledButton.tonal(
                   onPressed: () => _approve(context, ref, ListRole.readOnly),
-                  child: Text('${l10n.approve}：${l10n.roleReadOnly}'),
+                  child: Text(l10n.approveAs(l10n.roleReadOnly)),
                 ),
                 TextButton(
                   onPressed: () => _reject(context, ref),
@@ -562,8 +567,11 @@ class ListSettingsScreen extends ConsumerWidget {
           _AdminHeader(listId: listId, title: l10n.listSettings),
           const SizedBox(height: 24),
 
-          // 容量使用量（仕様書 7.4）。
-          if (stats != null) _QuotaCard(stats: stats),
+          // 容量使用量（仕様書 7.4）。**リスト管理者以上にだけ出す。**
+          // 判定関数はあるのに呼ばれておらず、Read Only にも見えていた
+          // （監査 第2回）。
+          if (stats != null && Permissions.canViewQuota(access))
+            _QuotaCard(stats: stats),
 
           const SizedBox(height: 24),
           _ShareUrlCard(listId: listId),

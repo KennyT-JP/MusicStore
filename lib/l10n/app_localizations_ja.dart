@@ -315,20 +315,27 @@ class AppL10nJa extends AppL10n {
   String get trackCountLabel => '登録曲数';
 
   @override
-  String trackCountValue(Object count) {
-    return '約 $count 曲';
+  String trackCountValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '約 $count 曲',
+    );
+    return '$_temp0';
   }
 
   @override
-  String userCountValue(Object count) {
-    return '$count 人';
+  String userCountValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人',
+    );
+    return '$_temp0';
   }
 
   @override
   String get noListsYet => 'リストはまだありません。';
-
-  @override
-  String get open => '開く';
 
   @override
   String get changeQuota => '容量上限を変更';
@@ -341,6 +348,34 @@ class AppL10nJa extends AppL10n {
   @override
   String siteAdminCountSummary(Object admins, Object total) {
     return 'サイト管理者 $admins 人 / 全 $total 人';
+  }
+
+  @override
+  String memberCountHeading(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'メンバー（$count）',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeRoleTo(String role) {
+    return '役割を変更：$role';
+  }
+
+  @override
+  String approveAs(String role) {
+    return '承認：$role';
+  }
+
+  @override
+  String get withdrawIrreversible => 'この操作は取り消せません。';
+
+  @override
+  String noItemsHint(String addItem) {
+    return '右下の「$addItem」から音源や URL を登録できます。';
   }
 
   @override
@@ -401,8 +436,13 @@ class AppL10nJa extends AppL10n {
   String get noSearchResults => '該当する項目が見つかりませんでした。';
 
   @override
-  String deleteItemBody(Object days) {
-    return 'この項目を削除します。\n\nファイル本体は $days 日間保持され、その間はリスト管理者以上が復元できます。';
+  String deleteItemBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'この項目を削除します。\n\nファイル本体は $days 日間保持され、その間はリスト管理者以上が復元できます。',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -435,9 +475,6 @@ class AppL10nJa extends AppL10n {
   @override
   String get fileReplaceNotSupported =>
       'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。';
-
-  @override
-  String get withdrawnUserLabel => '退会したユーザー';
 
   @override
   String get save => '保存';
@@ -525,13 +562,16 @@ class AppL10nJa extends AppL10n {
   String get myJoinRequests => '自分の参加申請';
 
   @override
+  String get open => '開く';
+
+  @override
   String get requestStatusPending => '申請中';
 
   @override
-  String get requestStatusApproved => '承認';
+  String get requestStatusApproved => '承認済み';
 
   @override
-  String get requestStatusRejected => '却下';
+  String get requestStatusRejected => '却下済み';
 
   @override
   String get requestAgain => 'もう一度申請する';

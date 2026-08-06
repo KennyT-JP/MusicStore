@@ -297,7 +297,7 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.withdraw),
-        content: Text('${l10n.withdrawWarning}\n\nこの操作は取り消せません。'),
+        content: Text('${l10n.withdrawWarning}\n\n${l10n.withdrawIrreversible}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

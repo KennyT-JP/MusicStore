@@ -137,9 +137,12 @@ class _ItemHeader extends ConsumerWidget {
             ],
             const SizedBox(height: 16),
             _MetaRow(label: l10n.columnDate, value: item.date),
+            // **登録者は改めて解決する。** itemProvider は 1 件だけを
+            // 監視するため表示名を解決しておらず、空文字が入っている。
+            // 一覧では出るのに詳細だけ常に空欄だった（監査 第2回）。
             _MetaRow(
               label: l10n.columnRegistrant,
-              value: item.registrantDisplayName,
+              value: _registrantName(ref, listId, item.createdBy, l10n),
             ),
             const SizedBox(height: 16),
             _MediaAction(item: item),
@@ -226,6 +229,37 @@ class _DeletedNotice extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 登録者・投稿者の表示名を解決する（仕様書 3.5 / 5.4）。
+///
+/// 退会・除外された人は本名を出さない。まだ読み込めていない人と
+/// 区別できるよう、取得前は空文字を返す（「退会したユーザー」と
+/// 表示してしまうと、在籍中の人が退会したように見える）。
+String _registrantName(
+  WidgetRef ref,
+  String listId,
+  String uid,
+  AppL10n l10n,
+) {
+  final users = ref.watch(userDirectoryProvider(userDirectoryKey([uid])));
+  final members = ref.watch(listMembersProvider(listId));
+
+  // どちらかがまだ届いていないなら、決めつけずに空にする。
+  if (!users.hasValue || !members.hasValue) return '';
+
+  final user = users.requireValue[uid];
+  return DisplayNameResolver.resolveInList(
+    uid: uid,
+    user: user == null
+        ? null
+        : UserNameSource(
+            displayName: user.displayName,
+            isWithdrawn: user.isWithdrawn,
+          ),
+    currentMemberUids: members.requireValue.map((m) => m.uid).toSet(),
+    withdrawnLabel: l10n.withdrawnUser,
+  ).text;
 }
 
 class _MetaRow extends StatelessWidget {

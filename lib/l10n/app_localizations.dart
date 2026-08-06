@@ -676,26 +676,20 @@ abstract class AppL10n {
   /// No description provided for @trackCountValue.
   ///
   /// In ja, this message translates to:
-  /// **'約 {count} 曲'**
-  String trackCountValue(Object count);
+  /// **'{count, plural, other{約 {count} 曲}}'**
+  String trackCountValue(int count);
 
   /// No description provided for @userCountValue.
   ///
   /// In ja, this message translates to:
-  /// **'{count} 人'**
-  String userCountValue(Object count);
+  /// **'{count, plural, other{{count} 人}}'**
+  String userCountValue(int count);
 
   /// No description provided for @noListsYet.
   ///
   /// In ja, this message translates to:
   /// **'リストはまだありません。'**
   String get noListsYet;
-
-  /// No description provided for @open.
-  ///
-  /// In ja, this message translates to:
-  /// **'開く'**
-  String get open;
 
   /// No description provided for @changeQuota.
   ///
@@ -714,6 +708,36 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'サイト管理者 {admins} 人 / 全 {total} 人'**
   String siteAdminCountSummary(Object admins, Object total);
+
+  /// No description provided for @memberCountHeading.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{メンバー（{count}）}}'**
+  String memberCountHeading(int count);
+
+  /// No description provided for @changeRoleTo.
+  ///
+  /// In ja, this message translates to:
+  /// **'役割を変更：{role}'**
+  String changeRoleTo(String role);
+
+  /// No description provided for @approveAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'承認：{role}'**
+  String approveAs(String role);
+
+  /// No description provided for @withdrawIrreversible.
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作は取り消せません。'**
+  String get withdrawIrreversible;
+
+  /// No description provided for @noItemsHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'右下の「{addItem}」から音源や URL を登録できます。'**
+  String noItemsHint(String addItem);
 
   /// No description provided for @removeSiteAdmin.
   ///
@@ -832,8 +856,8 @@ abstract class AppL10n {
   /// No description provided for @deleteItemBody.
   ///
   /// In ja, this message translates to:
-  /// **'この項目を削除します。\n\nファイル本体は {days} 日間保持され、その間はリスト管理者以上が復元できます。'**
-  String deleteItemBody(Object days);
+  /// **'{days, plural, other{この項目を削除します。\n\nファイル本体は {days} 日間保持され、その間はリスト管理者以上が復元できます。}}'**
+  String deleteItemBody(int days);
 
   /// No description provided for @restorableUntil.
   ///
@@ -882,12 +906,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。'**
   String get fileReplaceNotSupported;
-
-  /// No description provided for @withdrawnUserLabel.
-  ///
-  /// In ja, this message translates to:
-  /// **'退会したユーザー'**
-  String get withdrawnUserLabel;
 
   /// No description provided for @save.
   ///
@@ -1051,6 +1069,12 @@ abstract class AppL10n {
   /// **'自分の参加申請'**
   String get myJoinRequests;
 
+  /// No description provided for @open.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get open;
+
   /// No description provided for @requestStatusPending.
   ///
   /// In ja, this message translates to:
@@ -1060,13 +1084,13 @@ abstract class AppL10n {
   /// No description provided for @requestStatusApproved.
   ///
   /// In ja, this message translates to:
-  /// **'承認'**
+  /// **'承認済み'**
   String get requestStatusApproved;
 
   /// No description provided for @requestStatusRejected.
   ///
   /// In ja, this message translates to:
-  /// **'却下'**
+  /// **'却下済み'**
   String get requestStatusRejected;
 
   /// No description provided for @requestAgain.

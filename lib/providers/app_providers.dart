@@ -145,15 +145,36 @@ class MyListEntry {
 }
 
 final myListsProvider = StreamProvider<List<MyListEntry>>((ref) {
-  final memberships = ref.watch(myMembershipsProvider).value;
-  if (memberships == null || memberships.isEmpty) {
-    return Stream.value(const []);
+  // **`.value` で受けてはいけない。**
+  //
+  // AsyncValue の `.value` は、エラーのときも読み込み中のときも null を返す。
+  // 以前はここで null を「参加 0 件」に丸めていたため、権限の拒否も
+  // 索引の不足も通信の失敗も、すべて画面では
+  // 「まだどのリストにも参加していません。」という**断定的な文言**になった。
+  // ログイン直後に全員が通る画面で、再読み込みの導線すら出なかった
+  // （監査 第2回。実際、以前の「リストを作ってもホームに出ない」不具合は
+  // この表示のせいで原因が見えなかった）。
+  //
+  // エラーはエラーのまま、読み込み中は読み込み中のまま流す。
+  final memberships = ref.watch(myMembershipsProvider);
+
+  if (memberships.hasError) {
+    return Stream<List<MyListEntry>>.error(
+      memberships.error!,
+      memberships.stackTrace,
+    );
   }
+  // まだ 1 度も値が来ていない＝読み込み中。値を流さず待たせる。
+  if (!memberships.hasValue) return const Stream<List<MyListEntry>>.empty();
+
+  final value = memberships.requireValue;
+  if (value.isEmpty) return Stream.value(const []);
+
   final repo = ref.watch(listRepositoryProvider);
 
   return Stream.fromFuture(
     Future.wait(
-      memberships.map((m) async {
+      value.map((m) async {
         final list = await repo.fetchList(m.listId);
         if (list == null) return null;
         return MyListEntry(list: list, role: m.member.role);
@@ -201,13 +222,6 @@ final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
 // ---------------------------------------------------------------------------
 
 /// 表示名を解決するための、ユーザー情報のキャッシュ。
-/// 退会・除外された人の表示名（仕様書 3.5 / 5.4）。
-///
-/// **プロバイダは BuildContext を持たないため l10n を引けない。**
-/// 画面側は l10n.withdrawnUser を使っており、こちらは項目一覧の解決用。
-/// 両者がずれないよう、値は l10n の ja と同じにしてある（監査 S20）。
-const String withdrawnUserLabel = '退会したユーザー';
-
 /// [userDirectoryProvider] に渡すキーを作る。
 ///
 /// **Set をそのままキーにしてはいけない。** Dart の Set は `==` を
@@ -226,38 +240,71 @@ final userDirectoryProvider =
           .fetchUsers(key.isEmpty ? const <String>[] : key.split(',')),
     );
 
+/// [listItemsProvider] / [itemProvider] に渡す引数。
+///
+/// **退会者の表示名を引数で受け取る。** プロバイダは BuildContext を
+/// 持たないため l10n を引けない。以前は日本語の定数を直接使っており、
+/// 英語表示のときだけ項目一覧の登録者名が「退会したユーザー」になり、
+/// 同じ画面群のコメント欄は "Former member" という混在が起きていた
+/// （監査 第2回）。画面側から l10n.withdrawnUser を渡す。
+typedef ItemsArgs = ({String listId, String withdrawnLabel});
+
 /// リストの項目（表示名を解決済み）。
 ///
 /// 検索・並び替えはアプリのメモリ上で行うため（仕様書 13.6）、
 /// 削除済みも含めてまとめて読み込む。
 final listItemsProvider =
-    StreamProvider.autoDispose.family<List<ListItem>, String>((
+    StreamProvider.autoDispose.family<List<ListItem>, ItemsArgs>((
   ref,
-  listId,
+  args,
 ) async* {
+  final listId = args.listId;
   final repo = ref.watch(itemRepositoryProvider);
   final listRepo = ref.watch(listRepositoryProvider);
 
+  // **メンバー一覧が届くまで、項目の購読を始めない。**
+  //
+  // 以前は `await for` の**中で** listMembersProvider を watch していた。
+  // members は最初 AsyncLoading で、直後に AsyncData へ変わるため、
+  // プロバイダが必ず 1 回作り直され、**items の購読が 2 本張られて
+  // 全件を 2 回読んでいた**（項目 1000 件のリストなら 1 回開くたびに +1000）。
+  // さらに破棄済みの Ref に対する watch で未捕捉の例外が出ていた
+  // （監査 第2回）。
+  final members = ref.watch(listMembersProvider(listId));
+  if (!members.hasValue) return;
+  final memberUids = members.requireValue.map((m) => m.uid).toSet();
+
+  // 表示名は覚えておき、まだ知らない人のぶんだけ引く。
+  // 以前はスナップショットが届くたびに全員ぶんを引き直しており、
+  // 誰かが 1 件足すたびに、閲覧中の全員が人数ぶんの読み取りを起こしていた。
+  final known = <String, UserNameSource?>{};
+
   await for (final items in repo.watchItems(listId)) {
-    final memberUids = ref
-        .watch(listMembersProvider(listId))
-        .value
-        ?.map((m) => m.uid)
+    final missing = items
+        .map((i) => i.createdBy)
+        .where((uid) => !known.containsKey(uid))
         .toSet();
-    final users = await listRepo.fetchUsers(items.map((i) => i.createdBy));
+    if (missing.isNotEmpty) {
+      final fetched = await listRepo.fetchUsers(missing);
+      for (final uid in missing) {
+        final user = fetched[uid];
+        known[uid] = user == null
+            ? null
+            : UserNameSource(
+                displayName: user.displayName,
+                isWithdrawn: user.isWithdrawn,
+              );
+      }
+    }
+
     yield items
         .map(
           (item) => item.withRegistrantName(
             DisplayNameResolver.resolveInList(
               uid: item.createdBy,
-              user: users[item.createdBy] == null
-                  ? null
-                  : UserNameSource(
-                      displayName: users[item.createdBy]!.displayName,
-                      isWithdrawn: users[item.createdBy]!.isWithdrawn,
-                    ),
+              user: known[item.createdBy],
               currentMemberUids: memberUids,
-              withdrawnLabel: withdrawnUserLabel,
+              withdrawnLabel: args.withdrawnLabel,
             ).text,
           ),
         )

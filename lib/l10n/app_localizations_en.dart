@@ -326,20 +326,29 @@ class AppL10nEn extends AppL10n {
   String get trackCountLabel => 'Tracks';
 
   @override
-  String trackCountValue(Object count) {
-    return 'About $count tracks';
+  String trackCountValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'About $count tracks',
+      one: 'About 1 track',
+    );
+    return '$_temp0';
   }
 
   @override
-  String userCountValue(Object count) {
-    return '$count people';
+  String userCountValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
   }
 
   @override
   String get noListsYet => 'There are no lists yet.';
-
-  @override
-  String get open => 'Open';
 
   @override
   String get changeQuota => 'Change storage limit';
@@ -351,7 +360,36 @@ class AppL10nEn extends AppL10n {
 
   @override
   String siteAdminCountSummary(Object admins, Object total) {
-    return '$admins site administrators of $total users';
+    return '$admins of $total users are site admins';
+  }
+
+  @override
+  String memberCountHeading(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Members ($count)',
+      one: 'Members (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeRoleTo(String role) {
+    return 'Change role: $role';
+  }
+
+  @override
+  String approveAs(String role) {
+    return 'Approve as $role';
+  }
+
+  @override
+  String get withdrawIrreversible => 'This cannot be undone.';
+
+  @override
+  String noItemsHint(String addItem) {
+    return 'Use \"$addItem\" at the bottom right to add a file or a URL.';
   }
 
   @override
@@ -359,11 +397,11 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get siteAdminGranted =>
-      'Granted. The change applies after they sign in again.';
+      'They are now a site admin. The change applies after they sign in again.';
 
   @override
   String get siteAdminRevoked =>
-      'Removed. The change applies after they sign in again.';
+      'They are no longer a site admin. The change applies after they sign in again.';
 
   @override
   String get inviteExpiryLabel => 'Invite URL expiry';
@@ -418,8 +456,16 @@ class AppL10nEn extends AppL10n {
   String get noSearchResults => 'No items matched your search.';
 
   @override
-  String deleteItemBody(Object days) {
-    return 'This item will be deleted.\n\nThe file is kept for $days days, and list administrators can restore it during that time.';
+  String deleteItemBody(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other:
+          'This item will be deleted.\n\nThe file is kept for $days days, and list admins can restore it during that time.',
+      one:
+          'This item will be deleted.\n\nThe file is kept for 1 day, and list admins can restore it during that time.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -452,9 +498,6 @@ class AppL10nEn extends AppL10n {
   @override
   String get fileReplaceNotSupported =>
       'Replacing the file is not implemented yet. You can still change the title, artist and date.';
-
-  @override
-  String get withdrawnUserLabel => 'Former member';
 
   @override
   String get save => 'Save';
@@ -546,6 +589,9 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get myJoinRequests => 'Your join requests';
+
+  @override
+  String get open => 'Open';
 
   @override
   String get requestStatusPending => 'Pending';

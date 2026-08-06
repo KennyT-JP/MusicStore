@@ -88,7 +88,9 @@ Widget _wrapWithAccess(Widget child, {required ListAccess access}) {
           ),
         ),
       ),
-      listItemsProvider(_listId).overrideWith((ref) => Stream.value(_items)),
+      listItemsProvider(
+        (listId: _listId, withdrawnLabel: '退会したユーザー'),
+      ).overrideWith((ref) => Stream.value(_items)),
       listAccessProvider(_listId).overrideWith((ref) => access),
       listStatsProvider(_listId).overrideWith((ref) => Stream.value(null)),
       listMembersProvider(
@@ -124,7 +126,9 @@ Widget _wrap(Widget child, {required ListRole role, bool siteAdmin = false}) {
           ),
         ),
       ),
-      listItemsProvider(_listId).overrideWith((ref) => Stream.value(_items)),
+      listItemsProvider(
+        (listId: _listId, withdrawnLabel: '退会したユーザー'),
+      ).overrideWith((ref) => Stream.value(_items)),
       listAccessProvider(
         _listId,
       ).overrideWith((ref) => ListAccess(isSiteAdmin: siteAdmin, role: role)),

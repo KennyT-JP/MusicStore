@@ -76,8 +76,13 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('申請中'), findsOneWidget);
-      expect(find.text('承認'), findsOneWidget);
-      expect(find.text('却下'), findsOneWidget);
+      // **状態は「承認済み」「却下済み」。操作ボタンの「承認」「却下」と
+      // 同じ文字列にしない。** 自分の申請一覧に「承認」とだけ出ると、
+      // 押せる操作のように読めてしまう（監査 第2回）。
+      expect(find.text('承認済み'), findsOneWidget);
+      expect(find.text('却下済み'), findsOneWidget);
+      expect(find.text('承認'), findsNothing);
+      expect(find.text('却下'), findsNothing);
     });
 
     testWidgets('却下された申請には再申請ボタンを出す', (tester) async {

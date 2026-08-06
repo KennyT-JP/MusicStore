@@ -70,7 +70,23 @@ class ListDetailScreen extends ConsumerWidget {
     //
     // 参加の判定は自分のメンバー情報が読めるまで待つ。読み込み中に
     // 振り替えると、メンバーでも一瞬だけ申請画面が出てしまう。
+    //
+    // **取れなかったときに「未参加」と決めつけない。** 取得が失敗すると
+    // 役割は null になるが、それは「参加していない」ことを意味しない。
+    // 申請画面へ振り替えると、参加しているのに申請を促される（監査 第2回）。
     final memberships = ref.watch(myMembershipsProvider);
+    if (memberships.hasError) {
+      return Scaffold(
+        body: AsyncView<void>(
+          value: AsyncValue.error(
+            memberships.error!,
+            memberships.stackTrace ?? StackTrace.empty,
+          ),
+          onRetry: () => ref.invalidate(myMembershipsProvider),
+          builder: (_) => const SizedBox.shrink(),
+        ),
+      );
+    }
     if (memberships.hasValue && !access.canView) {
       return JoinRequestScreen(listId: listId);
     }
@@ -253,13 +269,14 @@ class _ItemList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    final items = ref.watch(listItemsProvider(listId));
+    final args = (listId: listId, withdrawnLabel: l10n.withdrawnUser);
+    final items = ref.watch(listItemsProvider(args));
     final query = ref.watch(itemQueryProvider(listId));
     final access = ref.watch(listAccessProvider(listId));
 
     return AsyncView(
       value: items,
-      onRetry: () => ref.invalidate(listItemsProvider(listId)),
+      onRetry: () => ref.invalidate(listItemsProvider(args)),
       builder: (all) {
         final filtered = ItemQueryRunner.apply(all, query);
 
@@ -270,7 +287,7 @@ class _ItemList extends ConsumerWidget {
                 : Icons.search_off,
             title: query.keyword.isEmpty ? l10n.noItemsYet : l10n.noSearchResults,
             description: query.keyword.isEmpty && Permissions.canAddItem(access)
-                ? '右下の「${l10n.addItem}」から音源や URL を登録できます。'
+                ? l10n.noItemsHint(l10n.addItem)
                 : null,
           );
         }
