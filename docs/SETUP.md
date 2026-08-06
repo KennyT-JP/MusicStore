@@ -526,6 +526,119 @@ Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 firebase deploy --project music-storage-dev --only firestore:rules
 ```
 
+### 本番へ配信する前の確認（初回のみ）
+
+**本番は取り違えても戻せません。** 検証環境の初回配信は 6 回失敗しました。
+同じところで止まらないよう、順に確かめてください。
+
+#### 1. 検証環境で動作を確認したか
+
+**本番に出す版は、検証環境で一度動かしたものにしてください。**
+自動テストは「壊れていないこと」を見ますが、実際にメールが届くか、
+通知が届くかまでは見ていません（仕様 12.6 の手動確認）。
+
+#### 2. 予算アラートを設定したか（仕様 12.1）
+
+**自動停止は実装しない方針なので、これが唯一の歯止めです。**
+本番プロジェクトに未設定なら、配信より先に設定してください（3 章）。
+
+費用を決めるのは保存量ではなく**ダウンロード量**です。音源を配るアプリなので、
+利用者が増えたときに効いてくるのはこちらです。
+
+#### 3. 接続設定を生成したか
+
+```bat
+scripts\configure-firebase.cmd prod
+```
+
+`lib/env/firebase_options_prod.dart` が `REPLACE_ME` のままだと、
+`deploy.cmd prod` が事前検査で止めます。
+
+#### 4. **Storage バケットのリージョンを確かめたか**
+
+**検証環境の初回配信が最初に失敗したのがここです。**
+
+```
+A function in region asia-northeast1 cannot listen to a bucket in region us-east1
+```
+
+Storage のトリガーは、バケットと同じリージョンでしか動かせません。
+**バケットのリージョンは作成後に変更できません。**
+
+Firebase コンソール → Storage を開き、バケットのロケーションを確認してください。
+
+| バケットのロケーション | 対応 |
+| --- | --- |
+| `asia-northeast1` | 何もしなくてよい（`functions/.env` の既定と同じ） |
+| それ以外（`us-east1` など） | `functions/.env.music-storage-d79b2` を作り、下記を書く |
+
+```
+STORAGE_REGION=us-east1
+```
+
+Firestore のロケーションも同様に確認し、`asia-northeast1` でなければ
+同じファイルに `FUNCTIONS_REGION=<Firestore のロケーション>` を足してください。
+
+> **このファイルはリポジトリに入れて構いません**（リージョン名だけで秘密ではありません）。
+> むしろ入れておかないと、次に配信する人が同じところで止まります。
+
+#### 5. Authentication のログイン方法を有効にしたか
+
+Firebase コンソール → Authentication → Sign-in method で、
+**メール／パスワード**と **Google** を有効にしてください。
+検証環境で有効でも、本番は別プロジェクトなので個別に設定が要ります。
+
+あわせて「承認済みドメイン」に `<プロジェクト ID>.web.app` が入っていることを
+確認してください（通常は自動で入ります）。
+
+#### 6. 初回配信で起きうること（検証環境で実際に起きたもの）
+
+| 症状 | 対処 |
+| --- | --- |
+| `<何とか> API has not been used in project ...` | 出力の URL を開いて有効化し、再実行。`purgeDeletedFiles` が使う Cloud Scheduler API が該当します |
+| `We failed to modify the IAM policy for the project` | API の有効化と同時に走ったため。**数分待って再実行**すれば通ります |
+| Cloud Build が大量に失敗する（1 個だけ成功する） | コンテナの置き場所が同じ配信の中で作られるため。**そのまま再実行**すれば通ります |
+| 呼び出すと `internal` とだけ出る | Cloud Run の呼び出し許可が設定されていません。下記参照 |
+
+**`internal` が出たときは、関数のコードは 1 行も動いていません。**
+`onCall` の関数は Cloud Run のレベルで誰でも呼べる状態が要りますが、
+この設定は**新規作成のときにしか行われません**。上の Cloud Build 失敗で
+作成が途中終了すると、設定だけが飛ばされます。再実行は更新扱いなので直りません。
+
+**その関数を削除してから配信し直してください**（この章の「呼び出し可能関数が
+`internal` で失敗するとき」を参照）。
+
+#### 7. 配信
+
+```bat
+scripts\deploy.cmd prod
+```
+
+本番のプロジェクト ID（`music-storage-d79b2`）の入力を求められます。
+取り違え防止のためなので、そのまま入力してください。
+
+#### 8. 最初のサイト管理者を登録
+
+**本番は誰もサイト管理者ではない状態から始まります。**
+6 章の手順を、本番のサービスアカウント鍵で実行してください。
+
+```bat
+node scripts\grant-site-admin.js --key <本番の鍵.json> --email <あなたのメール>
+```
+
+登録後、**アプリからログインし直してください**（カスタムクレームは
+トークンを取り直すまで反映されません）。
+
+#### 9. 既存データの手当て
+
+新しく作った本番プロジェクトにデータが無ければ不要です。
+すでに利用を始めている場合は、検証環境と同じ手当てを実行してください。
+
+```bat
+node scripts\backfill.mjs --project music-storage-d79b2 --key <本番の鍵.json> --dry-run
+node scripts\backfill.mjs --project music-storage-d79b2 --key <本番の鍵.json>
+```
+
 ### リージョンについて
 
 Cloud Functions は既定で `asia-northeast1`（東京）で動かします。主な利用者が日本にいる想定です。
