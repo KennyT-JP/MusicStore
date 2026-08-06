@@ -595,6 +595,24 @@ abstract class AppL10n {
   /// **'招待 URL を発行'**
   String get createInvite;
 
+  /// No description provided for @myRequestsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ申請はありません。'**
+  String get myRequestsEmpty;
+
+  /// No description provided for @myJoinRequests.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分の参加申請'**
+  String get myJoinRequests;
+
+  /// No description provided for @open.
+  ///
+  /// In ja, this message translates to:
+  /// **'開く'**
+  String get open;
+
   /// No description provided for @requestStatusPending.
   ///
   /// In ja, this message translates to:

@@ -166,15 +166,16 @@ final myListsProvider = StreamProvider<List<MyListEntry>>((ref) {
   );
 });
 
-final listProvider = StreamProvider.family<MusicList?, String>(
+final listProvider = StreamProvider.autoDispose.family<MusicList?, String>(
   (ref, listId) => ref.watch(listRepositoryProvider).watchList(listId),
 );
 
-final listStatsProvider = StreamProvider.family<ListStats?, String>(
+final listStatsProvider = StreamProvider.autoDispose.family<ListStats?, String>(
   (ref, listId) => ref.watch(listRepositoryProvider).watchStats(listId),
 );
 
-final listMembersProvider = StreamProvider.family<List<ListMember>, String>(
+final listMembersProvider =
+    StreamProvider.autoDispose.family<List<ListMember>, String>(
   (ref, listId) => ref.watch(listRepositoryProvider).watchMembers(listId),
 );
 
@@ -191,19 +192,39 @@ final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
 
 // ---------------------------------------------------------------------------
 // 項目とコメント
+//
+// **リストや項目ごとに作られるプロバイダは autoDispose にすること。**
+// Riverpod の既定は非 autoDispose で、ProviderScope はアプリ全体に 1 つしか
+// 無い。そのため一度でも監視したキーの購読が、画面を離れてもセッション中
+// ずっと残る。項目詳細を 50 件開けば snapshot の listener が 50 本残り、
+// 閲覧時間に比例してメモリと通信が増え続けていた（監査 S7）。
 // ---------------------------------------------------------------------------
 
 /// 表示名を解決するための、ユーザー情報のキャッシュ。
+/// [userDirectoryProvider] に渡すキーを作る。
+///
+/// **Set をそのままキーにしてはいけない。** Dart の Set は `==` を
+/// 上書きしないため、中身が同じでも別のキーとして扱われる。画面が再描画
+/// されるたびに新しいプロバイダとクエリが作られ、キャッシュに当たらない
+/// （監査 性能-S3）。並び順を固定した文字列にして同一性を保つ。
+String userDirectoryKey(Iterable<String> uids) {
+  final unique = uids.where((u) => u.isNotEmpty).toSet().toList()..sort();
+  return unique.join(',');
+}
+
 final userDirectoryProvider =
-    FutureProvider.family<Map<String, AppUser>, Set<String>>(
-      (ref, uids) => ref.watch(listRepositoryProvider).fetchUsers(uids),
+    FutureProvider.autoDispose.family<Map<String, AppUser>, String>(
+      (ref, key) => ref
+          .watch(listRepositoryProvider)
+          .fetchUsers(key.isEmpty ? const <String>[] : key.split(',')),
     );
 
 /// リストの項目（表示名を解決済み）。
 ///
 /// 検索・並び替えはアプリのメモリ上で行うため（仕様書 13.6）、
 /// 削除済みも含めてまとめて読み込む。
-final listItemsProvider = StreamProvider.family<List<ListItem>, String>((
+final listItemsProvider =
+    StreamProvider.autoDispose.family<List<ListItem>, String>((
   ref,
   listId,
 ) async* {
@@ -238,13 +259,15 @@ final listItemsProvider = StreamProvider.family<List<ListItem>, String>((
 });
 
 final itemProvider =
-    StreamProvider.family<ListItem?, ({String listId, String itemId})>(
+    StreamProvider.autoDispose
+        .family<ListItem?, ({String listId, String itemId})>(
       (ref, args) =>
           ref.watch(itemRepositoryProvider).watchItem(args.listId, args.itemId),
     );
 
 final itemCommentsProvider =
-    StreamProvider.family<List<ItemComment>, ({String listId, String itemId})>(
+    StreamProvider.autoDispose
+        .family<List<ItemComment>, ({String listId, String itemId})>(
       (ref, args) => ref
           .watch(itemRepositoryProvider)
           .watchComments(args.listId, args.itemId),
@@ -328,6 +351,13 @@ final myListRequestsProvider = StreamProvider<List<ListRequest>>((ref) {
       .map((s) => s.docs.map(ListRequest.fromDoc).toList());
 });
 
+/// 自分が出した参加申請（リストをまたぐ／仕様書 5.2.1）。
+final myJoinRequestsProvider = StreamProvider<List<JoinRequest>>((ref) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(listRepositoryProvider).watchMyJoinRequests(user.uid);
+});
+
 /// 保留中のリスト作成申請（サイト管理者向け／仕様書 5.1）。
 final pendingListRequestsProvider = StreamProvider<List<ListRequest>>((ref) {
   final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
@@ -343,7 +373,7 @@ final pendingListRequestsProvider = StreamProvider<List<ListRequest>>((ref) {
 
 /// リストの保留中の参加申請（リスト管理者向け／仕様書 5.2）。
 final pendingJoinRequestsProvider =
-    StreamProvider.family<List<JoinRequest>, String>((ref, listId) {
+    StreamProvider.autoDispose.family<List<JoinRequest>, String>((ref, listId) {
       return ref
           .watch(firestoreProvider)
           .collection(FirestorePaths.listJoinRequests(listId))
@@ -357,7 +387,8 @@ final pendingJoinRequestsProvider =
     });
 
 /// このリストへの自分の参加申請（仕様書 5.3 / 5.2.1）。
-final myJoinRequestProvider = StreamProvider.family<JoinRequest?, String>((
+final myJoinRequestProvider =
+    StreamProvider.autoDispose.family<JoinRequest?, String>((
   ref,
   listId,
 ) {

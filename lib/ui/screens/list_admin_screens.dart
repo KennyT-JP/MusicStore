@@ -47,7 +47,7 @@ class ListMembersScreen extends ConsumerWidget {
         builder: (list) {
           final uids = list.map((m) => m.uid).toSet();
           final users =
-              ref.watch(userDirectoryProvider(uids)).value ?? const {};
+              ref.watch(userDirectoryProvider(userDirectoryKey(uids))).value ?? const {};
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -411,7 +411,7 @@ class _JoinRequestCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    final users = ref.watch(userDirectoryProvider({request.uid})).value;
+    final users = ref.watch(userDirectoryProvider(userDirectoryKey([request.uid]))).value;
     final user = users?[request.uid];
 
     return Card(

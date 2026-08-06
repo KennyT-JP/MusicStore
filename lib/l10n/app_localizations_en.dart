@@ -282,6 +282,15 @@ class AppL10nEn extends AppL10n {
   String get createInvite => 'Create invite URL';
 
   @override
+  String get myRequestsEmpty => 'You have no requests yet.';
+
+  @override
+  String get myJoinRequests => 'Your join requests';
+
+  @override
+  String get open => 'Open';
+
+  @override
   String get requestStatusPending => 'Pending';
 
   @override

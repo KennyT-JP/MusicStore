@@ -149,6 +149,9 @@
   "inviteAlreadyMember": "すでにこのリストに参加しています。",
   "createInvite": "招待 URL を発行",
 
+  "myRequestsEmpty": "まだ申請はありません。",
+  "myJoinRequests": "自分の参加申請",
+  "open": "開く",
   "requestStatusPending": "申請中",
   "requestStatusApproved": "承認",
   "requestStatusRejected": "却下",

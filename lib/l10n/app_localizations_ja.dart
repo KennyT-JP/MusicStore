@@ -274,6 +274,15 @@ class AppL10nJa extends AppL10n {
   String get createInvite => '招待 URL を発行';
 
   @override
+  String get myRequestsEmpty => 'まだ申請はありません。';
+
+  @override
+  String get myJoinRequests => '自分の参加申請';
+
+  @override
+  String get open => '開く';
+
+  @override
   String get requestStatusPending => '申請中';
 
   @override

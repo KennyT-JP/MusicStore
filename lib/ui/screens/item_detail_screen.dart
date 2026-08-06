@@ -577,7 +577,7 @@ class _AuthorLine extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
     final theme = Theme.of(context);
-    final users = ref.watch(userDirectoryProvider({uid})).value;
+    final users = ref.watch(userDirectoryProvider(userDirectoryKey([uid]))).value;
     final members = ref.watch(listMembersProvider(listId)).value;
 
     final AppUser? user = users?[uid];

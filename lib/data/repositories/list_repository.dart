@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../firestore_paths.dart';
 import '../models/app_user.dart';
+import '../models/requests.dart';
 import '../models/music_list.dart';
 
 /// リストとメンバーの読み書き。
@@ -63,6 +64,27 @@ class ListRepository {
       .doc(FirestorePaths.listMember(listId, uid))
       .snapshots()
       .map((doc) => doc.exists ? ListMember.fromDoc(doc) : null);
+
+  /// 自分が出した参加申請を、リストをまたいで集める（仕様書 5.2.1）。
+  ///
+  /// **申請一覧にはリスト作成申請しか出ていなかった**（監査 S17）。
+  /// 参加申請はリストごとの下位コレクションにあるため、
+  /// `members` と同じく collectionGroup で横断的に引く。
+  Stream<List<JoinRequest>> watchMyJoinRequests(String uid) => _db
+      .collectionGroup(FirestorePaths.joinRequests)
+      .where(FieldPath.documentId, isEqualTo: uid)
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => JoinRequest.fromDoc(
+                doc,
+                // lists/{listId}/joinRequests/{uid} → listId
+                listId: doc.reference.parent.parent!.id,
+              ),
+            )
+            .toList(),
+      );
 
   /// 表示名の解決に使うユーザー情報をまとめて引く（仕様書 13.3）。
   ///

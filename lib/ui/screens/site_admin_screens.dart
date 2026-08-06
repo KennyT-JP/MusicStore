@@ -186,7 +186,7 @@ class _ListRequestCardState extends ConsumerState<_ListRequestCard> {
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
     final request = widget.request;
-    final users = ref.watch(userDirectoryProvider({request.requestedBy})).value;
+    final users = ref.watch(userDirectoryProvider(userDirectoryKey([request.requestedBy]))).value;
     final requester = users?[request.requestedBy];
 
     return Card(

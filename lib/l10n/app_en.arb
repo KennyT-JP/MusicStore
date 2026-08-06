@@ -100,6 +100,9 @@
   "inviteAlreadyMember": "You are already a member of this list.",
   "createInvite": "Create invite URL",
 
+  "myRequestsEmpty": "You have no requests yet.",
+  "myJoinRequests": "Your join requests",
+  "open": "Open",
   "requestStatusPending": "Pending",
   "requestStatusApproved": "Approved",
   "requestStatusRejected": "Rejected",

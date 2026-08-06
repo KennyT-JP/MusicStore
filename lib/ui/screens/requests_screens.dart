@@ -196,16 +196,19 @@ class MyRequestsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
     final requests = ref.watch(myListRequestsProvider);
+    // **参加申請も並べる（仕様書 5.2.1）。** リスト作成申請しか出ておらず、
+    // 参加申請の状態をどこからも確認できなかった（監査 S17）。
+    final joinRequests = ref.watch(myJoinRequestsProvider).value ?? const [];
 
     return Scaffold(
       body: AsyncView(
         value: requests,
         onRetry: () => ref.invalidate(myListRequestsProvider),
         builder: (items) {
-          if (items.isEmpty) {
+          if (items.isEmpty && joinRequests.isEmpty) {
             return EmptyState(
               icon: Icons.inbox_outlined,
-              title: 'まだ申請はありません。',
+              title: l10n.myRequestsEmpty,
               action: FilledButton.icon(
                 onPressed: () => context.go(AppRoutes.requestList),
                 icon: const Icon(Icons.add),
@@ -223,6 +226,16 @@ class MyRequestsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               for (final request in items) _RequestCard(request: request),
+              if (joinRequests.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text(
+                  l10n.myJoinRequests,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                for (final request in joinRequests)
+                  _JoinRequestCard(request: request),
+              ],
             ],
           );
         },
@@ -446,4 +459,38 @@ class _JoinRequestScreenState extends ConsumerState<JoinRequestScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
+}
+
+
+/// 自分が出した参加申請の 1 行（仕様書 5.2.1）。
+class _JoinRequestCard extends ConsumerWidget {
+  const _JoinRequestCard({required this.request});
+
+  final JoinRequest request;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    final list = ref.watch(listProvider(request.listId)).value;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        title: Text(list?.name ?? request.listId),
+        subtitle: Text(_statusLabel(l10n, request.status)),
+        trailing: request.status == RequestStatus.approved
+            ? TextButton(
+                onPressed: () => context.go(AppRoutes.list(request.listId)),
+                child: Text(l10n.open),
+              )
+            : null,
+      ),
+    );
+  }
+
+  String _statusLabel(AppL10n l10n, RequestStatus status) => switch (status) {
+    RequestStatus.pending => l10n.requestStatusPending,
+    RequestStatus.approved => l10n.requestStatusApproved,
+    RequestStatus.rejected => l10n.requestStatusRejected,
+  };
 }
