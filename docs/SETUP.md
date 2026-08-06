@@ -526,6 +526,29 @@ Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 firebase deploy --project music-storage-dev --only firestore:rules
 ```
 
+### 配信したのに、画面が古いまま／アイコンが出ないとき
+
+**まずブラウザのキャッシュを疑ってください。** 強制リロード（Ctrl + Shift + R）
+だけでは足りない場合があります。
+
+過去に一度、**アイコンの場所だけ空いていて絵柄が出ない**という形で出ました。
+原因は `firebase.json` のキャッシュ指定です。
+
+Flutter はアイコン用の `MaterialIcons-Regular.otf` を、**そのビルドで使っている
+アイコンだけに削り込んで作り直します。** 名前は変わらないのに中身がビルドごとに
+変わるファイルです。ここを `immutable`（取り直さない）にしていたため、
+**新しい画面が古いフォントで描かれ**、増やしたアイコンだけが出ませんでした。
+
+`firebase.json` は `must-revalidate` に直してあり、
+`test/domain/hosting_cache_test.dart` で戻らないよう固定しています。
+ただし**すでにブラウザに残っている分は消えません。** 一度だけ手で消してください。
+
+1. F12 で開発者ツールを開く
+2. **Application** タブ →左の **Storage** → **Clear site data**
+3. ページを開き直す
+
+シークレット ウィンドウで開いて直るなら、原因はキャッシュだと切り分けられます。
+
 ### 本番へ配信する前の確認（初回のみ）
 
 **本番は取り違えても戻せません。** 検証環境の初回配信は 6 回失敗しました。
@@ -794,7 +817,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 233 件
+flutter test      # 242 件
 flutter analyze
 
 cd functions && npm test   # 76 件（サーバー側のドメインロジック・通知）

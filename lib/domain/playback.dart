@@ -5,6 +5,24 @@
 /// 端末の音を鳴らさずに確かめられる。ここに置いて回帰テストで固定する。
 library;
 
+/// そのファイルを、この画面で鳴らせるか。
+///
+/// **ファイルの種類は登録時に制限していない（仕様書 7.1）。** 画像や書類も
+/// 登録できるため、「ファイルとして登録されたもの」すべてに再生ボタンを
+/// 出すと、押しても鳴らないものにボタンが出てしまう。
+///
+/// 判断はまず `contentType` を見る。登録時に拡張子から決めているが、
+/// 分からないものは `application/octet-stream` になる。古い項目で
+/// 空になっている場合に備えて、拡張子も見ておく。
+bool isPlayableAudio({required String contentType, required String fileName}) {
+  if (contentType.toLowerCase().startsWith('audio/')) return true;
+
+  final ext = fileName.contains('.')
+      ? fileName.split('.').last.toLowerCase()
+      : '';
+  return const {'mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac'}.contains(ext);
+}
+
 /// いまの再生の状況。
 enum PlaybackStatus {
   /// 止まっている。次に再生すると**先頭から**始まる。

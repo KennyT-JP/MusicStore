@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/list_item.dart';
 import '../../domain/item_query.dart';
 import '../../domain/permissions.dart';
+import '../../domain/playback.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/playback_provider.dart';
@@ -449,8 +450,10 @@ class _SeqBadge extends StatelessWidget {
 
 /// 再生・一時停止・停止（仕様書 8 章）。
 ///
-/// **ファイルの項目にだけ出す。** URL の項目は外部のページなので、
-/// ここで音として鳴らすことはできない（項目詳細から開く）。
+/// **音として鳴らせるファイルにだけ出す。** URL の項目は外部のページなので
+/// ここでは鳴らせない（項目詳細から開く）。ファイルの種類は登録時に
+/// 制限していない（仕様書 7.1）ため、画像や書類にもボタンが出ないよう
+/// `isPlayableAudio` で絞る。
 ///
 /// 出し分けの規則：
 ///
@@ -470,7 +473,16 @@ class _PlaybackButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    if (item.kind != ItemKind.file) return const SizedBox.shrink();
+    final file = item.file;
+    if (item.kind != ItemKind.file || file == null) {
+      return const SizedBox.shrink();
+    }
+    if (!isPlayableAudio(
+      contentType: file.contentType,
+      fileName: file.fileName,
+    )) {
+      return const SizedBox.shrink();
+    }
 
     final playback = ref.watch(playbackProvider);
     final controller = ref.read(playbackProvider.notifier);

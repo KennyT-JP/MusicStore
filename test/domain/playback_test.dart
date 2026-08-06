@@ -103,6 +103,58 @@ void main() {
     });
   });
 
+  group('再生ボタンを出すファイルかどうか', () {
+    // ファイルの種類は登録時に制限していない（仕様 7.1）ので、
+    // 画像や書類も登録できる。押しても鳴らないものにボタンを出さない。
+    test('音のファイルには出す', () {
+      for (final type in [
+        'audio/mpeg',
+        'audio/mp4',
+        'audio/wav',
+        'audio/flac',
+        'audio/ogg',
+        'audio/aac',
+      ]) {
+        expect(
+          isPlayableAudio(contentType: type, fileName: 'take.mp3'),
+          isTrue,
+          reason: type,
+        );
+      }
+    });
+
+    test('画像や書類には出さない', () {
+      expect(
+        isPlayableAudio(
+          contentType: 'application/octet-stream',
+          fileName: '顔写真3.jpg',
+        ),
+        isFalse,
+      );
+      expect(
+        isPlayableAudio(contentType: 'image/jpeg', fileName: 'a.jpg'),
+        isFalse,
+      );
+      expect(
+        isPlayableAudio(contentType: 'application/pdf', fileName: '譜面.pdf'),
+        isFalse,
+      );
+    });
+
+    test('動画にも出さない（音だけを鳴らす作りではない）', () {
+      expect(
+        isPlayableAudio(contentType: 'video/mp4', fileName: 'live.mp4'),
+        isFalse,
+      );
+    });
+
+    test('種類が空でも、拡張子が音なら出す（古い項目のため）', () {
+      expect(isPlayableAudio(contentType: '', fileName: 'take.MP3'), isTrue);
+      expect(isPlayableAudio(contentType: '', fileName: 'take.m4a'), isTrue);
+      expect(isPlayableAudio(contentType: '', fileName: 'take'), isFalse);
+    });
+  });
+
   group('ボタンの出し分け', () {
     test('鳴っている曲だけが「鳴っている」', () {
       const state = PlaybackState(itemId: _a, status: PlaybackStatus.playing);

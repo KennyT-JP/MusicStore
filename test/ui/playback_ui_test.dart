@@ -59,6 +59,23 @@ ListItem _fileItem(int seq) => ListItem(
   status: ContentStatus.active,
 );
 
+/// 音ではないファイル。仕様 7.1 でファイルの種類は制限していない。
+ListItem _imageItem(int seq) => ListItem(
+  id: 'item-$seq',
+  seq: seq,
+  itemDate: LocalDate.tryParse('2026-08-01')!,
+  kind: ItemKind.file,
+  file: ItemFile(
+    storagePath: 'lists/$_listId/items/item-$seq/photo.jpg',
+    fileName: '顔写真3.jpg',
+    sizeBytes: 1024,
+    contentType: 'application/octet-stream',
+  ),
+  createdBy: 'u1',
+  registrantDisplayName: '山田',
+  status: ContentStatus.active,
+);
+
 ListItem _urlItem(int seq) => ListItem(
   id: 'item-$seq',
   seq: seq,
@@ -127,6 +144,24 @@ void main() {
     // 止まっているうちは停止ボタンを出さない。
     expect(find.byIcon(Icons.stop), findsNothing);
     expect(find.byIcon(Icons.pause), findsNothing);
+  });
+
+  testWidgets('画像のファイルには出さない（押しても鳴らないため）', (tester) async {
+    await tester.pumpWidget(_app([_imageItem(1)], _FakeHandle()));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.play_arrow), findsNothing);
+    // 行そのものは出る。開けば中身は見られる。
+    expect(find.text('顔写真3.jpg'), findsOneWidget);
+  });
+
+  testWidgets('音のファイルと画像が並んでいても、音にだけ出す', (tester) async {
+    await tester.pumpWidget(
+      _app([_imageItem(1), _fileItem(2)], _FakeHandle()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
   });
 
   testWidgets('URL の項目には出さない（外部のページは鳴らせない）', (tester) async {
