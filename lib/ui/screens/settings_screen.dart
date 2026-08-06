@@ -182,6 +182,13 @@ class _NotificationSection extends ConsumerWidget {
         for (final type in NotificationType.values)
           SwitchListTile(
             title: Text(_labelFor(l10n, type)),
+            // どんなときに届くのかを書き添える。種別の名前だけでは
+            // 「自分に届くのか」が分からず、切り替える判断ができない。
+            subtitle: Text(
+              _detailFor(l10n, type),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            isThreeLine: false,
             value: settings.settingFor(type).inApp,
             // マスターがオフなら個別の切り替えは意味がないので無効にする。
             onChanged: settings.master
@@ -206,6 +213,18 @@ class _NotificationSection extends ConsumerWidget {
         NotificationType.listRequested => l10n.notifyListRequested,
         NotificationType.joinRequested => l10n.notifyJoinRequested,
         NotificationType.requestApproved => l10n.notifyRequestApproved,
+      };
+
+  /// その通知がどんなときに届くか（仕様書 10.2 の受信者）。
+  static String _detailFor(AppL10n l10n, NotificationType type) =>
+      switch (type) {
+        NotificationType.itemAdded => l10n.notifyItemAddedDetail,
+        NotificationType.commentAdded => l10n.notifyCommentAddedDetail,
+        NotificationType.quotaNotice => l10n.notifyQuotaNoticeDetail,
+        NotificationType.quotaWarning => l10n.notifyQuotaWarningDetail,
+        NotificationType.listRequested => l10n.notifyListRequestedDetail,
+        NotificationType.joinRequested => l10n.notifyJoinRequestedDetail,
+        NotificationType.requestApproved => l10n.notifyRequestApprovedDetail,
       };
 }
 

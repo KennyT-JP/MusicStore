@@ -624,10 +624,10 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 193 件
+flutter test      # 199 件
 flutter analyze
 
-cd functions && npm test   # 29 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # 41 件（サーバー側のドメインロジック・通知）
 ```
 
 権限判定・容量上限・連番・招待 URL・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
@@ -662,7 +662,7 @@ Firestore ルールは 92 件すべて検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（41 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（47 件）。
 
 ```sh
 # ターミナル 1

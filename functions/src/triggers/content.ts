@@ -11,10 +11,27 @@ import {
 import * as logger from 'firebase-functions/logger';
 
 import { REGION, paths } from '../config';
-import { listAdminUids, notifySafely, siteAdminUids } from '../notifications';
+import {
+  listAdminUids,
+  listMemberUids,
+  notifySafely,
+  siteAdminUids,
+} from '../notifications';
 
 /**
- * 項目が追加されたら、リスト管理者とサイト管理者へ通知する（仕様書 10.2）。
+ * 曲（項目）が追加されたら、そのリストのメンバー全員へ通知する（仕様書 10.2）。
+ *
+ * **宛先はリストのメンバー全員**。役割は問わない。曲が増えたことは、
+ * そのリストに参加している人みんなにとっての知らせなので、
+ * 閲覧のみ（Read Only）の人も受け取る。リスト管理者もメンバーなので含まれる。
+ *
+ * **サイト管理者だからという理由では送らない。** 以前は全リストの項目追加が
+ * サイト管理者に届いていたが、参加していないリストの曲まで通知されるのは
+ * 雑音でしかない。サイト管理者も、そのリストのメンバーであれば受け取る。
+ *
+ * URL の項目もファイルの項目も同じ扱い（どちらも「曲が 1 つ増えた」）。
+ *
+ * 受け取るかどうかは各自の通知設定で切り替えられる（仕様書 10.3）。
  */
 export const onItemCreated = onDocumentCreated(
   { region: REGION, document: 'lists/{listId}/items/{itemId}' },
@@ -26,13 +43,7 @@ export const onItemCreated = onDocumentCreated(
     // 宛先集めから通知までを包む。ここで例外を出すとトリガーが失敗扱いになり、
     // 再試行が延々と繰り返される。通知は本処理の副次的なものなので、
     // 失敗はログに残して先へ進む。
-    await notifySafely(async () => {
-      const [admins, siteAdmins] = await Promise.all([
-        listAdminUids(listId),
-        siteAdminUids(),
-      ]);
-      return [...admins, ...siteAdmins];
-    }, {
+    await notifySafely(() => listMemberUids(listId), {
       type: 'itemAdded',
       listId,
       itemId,

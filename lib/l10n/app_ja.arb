@@ -271,13 +271,21 @@
   "withdraw": "退会する",
   "withdrawWarning": "退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。",
 
-  "notifyItemAdded": "項目が追加された",
+  "notifyItemAdded": "曲が追加された",
   "notifyCommentAdded": "コメントが付いた",
   "notifyQuotaNotice": "容量が 80% を超えた",
   "notifyQuotaWarning": "容量が 90% を超えた",
   "notifyListRequested": "リスト作成の申請があった",
   "notifyJoinRequested": "参加申請があった",
   "notifyRequestApproved": "申請が承認された",
+
+  "notifyItemAddedDetail": "参加しているリストに曲が追加されたとき。管理しているリストも含みます。",
+  "notifyCommentAddedDetail": "自分が管理しているリスト、または自分の投稿にコメントが付いたとき。",
+  "notifyQuotaNoticeDetail": "管理しているリストの使用容量が上限の 80% を超えたとき。",
+  "notifyQuotaWarningDetail": "管理しているリストの使用容量が上限の 90% を超えたとき。",
+  "notifyListRequestedDetail": "リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。",
+  "notifyJoinRequestedDetail": "管理しているリストに参加を申し込まれたとき。",
+  "notifyRequestApprovedDetail": "自分が出した申請が承認されたとき。",
 
   "notificationsEmpty": "通知はありません。",
   "markAllAsRead": "すべて既読にする",

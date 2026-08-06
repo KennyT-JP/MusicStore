@@ -611,7 +611,7 @@ class AppL10nJa extends AppL10n {
   String get withdrawWarning => '退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。';
 
   @override
-  String get notifyItemAdded => '項目が追加された';
+  String get notifyItemAdded => '曲が追加された';
 
   @override
   String get notifyCommentAdded => 'コメントが付いた';
@@ -630,6 +630,27 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get notifyRequestApproved => '申請が承認された';
+
+  @override
+  String get notifyItemAddedDetail => '参加しているリストに曲が追加されたとき。管理しているリストも含みます。';
+
+  @override
+  String get notifyCommentAddedDetail => '自分が管理しているリスト、または自分の投稿にコメントが付いたとき。';
+
+  @override
+  String get notifyQuotaNoticeDetail => '管理しているリストの使用容量が上限の 80% を超えたとき。';
+
+  @override
+  String get notifyQuotaWarningDetail => '管理しているリストの使用容量が上限の 90% を超えたとき。';
+
+  @override
+  String get notifyListRequestedDetail => 'リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。';
+
+  @override
+  String get notifyJoinRequestedDetail => '管理しているリストに参加を申し込まれたとき。';
+
+  @override
+  String get notifyRequestApprovedDetail => '自分が出した申請が承認されたとき。';
 
   @override
   String get notificationsEmpty => '通知はありません。';

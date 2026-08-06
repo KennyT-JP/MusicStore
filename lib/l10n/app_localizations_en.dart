@@ -635,7 +635,7 @@ class AppL10nEn extends AppL10n {
       'Your items and comments stay in the lists after you leave. Your name will be shown as \"Former member\".';
 
   @override
-  String get notifyItemAdded => 'An item was added';
+  String get notifyItemAdded => 'A song was added';
 
   @override
   String get notifyCommentAdded => 'A comment was posted';
@@ -654,6 +654,34 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get notifyRequestApproved => 'Your request was approved';
+
+  @override
+  String get notifyItemAddedDetail =>
+      'When a song is added to a list you belong to, including lists you manage.';
+
+  @override
+  String get notifyCommentAddedDetail =>
+      'When a comment is posted on a list you manage, or on something you posted.';
+
+  @override
+  String get notifyQuotaNoticeDetail =>
+      'When a list you manage passes 80% of its storage limit.';
+
+  @override
+  String get notifyQuotaWarningDetail =>
+      'When a list you manage passes 90% of its storage limit.';
+
+  @override
+  String get notifyListRequestedDetail =>
+      'When someone requests a new list. Site admins only.';
+
+  @override
+  String get notifyJoinRequestedDetail =>
+      'When someone asks to join a list you manage.';
+
+  @override
+  String get notifyRequestApprovedDetail =>
+      'When a request you submitted is approved.';
 
   @override
   String get notificationsEmpty => 'No notifications.';

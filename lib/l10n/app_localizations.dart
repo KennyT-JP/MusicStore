@@ -1222,7 +1222,7 @@ abstract class AppL10n {
   /// No description provided for @notifyItemAdded.
   ///
   /// In ja, this message translates to:
-  /// **'項目が追加された'**
+  /// **'曲が追加された'**
   String get notifyItemAdded;
 
   /// No description provided for @notifyCommentAdded.
@@ -1260,6 +1260,48 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'申請が承認された'**
   String get notifyRequestApproved;
+
+  /// No description provided for @notifyItemAddedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加しているリストに曲が追加されたとき。管理しているリストも含みます。'**
+  String get notifyItemAddedDetail;
+
+  /// No description provided for @notifyCommentAddedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分が管理しているリスト、または自分の投稿にコメントが付いたとき。'**
+  String get notifyCommentAddedDetail;
+
+  /// No description provided for @notifyQuotaNoticeDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'管理しているリストの使用容量が上限の 80% を超えたとき。'**
+  String get notifyQuotaNoticeDetail;
+
+  /// No description provided for @notifyQuotaWarningDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'管理しているリストの使用容量が上限の 90% を超えたとき。'**
+  String get notifyQuotaWarningDetail;
+
+  /// No description provided for @notifyListRequestedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。'**
+  String get notifyListRequestedDetail;
+
+  /// No description provided for @notifyJoinRequestedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'管理しているリストに参加を申し込まれたとき。'**
+  String get notifyJoinRequestedDetail;
+
+  /// No description provided for @notifyRequestApprovedDetail.
+  ///
+  /// In ja, this message translates to:
+  /// **'自分が出した申請が承認されたとき。'**
+  String get notifyRequestApprovedDetail;
 
   /// No description provided for @notificationsEmpty.
   ///

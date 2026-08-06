@@ -78,6 +78,15 @@ async function list(path) {
   const r = await fetch(`${FS}/${path}`, { headers: FS_HEADERS });
   return r.ok ? (await r.json()).documents ?? [] : [];
 }
+/** ドキュメントを直接書く（トリガーを動かすため）。 */
+async function setDoc(path, fields) {
+  const r = await fetch(`${FS}/${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...FS_HEADERS },
+    body: JSON.stringify({ fields }),
+  });
+  return r.ok;
+}
 const sv = (d, k) => d?.fields?.[k]?.stringValue ?? d?.fields?.[k]?.integerValue ?? d?.fields?.[k]?.booleanValue;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -299,6 +308,41 @@ if (listId) {
   check('退会しても users は残る（3.5）',
         leftUser !== null && sv(leftUser, 'isWithdrawn') === true,
         String(sv(leftUser, 'isWithdrawn')));
+
+  // --- 曲が追加されたらメンバー全員へ通知（10.2） ---
+  //
+  // 以前はリスト管理者とサイト管理者だけが宛先だった。参加していても
+  // 管理者でなければ曲の追加に気づけず、逆にサイト管理者には参加して
+  // いないリストの曲まで届いていた。
+  //
+  // ここでは項目を直接書いて onItemCreated を動かす。
+  const itemId = `song-${stamp}`;
+  const wrote = await setDoc(`lists/${listId}/items/${itemId}`, {
+    seq: { integerValue: '1' },
+    date: { stringValue: '2026-08-06' },
+    kind: { stringValue: 'url' },
+    url: { stringValue: 'https://example.com/song' },
+    title: { stringValue: `テスト曲${stamp}` },
+    createdBy: { stringValue: applicant.localId },
+    status: { stringValue: 'active' },
+  });
+  check('曲を追加できる（通知の検証用）', wrote);
+
+  await sleep(6000);
+  const itemAdded = async (uid) =>
+    (await list(`users/${uid}/notifications`))
+      .some((n) => sv(n, 'type') === 'itemAdded' && sv(n, 'itemId') === itemId);
+
+  // invitee は superUser、joiner はこの時点で listAdmin。
+  check('参加しているだけの人にも届く（10.2）', await itemAdded(invitee.localId));
+  check('リスト管理者にも届く（10.2）', await itemAdded(joiner.localId));
+  check('追加した本人には届かない', !(await itemAdded(applicant.localId)));
+  check('参加していない人には届かない', !(await itemAdded(revoked.localId)));
+
+  // サイト管理者はこのリストのメンバーではない。参加していないリストの
+  // 曲まで通知されると雑音になるため、役割だけを理由には送らない。
+  check('サイト管理者でも参加していなければ届かない',
+        !(await itemAdded(siteAdmin.localId)));
 }
 
 console.log(`\n=== ${results.filter(Boolean).length} / ${results.length} 成功 ===`);

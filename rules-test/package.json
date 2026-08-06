@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Firestore / Storage セキュリティルールのテスト（仕様書 12.6）",
   "scripts": {
-    "//": "JAVA_TOOL_OPTIONS を空にするのは、環境変数が設定されていると JVM が起動時に 'Picked up ...' を出力し、Storage エミュレータのルールランタイムがそれを解釈できずに落ちるため。",
-    "test": "JAVA_TOOL_OPTIONS= firebase emulators:exec --project demo-musiclist --only firestore,storage \"vitest run\"",
+    "//": "実行の中身は run.mjs にある。JAVA_TOOL_OPTIONS を消す必要があり、その書き方が OS で違うため（理由は run.mjs の先頭）。",
+    "test": "node run.mjs",
     "test:watch": "vitest"
   },
   "license": "UNLICENSED",

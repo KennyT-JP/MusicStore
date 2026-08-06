@@ -219,13 +219,21 @@
   "withdraw": "Delete my account",
   "withdrawWarning": "Your items and comments stay in the lists after you leave. Your name will be shown as \"Former member\".",
 
-  "notifyItemAdded": "An item was added",
+  "notifyItemAdded": "A song was added",
   "notifyCommentAdded": "A comment was posted",
   "notifyQuotaNotice": "Storage passed 80%",
   "notifyQuotaWarning": "Storage passed 90%",
   "notifyListRequested": "A list was requested",
   "notifyJoinRequested": "Someone asked to join",
   "notifyRequestApproved": "Your request was approved",
+
+  "notifyItemAddedDetail": "When a song is added to a list you belong to, including lists you manage.",
+  "notifyCommentAddedDetail": "When a comment is posted on a list you manage, or on something you posted.",
+  "notifyQuotaNoticeDetail": "When a list you manage passes 80% of its storage limit.",
+  "notifyQuotaWarningDetail": "When a list you manage passes 90% of its storage limit.",
+  "notifyListRequestedDetail": "When someone requests a new list. Site admins only.",
+  "notifyJoinRequestedDetail": "When someone asks to join a list you manage.",
+  "notifyRequestApprovedDetail": "When a request you submitted is approved.",
 
   "notificationsEmpty": "No notifications.",
   "markAllAsRead": "Mark all as read",

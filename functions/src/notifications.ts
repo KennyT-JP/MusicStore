@@ -127,6 +127,22 @@ async function inAppEnabled(
 }
 
 /**
+ * そのリストのメンバー全員の uid を集める（仕様書 10.2）。
+ *
+ * 役割は問わない。**曲が追加されたことは、そのリストに参加している人
+ * 全員にとっての知らせ**なので、閲覧のみ（Read Only）の人も宛先に入れる。
+ *
+ * リスト管理者もメンバーとして登録されている（13.5）ので、この一覧に含まれる。
+ * 受け取るかどうかは各自の通知設定で決まる（10.3）。
+ */
+export async function listMemberUids(listId: string): Promise<string[]> {
+  const snapshot = await getFirestore()
+    .collection(paths.listMembers(listId))
+    .get();
+  return snapshot.docs.map((doc) => doc.id);
+}
+
+/**
  * そのリストのリスト管理者の uid を集める（仕様書 10.2）。
  */
 export async function listAdminUids(listId: string): Promise<string[]> {
