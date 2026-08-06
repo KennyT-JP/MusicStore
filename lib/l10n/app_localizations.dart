@@ -793,6 +793,102 @@ abstract class AppL10n {
   /// **'保存しました。'**
   String get saved;
 
+  /// No description provided for @verificationResent.
+  ///
+  /// In ja, this message translates to:
+  /// **'確認メールを再送しました。'**
+  String get verificationResent;
+
+  /// No description provided for @verificationNotYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ確認が済んでいないようです。メール内のリンクを開いてください。'**
+  String get verificationNotYet;
+
+  /// No description provided for @displayNameHelper.
+  ///
+  /// In ja, this message translates to:
+  /// **'後から変更できます'**
+  String get displayNameHelper;
+
+  /// No description provided for @passwordHelper.
+  ///
+  /// In ja, this message translates to:
+  /// **'6 文字以上'**
+  String get passwordHelper;
+
+  /// No description provided for @noItemsYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだ項目がありません。'**
+  String get noItemsYet;
+
+  /// No description provided for @noSearchResults.
+  ///
+  /// In ja, this message translates to:
+  /// **'該当する項目が見つかりませんでした。'**
+  String get noSearchResults;
+
+  /// No description provided for @deleteItemBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'この項目を削除します。\n\nファイル本体は {days} 日間保持され、その間はリスト管理者以上が復元できます。'**
+  String deleteItemBody(Object days);
+
+  /// No description provided for @restorableUntil.
+  ///
+  /// In ja, this message translates to:
+  /// **'{date} まではリスト管理者が復元できます。'**
+  String restorableUntil(Object date);
+
+  /// No description provided for @noCommentsYet.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだコメントはありません。'**
+  String get noCommentsYet;
+
+  /// No description provided for @replyingTo.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{body}」への返信'**
+  String replyingTo(Object body);
+
+  /// No description provided for @inviteReceived.
+  ///
+  /// In ja, this message translates to:
+  /// **'招待を受け取りました'**
+  String get inviteReceived;
+
+  /// No description provided for @joinThisList.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストに参加します。'**
+  String get joinThisList;
+
+  /// No description provided for @join.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加する'**
+  String get join;
+
+  /// No description provided for @fileWithSize.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name}（{size}）'**
+  String fileWithSize(Object name, Object size);
+
+  /// No description provided for @fileReplaceNotSupported.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。'**
+  String get fileReplaceNotSupported;
+
+  /// No description provided for @withdrawnUserLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'退会したユーザー'**
+  String get withdrawnUserLabel;
+
   /// No description provided for @save.
   ///
   /// In ja, this message translates to:

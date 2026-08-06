@@ -111,7 +111,7 @@ lib/
     shell/                 レスポンシブなアプリ外枠（14.1）
     screens/               各画面（14.2）
     widgets/               画面をまたいで使う部品
-  l10n/                    日本語・英語の文言（2 章）
+  l10n/                    日本語・英語の文言（2 章）。**画面の文字はすべてここを通す**
 
 functions/               Cloud Functions（TypeScript／仕様書 13.4）
   src/domain/            権限・容量の規則（Flutter 側と同じ内容）
@@ -151,6 +151,11 @@ cd rules-test && npm test           # 95 件（Firestore ルール 82 件・Stor
 cd functions && npm test            # 29 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 41 件（要エミュレータ）
 ```
+
+**画面に出る文字は必ず `lib/l10n/*.arb` を通してください。** 直書きすると
+英語表示に切り替えたときだけ日本語が出ます。2026-08-06 の監査では
+約 88 箇所が直書きで、英語利用者に日本語のログインエラーが出る状態でした
+（[docs/AUDIT-2026-08-06.md](docs/AUDIT-2026-08-06.md) の S20）。
 
 **権限と容量の規則は Dart と TypeScript の両方にあります。** 画面の出し分けは Flutter 側、
 サーバー側の判定は Functions 側が使います。同じ内容のテストを両方に置いてあるので、

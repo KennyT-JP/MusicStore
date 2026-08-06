@@ -201,6 +201,13 @@ final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
 // ---------------------------------------------------------------------------
 
 /// 表示名を解決するための、ユーザー情報のキャッシュ。
+/// 退会・除外された人の表示名（仕様書 3.5 / 5.4）。
+///
+/// **プロバイダは BuildContext を持たないため l10n を引けない。**
+/// 画面側は l10n.withdrawnUser を使っており、こちらは項目一覧の解決用。
+/// 両者がずれないよう、値は l10n の ja と同じにしてある（監査 S20）。
+const String withdrawnUserLabel = '退会したユーザー';
+
 /// [userDirectoryProvider] に渡すキーを作る。
 ///
 /// **Set をそのままキーにしてはいけない。** Dart の Set は `==` を
@@ -250,7 +257,7 @@ final listItemsProvider =
                       isWithdrawn: users[item.createdBy]!.isWithdrawn,
                     ),
               currentMemberUids: memberUids,
-              withdrawnLabel: '退会したユーザー',
+              withdrawnLabel: withdrawnUserLabel,
             ).text,
           ),
         )

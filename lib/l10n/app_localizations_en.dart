@@ -399,6 +399,64 @@ class AppL10nEn extends AppL10n {
   String get saved => 'Saved.';
 
   @override
+  String get verificationResent => 'Verification email resent.';
+
+  @override
+  String get verificationNotYet =>
+      'Not verified yet. Please open the link in the email.';
+
+  @override
+  String get displayNameHelper => 'You can change this later';
+
+  @override
+  String get passwordHelper => 'At least 6 characters';
+
+  @override
+  String get noItemsYet => 'There are no items yet.';
+
+  @override
+  String get noSearchResults => 'No items matched your search.';
+
+  @override
+  String deleteItemBody(Object days) {
+    return 'This item will be deleted.\n\nThe file is kept for $days days, and list administrators can restore it during that time.';
+  }
+
+  @override
+  String restorableUntil(Object date) {
+    return 'List administrators can restore this until $date.';
+  }
+
+  @override
+  String get noCommentsYet => 'There are no comments yet.';
+
+  @override
+  String replyingTo(Object body) {
+    return 'Replying to \"$body\"';
+  }
+
+  @override
+  String get inviteReceived => 'You have an invite';
+
+  @override
+  String get joinThisList => 'You will join this list.';
+
+  @override
+  String get join => 'Join';
+
+  @override
+  String fileWithSize(Object name, Object size) {
+    return '$name ($size)';
+  }
+
+  @override
+  String get fileReplaceNotSupported =>
+      'Replacing the file is not implemented yet. You can still change the title, artist and date.';
+
+  @override
+  String get withdrawnUserLabel => 'Former member';
+
+  @override
   String get save => 'Save';
 
   @override

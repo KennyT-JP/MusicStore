@@ -162,11 +162,7 @@ class _ItemHeader extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Text(l10n.deleteItem),
         // 猶予期間があることを伝える（仕様書 6.3）。
-        content: Text(
-          'この項目を削除します。\n\n'
-          '一覧には「${l10n.itemDeleted}」と表示され、連番は欠番として残ります。\n'
-          'ファイル本体は $graceDays 日間保持され、その間はリスト管理者以上が復元できます。',
-        ),
+        content: Text(l10n.deleteItemBody(graceDays)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -220,7 +216,9 @@ class _DeletedNotice extends StatelessWidget {
           if (purgeAt != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${purgeAt.year}年${purgeAt.month}月${purgeAt.day}日 まではリスト管理者が復元できます。',
+              l10n.restorableUntil(
+                '${purgeAt.year}-${purgeAt.month}-${purgeAt.day}',
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -395,7 +393,7 @@ class _CommentSectionState extends ConsumerState<_CommentSection> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Text(
-                    'まだコメントはありません。',
+                    l10n.noCommentsYet,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -441,7 +439,7 @@ class _CommentSectionState extends ConsumerState<_CommentSection> {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    '「${_replyTo!.body}」への返信',
+                    l10n.replyingTo(_replyTo!.body),
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

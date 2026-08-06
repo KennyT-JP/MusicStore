@@ -268,7 +268,7 @@ class _ItemList extends ConsumerWidget {
             icon: query.keyword.isEmpty
                 ? Icons.library_music_outlined
                 : Icons.search_off,
-            title: query.keyword.isEmpty ? 'まだ項目がありません。' : '該当する項目が見つかりませんでした。',
+            title: query.keyword.isEmpty ? l10n.noItemsYet : l10n.noSearchResults,
             description: query.keyword.isEmpty && Permissions.canAddItem(access)
                 ? '右下の「${l10n.addItem}」から音源や URL を登録できます。'
                 : null,

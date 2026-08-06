@@ -383,6 +383,63 @@ class AppL10nJa extends AppL10n {
   String get saved => '保存しました。';
 
   @override
+  String get verificationResent => '確認メールを再送しました。';
+
+  @override
+  String get verificationNotYet => 'まだ確認が済んでいないようです。メール内のリンクを開いてください。';
+
+  @override
+  String get displayNameHelper => '後から変更できます';
+
+  @override
+  String get passwordHelper => '6 文字以上';
+
+  @override
+  String get noItemsYet => 'まだ項目がありません。';
+
+  @override
+  String get noSearchResults => '該当する項目が見つかりませんでした。';
+
+  @override
+  String deleteItemBody(Object days) {
+    return 'この項目を削除します。\n\nファイル本体は $days 日間保持され、その間はリスト管理者以上が復元できます。';
+  }
+
+  @override
+  String restorableUntil(Object date) {
+    return '$date まではリスト管理者が復元できます。';
+  }
+
+  @override
+  String get noCommentsYet => 'まだコメントはありません。';
+
+  @override
+  String replyingTo(Object body) {
+    return '「$body」への返信';
+  }
+
+  @override
+  String get inviteReceived => '招待を受け取りました';
+
+  @override
+  String get joinThisList => 'このリストに参加します。';
+
+  @override
+  String get join => '参加する';
+
+  @override
+  String fileWithSize(Object name, Object size) {
+    return '$name（$size）';
+  }
+
+  @override
+  String get fileReplaceNotSupported =>
+      'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。';
+
+  @override
+  String get withdrawnUserLabel => '退会したユーザー';
+
+  @override
   String get save => '保存';
 
   @override

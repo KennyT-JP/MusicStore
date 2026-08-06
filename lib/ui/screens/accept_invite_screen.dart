@@ -55,7 +55,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '招待を受け取りました',
+                  l10n.inviteReceived,
                   style: theme.textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
@@ -77,11 +77,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () => context.go(AppRoutes.list(_joinedListId!)),
-                    child: const Text('リストを開く'),
+                    child: Text(l10n.openList),
                   ),
                 ] else ...[
                   Text(
-                    'このリストに参加します。',
+                    l10n.joinThisList,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium,
                   ),
@@ -94,7 +94,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('参加する'),
+                        : Text(l10n.join),
                   ),
                   const SizedBox(height: 8),
                   TextButton(

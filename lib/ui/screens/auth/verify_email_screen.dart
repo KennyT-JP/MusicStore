@@ -32,7 +32,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).resendVerificationEmail();
-      if (mounted) setState(() => _message = '確認メールを再送しました。');
+      if (mounted) setState(() => _message = AppL10n.of(context).verificationResent);
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
     } finally {
@@ -56,7 +56,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         // ルーターのリダイレクトが本来の画面へ運ぶ（仕様書 14.3）。
         ref.invalidate(firebaseUserProvider);
       } else {
-        setState(() => _message = 'まだ確認が済んでいないようです。メール内のリンクを開いてください。');
+        setState(() => _message = AppL10n.of(context).verificationNotYet);
       }
     } catch (_) {
       if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);

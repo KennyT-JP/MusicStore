@@ -90,7 +90,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.displayName,
                     border: const OutlineInputBorder(),
-                    helperText: '後から変更できます',
+                    helperText: l10n.displayNameHelper,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -112,7 +112,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   decoration: InputDecoration(
                     labelText: l10n.passwordLabel,
                     border: const OutlineInputBorder(),
-                    helperText: '6 文字以上',
+                    helperText: l10n.passwordHelper,
                   ),
                   validator: (v) => (v == null || v.length < 6)
                       ? l10n.passwordTooShort

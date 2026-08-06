@@ -239,10 +239,10 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         ),
         const SizedBox(height: 8),
         if (picked != null)
-          Text('${picked.name}（${formatBytes(picked.size)}）')
+          Text(l10n.fileWithSize(picked.name, formatBytes(picked.size)))
         else if (existing != null)
           Text(
-            '${existing.fileName}（${formatBytes(existing.sizeBytes)}）',
+            l10n.fileWithSize(existing.fileName, formatBytes(existing.sizeBytes)),
             style: TextStyle(color: Theme.of(context).colorScheme.outline),
           ),
         const Spacer(),
@@ -439,8 +439,7 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     if (isFileTab && _picked != null) {
       setState(
         () => _error =
-            'ファイルの差し替えはまだ実装されていません。'
-            '曲名・アーティスト名・日付の変更は保存できます。',
+            l10n.fileReplaceNotSupported,
       );
       return;
     }
