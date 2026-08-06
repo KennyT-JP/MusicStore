@@ -20,11 +20,24 @@
  *    このプロジェクトでは、処理を .mjs に寄せる方針にしている（SETUP.md）。
  */
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { connect } from 'node:net';
+import { delimiter, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const isWindows = process.platform === 'win32';
 
 const env = { ...process.env };
 delete env.JAVA_TOOL_OPTIONS;
+
+// vitest は依存パッケージなので node_modules/.bin にある。
+//
+// **firebase emulators:exec は、指定したコマンドを別のシェルで動かす。**
+// そのシェルからも見つけられるように、ここで PATH の先頭へ足しておく。
+// npm 経由で起動したときは npm が同じことをしてくれるが、
+// `node run.mjs` を直に叩いたときは足されないため、こちらで確実にする。
+env.PATH = [join(here, 'node_modules', '.bin'), env.PATH ?? ''].join(delimiter);
 
 const options = [
   'emulators:exec',
@@ -50,7 +63,33 @@ const script = 'vitest run';
  * そこで Windows では、こちらで引用符まで含めた 1 本の文字列を組み立てる。
  * 引数の配列と shell を同時に使わないので、Node の DEP0190 警告も出ない。
  */
-const isWindows = process.platform === 'win32';
+
+// ---------------------------------------------------------------------------
+// 依存パッケージ
+//
+// SETUP.md には `npm install` を先に行うよう書いてあるが、飛ばされると
+// 「'vitest' は認識されていません」という、原因の分かりにくい失敗になる。
+// エミュレータを起動したあとで失敗するため、なおさら分かりにくい。
+// 無ければここで入れる（scripts/seed.mjs と同じ扱い）。
+// ---------------------------------------------------------------------------
+
+if (!existsSync(join(here, 'node_modules'))) {
+  console.log('==> 依存パッケージを取得します（初回のみ）');
+  const code = await new Promise((resolve) => {
+    const install = spawn('npm', ['install'], {
+      stdio: 'inherit',
+      cwd: here,
+      shell: isWindows,
+    });
+    install.on('error', () => resolve(null));
+    install.on('close', resolve);
+  });
+  if (code !== 0) {
+    console.error('\nnpm install に失敗しました。');
+    process.exit(1);
+  }
+  console.log('');
+}
 
 // ---------------------------------------------------------------------------
 // 先にポートの空きを見る
