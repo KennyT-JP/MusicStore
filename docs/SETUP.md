@@ -246,7 +246,8 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   createInvite acceptInvite revokeInvite \
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin \
-  onItemCreated onCommentCreated onMemberWritten onListDeleted purgeDeletedFiles \
+  onItemCreated onItemWritten onCommentCreated onMemberWritten onListDeleted \
+  purgeDeletedFiles \
   --region asia-northeast1 --project music-storage-dev --force
 
 firebase functions:delete onFileUploaded onFileDeleted \
@@ -293,7 +294,7 @@ node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-acc
 Build failed with status: FAILURE and message: An unexpected error occurred.
 ```
 
-**初回デプロイでよく起きます。** 22 個の関数のコンテナが一斉に組み立てられる一方で、
+**初回デプロイでよく起きます。** 23 個の関数のコンテナが一斉に組み立てられる一方で、
 置き場所（Artifact Registry のリポジトリ）はその最中に作られます。用意が整う前に
 始まった分が巻き添えで失敗するため、一部だけ成功して残りが落ちる、という形になります。
 

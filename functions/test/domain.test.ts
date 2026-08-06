@@ -30,8 +30,10 @@ import {
   isPathOwnedByItem,
   normalizeListName,
   parseItemStoragePath,
+  shouldDeleteOrphan,
 } from '../src/domain/paths';
 import { ERROR_CODES, fail } from '../src/errors';
+import { evaluateInvite } from '../src/domain/invite';
 
 const readOnly: ListAccess = { isSiteAdmin: false, role: 'readOnly' };
 const superUser: ListAccess = { isSiteAdmin: false, role: 'superUser' };
@@ -364,5 +366,224 @@ describe('エラーの符号（2 章）', () => {
 
   test('符号が重複していない', () => {
     expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
+  });
+});
+
+/**
+ * 行き場を失ったファイルの削除判断（仕様書 7.5 / 監査 第2回）
+ *
+ * **リポジトリでもっとも取り返しのつかない処理。**
+ * 利用者の音源を Storage から永久に消す。にもかかわらず
+ * `functions/src/scheduled/purge.ts` はテストが 1 件も無かった。
+ * さらに `firebase.json` に pubsub エミュレータが無く、
+ * **エミュレータでは一度も起動できない**状態だった。
+ *
+ * Storage を実際に消すところは動かせなくても、「消してよいか」の
+ * 判断だけなら確かめられる。
+ */
+describe('孤児ファイルの削除判断（7.5）', () => {
+  const cutoffMs = 1_000_000;
+  const path = 'lists/L1/items/I1/take01.mp3';
+  const old = cutoffMs - 1;
+  const fresh = cutoffMs + 1;
+
+  test('項目が無く、猶予期間も過ぎていれば消す', () => {
+    expect(
+      shouldDeleteOrphan({ path, createdAtMs: old, cutoffMs, item: null })
+    ).toBe(true);
+  });
+
+  test('猶予期間内なら消さない（項目作成の直前かもしれない）', () => {
+    expect(
+      shouldDeleteOrphan({ path, createdAtMs: fresh, cutoffMs, item: null })
+    ).toBe(false);
+  });
+
+  test('アップロード時刻が読めないものは消さない', () => {
+    expect(
+      shouldDeleteOrphan({ path, createdAtMs: NaN, cutoffMs, item: null })
+    ).toBe(false);
+  });
+
+  test('項目が今このファイルを指しているなら消さない', () => {
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: { file: { storagePath: path } },
+      })
+    ).toBe(false);
+  });
+
+  test('項目が別のファイルを指しているなら消す（差し替え後の残骸）', () => {
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: { file: { storagePath: 'lists/L1/items/I1/new.mp3' } },
+      })
+    ).toBe(true);
+  });
+
+  test('差し替えの旧ファイルとして保持されていれば消さない', () => {
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: {
+          file: { storagePath: 'lists/L1/items/I1/new.mp3' },
+          previousFiles: [{ storagePath: path }],
+        },
+      })
+    ).toBe(false);
+  });
+
+  test('項目のファイル置き場でないパスには触らない', () => {
+    for (const other of [
+      'other/L1/items/I1/x.mp3',
+      'lists/L1/x/I1/y.mp3',
+      'lists/L1/items/I1/',
+      '',
+    ]) {
+      expect(
+        shouldDeleteOrphan({
+          path: other,
+          createdAtMs: old,
+          cutoffMs,
+          item: null,
+        }),
+        other
+      ).toBe(false);
+    }
+  });
+
+  test('previousFiles が壊れていても消す判断は変わらない', () => {
+    // 配列でない値・null 混じりでも例外を出さない。
+    for (const previousFiles of [null, 'x', 42, [null], [{}]]) {
+      expect(
+        shouldDeleteOrphan({
+          path,
+          createdAtMs: old,
+          cutoffMs,
+          item: { file: null, previousFiles },
+        })
+      ).toBe(true);
+    }
+  });
+});
+
+/**
+ * 招待の受諾可否（仕様書 3.3 / 監査 S11・第2回）
+ *
+ * **本番で動いている側をテストする。**
+ * 以前は同じ規則が Flutter 側にもあり、そちらだけが 13 件のテストで
+ * 守られていた。しかし本番コードからは一度も呼ばれておらず、実際に
+ * 動いていたのは membership.ts のインライン実装で、無テストだった。
+ */
+describe('招待の受諾可否（3.3）', () => {
+  const now = 1_000_000;
+  const active = {
+    exists: true,
+    status: 'active',
+    expiresAtMs: now + 1000,
+    listId: 'L1',
+  };
+
+  test('有効な招待は受け入れる', () => {
+    expect(
+      evaluateInvite({ invite: active, isAlreadyMember: false, nowMs: now })
+    ).toEqual({ listId: 'L1' });
+  });
+
+  test('存在しない招待', () => {
+    expect(
+      evaluateInvite({
+        invite: { exists: false },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteNotFound' });
+  });
+
+  test('使用済みはワンタイム性で弾く', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, status: 'used' },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteAlreadyUsed' });
+  });
+
+  test('取り消し済み', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, status: 'revoked' },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteRevoked' });
+  });
+
+  test('期限切れ（ちょうどの時刻は切れている扱い）', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, expiresAtMs: now },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteExpired' });
+  });
+
+  test('期限が読めないものは通さない', () => {
+    for (const expiresAtMs of [undefined, NaN]) {
+      expect(
+        evaluateInvite({
+          invite: { ...active, expiresAtMs },
+          isAlreadyMember: false,
+          nowMs: now,
+        })
+      ).toEqual({ rejection: 'inviteExpired' });
+    }
+  });
+
+  test('リスト ID が無い招待は「見つからない」扱い', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, listId: '' },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteNotFound' });
+  });
+
+  test('すでにメンバーなら受け入れない', () => {
+    expect(
+      evaluateInvite({ invite: active, isAlreadyMember: true, nowMs: now })
+    ).toEqual({ rejection: 'alreadyMember' });
+  });
+
+  // **判定の順番にも意味がある。**
+  test('取り消し済みなら、期限が切れていても「取り消し」と伝える', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, status: 'revoked', expiresAtMs: now - 1 },
+        isAlreadyMember: false,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteRevoked' });
+  });
+
+  test('期限切れなら、すでにメンバーでも「期限切れ」と伝える', () => {
+    expect(
+      evaluateInvite({
+        invite: { ...active, expiresAtMs: now - 1 },
+        isAlreadyMember: true,
+        nowMs: now,
+      })
+    ).toEqual({ rejection: 'inviteExpired' });
   });
 });

@@ -87,7 +87,7 @@ class ListDetailScreen extends ConsumerWidget {
         ),
       );
     }
-    if (memberships.hasValue && !access.canView) {
+    if (memberships.hasValue && !Permissions.canViewList(access)) {
       return JoinRequestScreen(listId: listId);
     }
 

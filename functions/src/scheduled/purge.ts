@@ -10,7 +10,7 @@ import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 import { REGION, paths, parseItemStoragePath, readSiteConfig } from '../config';
-import { isPathOwnedByItem } from '../domain/paths';
+import { isPathOwnedByItem, shouldDeleteOrphan } from '../domain/paths';
 
 /**
  * 1 回の実行で処理する上限。
@@ -197,19 +197,18 @@ async function purgeOrphanFiles(graceHours: number): Promise<number> {
         .doc(paths.listItem(parsed.listId, parsed.itemId))
         .get();
 
-      // 項目が存在し、かつこのファイルを指しているなら残す。
-      if (item.exists) {
-        const current = item.data()?.file?.storagePath;
-        if (current === file.name) continue;
-
-        // 差し替えの旧ファイルは、項目が保持している間は消さない。
-        const previous = item.data()?.previousFiles;
-        if (
-          Array.isArray(previous) &&
-          previous.some((old) => old?.storagePath === file.name)
-        ) {
-          continue;
-        }
+      // **消してよいかの判断は domain/paths.ts に集めてある。**
+      // 取り返しのつかない処理なので、判断だけは単体で確かめられる形にする
+      // （監査 第2回。ここは以前テストが 1 件も無かった）。
+      if (
+        !shouldDeleteOrphan({
+          path: file.name,
+          createdAtMs: created,
+          cutoffMs: cutoff,
+          item: item.exists ? (item.data() ?? null) : null,
+        })
+      ) {
+        continue;
       }
 
       await file.delete({ ignoreNotFound: true });

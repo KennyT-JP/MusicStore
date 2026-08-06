@@ -12,6 +12,7 @@ import '../../data/models/music_list.dart';
 import '../../data/models/requests.dart';
 import '../../data/repositories/functions_repository.dart';
 import '../../domain/quota.dart';
+import '../../domain/permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
@@ -569,7 +570,13 @@ class _SiteUserTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     // 最後の 1 人は降格できない（仕様書 4.5）。
-    final isLastAdmin = user.isSiteAdmin && siteAdminCount <= 1;
+    // **判定は domain/permissions.dart に置いてある。**
+    // 以前はここに同じ式を直接書いており、テストされている
+    // canStepDownAsSiteAdmin は本番から呼ばれていなかった（監査 第2回）。
+    final isLastAdmin = !Permissions.canStepDownAsSiteAdmin(
+      isSiteAdmin: user.isSiteAdmin,
+      siteAdminCount: siteAdminCount,
+    );
 
     return ListTile(
       leading: Icon(

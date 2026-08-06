@@ -64,11 +64,9 @@ class ListRepository {
       .snapshots()
       .map((s) => s.docs.map(ListMember.fromDoc).toList());
 
-  /// 自分のメンバー情報。参加していなければ null。
-  Stream<ListMember?> watchMyMembership(String listId, String uid) => _db
-      .doc(FirestorePaths.listMember(listId, uid))
-      .snapshots()
-      .map((doc) => doc.exists ? ListMember.fromDoc(doc) : null);
+  // 自分のメンバー情報だけを 1 件見る経路は用意していない。
+  // 役割は watchMyMemberships（横断）から取っており、リストごとに
+  // もう 1 本購読を張ると読み取りが二重になる。
 
   /// 自分が出した参加申請を、リストをまたいで集める（仕様書 5.2.1）。
   ///
@@ -155,14 +153,10 @@ class ListRepository {
   Future<void> deleteList(String listId) =>
       _db.doc(FirestorePaths.list(listId)).delete();
 
-  /// リスト名が既に使われているか調べる（仕様書 5.1）。
-  ///
-  /// ドキュメント ID の存在確認だけで行う。`lists` を名前で検索すると
-  /// 未参加者が全リスト名を列挙できてしまうため（仕様書 5.3）。
-  Future<bool> isListNameTaken(String name) async {
-    final doc = await _db
-        .doc(FirestorePaths.listName(normalizeListName(name)))
-        .get();
-    return doc.exists;
-  }
+  // リスト名の重複チェックはサーバー側で行う（仕様書 5.1）。
+  //
+  // 以前はここにも同じ確認があったが、本番からは一度も呼ばれておらず、
+  // しかも Dart 側の normalizeListName がサーバーと食い違っていたため、
+  // 呼んだ瞬間に不正なドキュメント参照で落ちる状態だった（監査 第2回）。
+  // 実際の判定は functions/src/callable/list_requests.ts にある。
 }

@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/display_name.dart';
-import '../../domain/permissions.dart';
 import '../firestore_paths.dart';
 import '../models/app_user.dart';
 
@@ -100,24 +99,13 @@ class AuthRepository {
 
   Future<void> signOut() => _auth.signOut();
 
-  /// 退会する（仕様書 3.5）。
-  ///
-  /// 投稿・履歴は残し、表示名だけ「退会したユーザー」になる。
-  /// 実際の処理（users の isWithdrawn 更新と Auth アカウントの削除）は
-  /// Cloud Functions が行う。ここでは前提条件だけ先に確認する。
-  ///
-  /// **最後のサイト管理者は退会できない**（仕様書 4.5）。判定はサーバー側でも
-  /// 行うが、画面に理由を出すためここでも確認する。
-  Future<bool> canWithdraw() async {
-    final isAdmin = await isSiteAdmin();
-    if (!isAdmin) return true;
-    final config = await _db.doc(FirestorePaths.globalConfig).get();
-    final count = (config.data()?['siteAdminCount'] as num?)?.toInt() ?? 1;
-    return Permissions.canStepDownAsSiteAdmin(
-      isSiteAdmin: true,
-      siteAdminCount: count,
-    );
-  }
+  // 退会できるかの判定はサーバー側にある（仕様書 4.5）。
+  //
+  // 以前はここにも同じ確認があったが、退会画面は withdrawAccount を
+  // 直接呼んでサーバーのエラーで判断しており、**本番からは一度も
+  // 呼ばれていなかった**（監査 第2回）。
+  // 「最後のサイト管理者は退会できない」は
+  // functions/src/callable/site_admin.ts が守っている。
 
   /// users ドキュメントがなければ作る。
   ///

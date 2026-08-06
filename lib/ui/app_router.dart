@@ -10,6 +10,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../domain/permissions.dart';
+import '../domain/role.dart';
 import 'routes.dart';
 import 'screens/screens.dart';
 import 'shell/app_shell.dart';
@@ -238,7 +240,13 @@ String? _redirect(AuthState auth, String location, Uri uri) {
 
   // サイト管理はサイト管理者のみ（14.5）。
   // 画面上の出し分けだけでなく、URL の直接入力も塞ぐ。
-  if (location.startsWith(AppRoutes.siteAdmin) && !auth.isSiteAdmin) {
+  // **判定は domain/permissions.dart を通す。** 以前はここに
+  // 直接書いており、テストされている canAccessSiteAdmin は
+  // 本番から呼ばれていなかった（監査 S8・第2回）。
+  if (location.startsWith(AppRoutes.siteAdmin) &&
+      !Permissions.canAccessSiteAdmin(
+        ListAccess(isSiteAdmin: auth.isSiteAdmin, role: null),
+      )) {
     return AppRoutes.home;
   }
 

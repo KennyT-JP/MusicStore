@@ -11,6 +11,7 @@ import { isAssignableRole } from '../domain/roles';
 import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
 import { fail } from '../errors';
+import { evaluateInvite } from '../domain/invite';
 
 /**
  * 参加を申請する（仕様書 5.2）。
@@ -209,28 +210,43 @@ export const acceptInvite = onCall({ region: REGION }, async (request) => {
     }
 
     const data = snapshot.data() ?? {};
-    if (data.status === 'used') {
-      throw fail('failed-precondition', 'inviteAlreadyUsed');
-    }
-    if (data.status === 'revoked') {
-      throw fail('failed-precondition', 'inviteRevoked');
-    }
-
     const expiresAt = data.expiresAt as Timestamp | undefined;
-    if (!expiresAt || expiresAt.toMillis() <= Date.now()) {
-      throw fail('failed-precondition', 'inviteExpired');
+
+    // メンバーかどうかは、受け入れる直前に確かめる必要がある。
+    // リスト ID が決まらないと引けないので、先に取り出しておく。
+    const candidateListId =
+      typeof data.listId === 'string' ? data.listId : '';
+    const member = candidateListId
+      ? await tx.get(db.doc(paths.listMember(candidateListId, uid)))
+      : null;
+
+    // **判断は domain/invite.ts に集めてある。**
+    // 以前はここに直接書かれており、同じ規則を持つ Flutter 側だけが
+    // テストされていた（監査 第2回）。
+    const decision = evaluateInvite({
+      invite: {
+        exists: snapshot.exists,
+        status: data.status,
+        expiresAtMs: expiresAt?.toMillis(),
+        listId: data.listId,
+      },
+      isAlreadyMember: member?.exists === true,
+      nowMs: Date.now(),
+    });
+
+    if (decision.rejection) {
+      throw fail(
+        decision.rejection === 'alreadyMember'
+          ? 'already-exists'
+          : decision.rejection === 'inviteNotFound'
+            ? 'not-found'
+            : 'failed-precondition',
+        decision.rejection
+      );
     }
 
-    const targetListId = String(data.listId ?? '');
-    if (!targetListId) {
-      throw fail('failed-precondition', 'inviteNotFound');
-    }
-
+    const targetListId = decision.listId!;
     const memberRef = db.doc(paths.listMember(targetListId, uid));
-    const member = await tx.get(memberRef);
-    if (member.exists) {
-      throw fail('already-exists', 'alreadyMember');
-    }
 
     tx.set(memberRef, {
       uid,

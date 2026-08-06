@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "//serve": "--project を付け忘れると .firebaserc の既定（検証環境 music-storage-dev）で立ち上がる。統合テストは demo-musiclist を相手にしているため、関数の URL もカスタムクレームの付与先も噛み合わなくなる。",
-    "serve": "npm run build && firebase emulators:start --project demo-musiclist --only functions,firestore,auth,storage",
+    "serve": "npm run build && firebase emulators:start --project demo-musiclist --only functions,firestore,auth,storage,pubsub",
     "deploy": "npm run build && firebase deploy --only functions",
     "test:integration": "node test/integration.mjs"
   },

@@ -59,3 +59,56 @@ export function isPathOwnedByItem(
   const parsed = parseItemStoragePath(path);
   return parsed !== null && parsed.listId === listId && parsed.itemId === itemId;
 }
+
+/**
+ * 行き場を失ったファイルとして削除してよいか（仕様書 7.5）。
+ *
+ * **復旧できない処理なので、判断はここに集めてテストする。**
+ * 定期削除（functions/src/scheduled/purge.ts）は、リポジトリ全体で
+ * もっとも取り返しのつかない処理なのに、**テストが 1 件も無かった**
+ * （監査 第2回）。実際に Storage を消すところは動かせなくても、
+ * 「消してよいか」の判断だけなら確かめられる。
+ */
+export function shouldDeleteOrphan(params: {
+  /** Storage のオブジェクト名。 */
+  path: string;
+  /** アップロードされた時刻（ミリ秒）。読めなければ NaN。 */
+  createdAtMs: number;
+  /** これより古いものだけが対象（ミリ秒）。 */
+  cutoffMs: number;
+  /** 対応する項目。無ければ null。 */
+  item: {
+    file?: { storagePath?: unknown } | null;
+    previousFiles?: unknown;
+  } | null;
+}): boolean {
+  const { path, createdAtMs, cutoffMs, item } = params;
+
+  // 項目のファイル置き場でないものには触らない。
+  if (!parseItemStoragePath(path)) return false;
+
+  // **時刻が読めないものは消さない。** 読めない＝新しいかもしれない。
+  if (!Number.isFinite(createdAtMs)) return false;
+
+  // 猶予期間内。アップロード完了から項目作成までの短い間かもしれない。
+  if (createdAtMs > cutoffMs) return false;
+
+  // 項目が無ければ孤児。
+  if (!item) return true;
+
+  // 項目が今このファイルを指している。
+  if (item.file?.storagePath === path) return false;
+
+  // 差し替えの旧ファイルは、項目が保持している間は消さない。
+  const previous = item.previousFiles;
+  if (
+    Array.isArray(previous) &&
+    previous.some(
+      (old: { storagePath?: unknown } | null) => old?.storagePath === path
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}

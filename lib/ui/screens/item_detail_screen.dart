@@ -78,6 +78,15 @@ class _ItemHeader extends ConsumerWidget {
       itemCreatedBy: item.createdBy,
       itemIsDeleted: item.isDeleted,
     );
+    // **削除は削除の判定を使う。** 編集と同じ条件だが、条件が分かれた
+    // ときに画面だけ取り残される。判定関数はあるのに呼ばれていなかった
+    // （監査 S8・第2回）。
+    final canDelete = Permissions.canDeleteItem(
+      access,
+      viewerUid: uid,
+      itemCreatedBy: item.createdBy,
+      itemIsDeleted: item.isDeleted,
+    );
     final canRestore = Permissions.canRestoreItem(
       access,
       itemIsDeleted: item.isDeleted,
@@ -104,7 +113,7 @@ class _ItemHeader extends ConsumerWidget {
                   onPressed: () =>
                       context.go(AppRoutes.editItem(listId, item.id)),
                 ),
-              if (canEdit)
+              if (canDelete)
                 IconButton(
                   tooltip: l10n.deleteItem,
                   icon: const Icon(Icons.delete_outline),
@@ -535,6 +544,13 @@ class _CommentTile extends ConsumerWidget {
       commentCreatedBy: comment.createdBy,
       commentIsDeleted: comment.isDeleted,
     );
+    // 削除は削除の判定を使う（項目と同じ理由）。
+    final canDelete = Permissions.canDeleteComment(
+      access,
+      viewerUid: uid,
+      commentCreatedBy: comment.createdBy,
+      commentIsDeleted: comment.isDeleted,
+    );
 
     // 深い階層でも横に押し出されないよう、字下げに上限を設ける。
     final indent = (depth.clamp(0, 6)) * 20.0;
@@ -582,7 +598,7 @@ class _CommentTile extends ConsumerWidget {
                       onPressed: () => _editComment(context, ref),
                       child: Text(l10n.edit),
                     ),
-                  if (canEdit)
+                  if (canDelete)
                     TextButton(
                       onPressed: () => ref
                           .read(itemRepositoryProvider)

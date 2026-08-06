@@ -10,6 +10,7 @@ import '../../domain/comment_tree.dart';
 import '../../domain/concurrent_edit.dart';
 import '../../domain/local_date.dart';
 import '../../domain/quota.dart';
+import '../../domain/sequence.dart';
 import '../firestore_paths.dart';
 import '../models/list_item.dart';
 
@@ -186,7 +187,16 @@ class ItemRepository {
 
     await _db.runTransaction((tx) async {
       final stats = await tx.get(statsRef);
-      final nextSeq = (stats.data()?['nextSeq'] as num?)?.toInt() ?? 1;
+
+      // **採番の規則は domain/sequence.dart に置いてある。**
+      // 以前はここで直接 +1 しており、テストで手厚く守られていた
+      // SequenceCounter は**本番から一度も呼ばれていなかった**
+      // （監査 S11・第2回）。テストがあることと、守られていることは別。
+      final counter = SequenceCounter(
+        (stats.data()?['nextSeq'] as num?)?.toInt() ?? 1,
+      );
+      final allocation = counter.allocate();
+      final nextSeq = allocation.seq;
 
       tx.set(ref, {
         'seq': nextSeq,
@@ -201,7 +211,7 @@ class ItemRepository {
         ...extra,
       });
       // 連番は振り直さない。削除しても戻さない（仕様書 6.2）。
-      tx.update(statsRef, {'nextSeq': nextSeq + 1});
+      tx.update(statsRef, {'nextSeq': allocation.updatedCounter.nextSeq});
     });
 
     return ref.id;
