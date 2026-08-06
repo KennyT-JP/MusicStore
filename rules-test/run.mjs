@@ -37,7 +37,17 @@ delete env.JAVA_TOOL_OPTIONS;
 // そのシェルからも見つけられるように、ここで PATH の先頭へ足しておく。
 // npm 経由で起動したときは npm が同じことをしてくれるが、
 // `node run.mjs` を直に叩いたときは足されないため、こちらで確実にする。
-env.PATH = [join(here, 'node_modules', '.bin'), env.PATH ?? ''].join(delimiter);
+//
+// **Windows での変数名は `Path` で、`PATH` ではない。** `env.PATH = ...` と
+// 書くと既存の `Path` は残ったまま別の項目ができ、Windows は名前の大小を
+// 区別しないので、どちらが使われるか決まらない。実際には中身が
+// node_modules/.bin だけの方が採用され、firebase すら見つからなくなった。
+// **必ず、今ある項目の綴りを探して、そこへ足す。**
+const pathKey =
+  Object.keys(env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
+env[pathKey] = [join(here, 'node_modules', '.bin'), env[pathKey]]
+  .filter(Boolean)
+  .join(delimiter);
 
 const options = [
   'emulators:exec',
@@ -76,11 +86,10 @@ const script = 'vitest run';
 if (!existsSync(join(here, 'node_modules'))) {
   console.log('==> 依存パッケージを取得します（初回のみ）');
   const code = await new Promise((resolve) => {
-    const install = spawn('npm', ['install'], {
-      stdio: 'inherit',
-      cwd: here,
-      shell: isWindows,
-    });
+    // 引数の配列と shell を併用しない（理由は下の起動処理と同じ）。
+    const install = isWindows
+      ? spawn('npm install', { stdio: 'inherit', cwd: here, shell: true })
+      : spawn('npm', ['install'], { stdio: 'inherit', cwd: here });
     install.on('error', () => resolve(null));
     install.on('close', resolve);
   });
