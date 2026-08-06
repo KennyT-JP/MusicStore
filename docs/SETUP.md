@@ -266,6 +266,27 @@ gcloud functions add-invoker-policy-binding submitListRequest \
   --region=asia-northeast1 --member=allUsers --project=music-storage-dev
 ```
 
+### 2026-08-06 の監査対応を配信するとき（1 度だけ必要な手当て）
+
+この版には**既存データの手当てが要る変更**が 2 つ含まれます。
+**配信の直後に 1 度だけ**次を実行してください。何度実行しても安全です。
+
+```sh
+node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-account.json --dry-run
+node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-account.json
+```
+
+| 何を直すか | 直さないとどうなるか |
+| --- | --- |
+| `members` に `uid` を足す | 退会してもリストのメンバーから外れない（監査 S14） |
+| `stats` に `itemCount` を入れる | ホーム画面の項目数が 0 と表示される（監査 S6） |
+
+> **あわせて、メール確認が済んでいないアカウントは使えなくなります。**
+> 仕様 3.1 の「確認が済むまでアプリは使えない」を、画面のリダイレクトだけでなく
+> セキュリティルールと Cloud Functions でも担保するようにしたためです（監査 S3）。
+> 配信後にログインできなくなった場合は、確認メールのリンクを開いてください。
+> Firebase コンソールの Authentication から手動で確認済みにすることもできます。
+
 ### 一部の関数だけ Cloud Build で失敗するとき
 
 ```
