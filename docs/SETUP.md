@@ -608,6 +608,33 @@ Firebase コンソール → Authentication → Sign-in method で、
 **その関数を削除してから配信し直してください**（この章の「呼び出し可能関数が
 `internal` で失敗するとき」を参照）。
 
+#### 6.5 2 回目の配信で `update` と出た呼び出し可能関数に注意
+
+初回の配信が途中で失敗し、再実行で通ったときは、出力をよく見てください。
+
+```
++  functions[submitJoinRequest(asia-northeast1)] Successful update operation.
++  functions[onItemCreated(asia-northeast1)]     Successful create operation.
+```
+
+**`onCall` の関数が `update` になっていたら、器だけが前回作られていたということです。**
+Cloud Run の「誰でも呼べる」設定は**新規作成のときにしか行われない**ため、
+更新扱いになった関数はその設定が飛ばされている可能性があります。
+
+そのまま呼ぶと `internal` とだけ返ります（**関数のコードは 1 行も動いていません**）。
+削除してから配信し直すと、新規作成として扱われて直ります。
+
+```bat
+firebase functions:delete <対象の関数を並べる> ^
+  --region asia-northeast1 --project music-storage-d79b2 --force
+
+scripts\deploy.cmd prod --no-build --only=functions
+```
+
+削除してもデータは消えません（関数の定義だけです）。
+
+**トリガー（`onItemCreated` など）は対象外です。** 呼び出し許可の設定を持たないためです。
+
 #### 7. 配信
 
 ```bat
