@@ -1,7 +1,7 @@
 {
   "//": "複合インデックスの定義（仕様書 13.3）。単一フィールドの索引は Firestore が自動で作るので、ここには書かない。書くと『このインデックスは不要』(400 this index is not necessary) で配信が止まる。",
   "//deleted": "2026-08-06 の監査で、宣言していた 7 件のうち 4 件がどのクエリとも対応していないことが分かった（items status+seq／comments parentId+createdAt／joinRequests status+requestedAt／notifications isRead+createdAt）。書き込みのたびに更新コストと保存料だけが掛かる状態だったため削除した。並び替えや絞り込みを足して索引が要るようになったら、Firestore が実行時のエラーに作成 URL を含めて返すので、それを見て追記すること。",
-  "//members": "自分の参加リスト一覧は collectionGroup('members') にドキュメント ID の一致だけを課すクエリで、並び替えを伴わないため定義は不要。条件を増やしたときは、Firestore が実行時のエラーに必要な索引の作成 URL を含めて返すので、それを見てここに追記すること。",
+  "//members": "自分の参加リスト一覧と参加申請一覧は collectionGroup('members') / collectionGroup('joinRequests') を uid 項目で絞って引く。ドキュメント ID では引けない（documentId() に渡す値は完全なドキュメントパスでなければならず、素の uid では失敗する）。単一フィールドの索引はコレクション範囲しか自動作成されないため、コレクショングループ範囲のものを下の fieldOverrides で明示している。以前ここには『ドキュメント ID の一致だけを課すクエリなので定義は不要』と書いてあったが、実装とも仕様 13.3 とも食い違っていた（監査 第2回）。",
   "indexes": [
     {
       "//": "猶予期間を過ぎた削除項目の抽出（仕様書 13.4）。定期実行の Cloud Functions が使う。",

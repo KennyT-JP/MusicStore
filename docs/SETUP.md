@@ -267,10 +267,13 @@ gcloud functions add-invoker-policy-binding submitListRequest \
   --region=asia-northeast1 --member=allUsers --project=music-storage-dev
 ```
 
-### 2026-08-06 の監査対応を配信するとき（1 度だけ必要な手当て）
+### 監査対応を配信するとき（既存データの手当て）
 
-この版には**既存データの手当てが要る変更**が 2 つ含まれます。
-**配信の直後に 1 度だけ**次を実行してください。何度実行しても安全です。
+この版には**既存データの手当てが要る変更**が含まれます。
+**配信の直後に**次を実行してください。何度実行しても安全です。
+
+> **第 2 回の監査対応（2026-08-06）で手当てが 2 つ増えました。**
+> 以前に実行済みの環境でも、**もう一度実行してください。**
 
 ```sh
 node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-account.json --dry-run
@@ -281,6 +284,16 @@ node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-acc
 | --- | --- |
 | `members` に `uid` を足す | 退会してもリストのメンバーから外れない（監査 S14） |
 | `stats` に `itemCount` を入れる | ホーム画面の項目数が 0 と表示される（監査 S6） |
+| **`joinRequests` に `uid` を足す** | 自分が出した参加申請が申請一覧に出ない。**アプリの中に復旧手段がありません**（監査 第2回） |
+| **`stats` が無いリストに作る** | そのリストに**曲を 1 曲も追加できません**（追加のトランザクションが失敗する／監査 第2回） |
+
+> `--dry-run` の出力に「stats を作成」が並んだら、そのリストは
+> **これまで曲を 1 曲も追加できなかった**ものです。
+
+> **第 2 回の監査で、新規登録が失敗する不具合が見つかりました（この版で修正済み）。**
+> メール確認をサーバー側で強制する対応（監査 S3）が、**新規登録そのものを壊していました。**
+> 登録処理は「読んで、無ければ作る」順なのに、読みだけが禁じられていたためです。
+> **この版より前の検証環境では、メール＋パスワードでの新規登録ができません。**
 
 > **あわせて、メール確認が済んでいないアカウントは使えなくなります。**
 > 仕様 3.1 の「確認が済むまでアプリは使えない」を、画面のリダイレクトだけでなく
@@ -451,6 +464,22 @@ Windows は `scripts\configure-firebase.cmd` / `scripts\configure-firebase.cmd p
 
 生成前は `REPLACE_ME` が入っており、そのままクラウドに繋ごうとすると
 `FirebaseNotConfiguredError` を投げて止まります（設定忘れに気づけるように）。
+
+> **生成後は `git status` に「modified」として残り続けます。これが正常です。**
+>
+> ```
+> modified:   lib/env/firebase_options_staging.dart
+> ```
+>
+> リポジトリ側は `REPLACE_ME` のまま置き、手元だけ実際の値にする作りだからです。
+> **この変更を `git checkout` で捨てないでください。** 捨てると `REPLACE_ME` に戻り、
+> 配信も検証環境への接続もできなくなります。
+>
+> `git pull` が
+> `Your local changes to the following files would be overwritten by merge` で
+> 止まったときは、**まず `git diff <ファイル名>` で中身を確かめてください。**
+> 上の 2 ファイルなら残す、それ以外（`firebase.json` など）なら
+> `git checkout -- <ファイル名>` で捨てる、が基本です。
 
 > **`flutterfire configure` は `firebase login` 済みであることが前提です。** まだの場合は
 > 先に `firebase login` を実行してください。ブラウザが開き、Google アカウントでの許可を求められます。
@@ -659,7 +688,30 @@ Firestore ルールは 92 件すべて検証できます。
 > テストファイルのコメントの 4 箇所に転記され、増幅していました。
 >
 > 現在はスキップなしで 13 件すべてを検証しています。
+
+> **メンバー判定が働いていないときは、その場で止まります。**
+>
+> ```
+> メンバー判定（storage.rules の firestore.exists()）が働いていません。
+> この状態では否定側のテストが「拒否された」ことだけを見て緑になり、
+> ルールの後退を見逃します。以降の結果は信用できません。
+> ```
+>
+> `storage.rules` は Firestore を参照してメンバーかどうかを判定します。
+> この参照が失敗すると**全員が拒否される**ため、
+> 「Read Only はアップロードできない」「未参加者は読めない」といった
+> **否定側の 4 件がすべて緑になります**。土台が壊れているほど緑が増える、
+> いちばん質の悪い出方です。
+>
+> 第 2 回の監査で、ルールをわざと壊す対照実験によりこれを実証しました。
+> そのため、否定側を動かす前に前提を確かめ、崩れていれば理由を出して止めます。
 > **「〜できない」と書かれた箇所こそ、まず試してください。**
+
+> **エミュレータは 5 種類（Auth / Firestore / Storage / Functions / Pub/Sub）を起動します。**
+> Pub/Sub が無いと、定期実行の `purgeDeletedFiles` が読み込み時に無視され、
+> **エミュレータ上で一度も起動できません。** ログには
+> `function ignored because the pubsub emulator does not exist` としか出ないため
+> 気づきにくく、第 2 回の監査まで見落としていました。
 
 ### Cloud Functions の統合テスト
 
