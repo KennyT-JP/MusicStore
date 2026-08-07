@@ -7,8 +7,14 @@ library;
 /// アプリ内のパスから、人に渡せる URL を作る。
 ///
 /// go_router のハッシュ方式に合わせて `#` を挟む。
-/// `Uri.base` を使うので、検証環境なら検証環境の、本番なら本番の URL になる。
-String buildShareUrl(String path) {
-  final base = Uri.base;
-  return '${base.origin}${base.path}#$path';
+/// 既定では `Uri.base` を見るので、検証環境なら検証環境の、
+/// 本番なら本番の URL になる。
+///
+/// **[base] を差し替えられるようにしてある。** `Uri.base` はテストでは
+/// `file:` 形式になり、`origin` を読むと例外になる。渡せないと
+/// **招待 URL の組み立てを一度も確かめられない。** ここが壊れると
+/// 誰もリストに参加できなくなるので、確かめられる形にしておく。
+String buildShareUrl(String path, {Uri? base}) {
+  final origin = base ?? Uri.base;
+  return '${origin.origin}${origin.path}#$path';
 }
