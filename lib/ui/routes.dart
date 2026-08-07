@@ -56,7 +56,8 @@ class AppRoutes {
   // --- 参加・招待（14.2） ---
 
   /// 招待 URL。ID は推測できないランダム文字列（13.3）。
-  static String invite(String inviteId) => '/invite/$inviteId';
+  /// 共有リンク（仕様書 3.3）。無期限・何度でも・複数人が使える。
+  static String shareLink(String linkId) => '/s/$linkId';
 
   // --- サイト管理（14.2） ---
 
@@ -75,7 +76,7 @@ class AppRoutes {
   static const String listMembersPattern = '/lists/:listId/members';
   static const String listJoinRequestsPattern = '/lists/:listId/join-requests';
   static const String listSettingsPattern = '/lists/:listId/settings';
-  static const String invitePattern = '/invite/:inviteId';
+  static const String shareLinkPattern = '/s/:linkId';
 
   /// ログイン後に戻る先を保持するクエリパラメータ（3.1.1）。
   ///

@@ -200,6 +200,12 @@ final listMembersProvider =
   (ref, listId) => ref.watch(listRepositoryProvider).watchMembers(listId),
 );
 
+/// 参加せずに見るだけの人（仕様書 3.3）。リスト管理者だけが読める。
+final listViewersProvider =
+    StreamProvider.autoDispose.family<List<String>, String>(
+  (ref, listId) => ref.watch(listRepositoryProvider).watchViewers(listId),
+);
+
 /// このリストに対する自分の権限（仕様書 4.2）。
 final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
   final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;

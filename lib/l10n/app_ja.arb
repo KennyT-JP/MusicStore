@@ -1,21 +1,17 @@
 {
   "@@locale": "ja",
-
   "appTitle": "音楽リスト",
   "@appTitle": {
     "description": "アプリ名。ブラウザのタブと上部バーに表示する"
   },
-
   "navHome": "ホーム",
   "navNotifications": "通知",
   "navSettings": "設定",
   "navSiteAdmin": "サイト管理",
-
   "environmentBannerStaging": "検証環境",
   "@environmentBannerStaging": {
     "description": "本番以外で作業していることを見失わないための表示（仕様書 12.2）"
   },
-
   "signIn": "ログイン",
   "signUp": "アカウントを作成",
   "signOut": "ログアウト",
@@ -31,49 +27,51 @@
   "forgotPassword": "パスワードをお忘れですか",
   "resetPassword": "パスワードを再設定",
   "resetPasswordSent": "再設定用のリンクを送信しました。メールをご確認ください。",
-
   "verifyEmailTitle": "確認メールを送りました",
   "verifyEmailBody": "{email} 宛に確認メールを送りました。メール内のリンクを開くと、ご利用いただけます。",
   "@verifyEmailBody": {
     "description": "メール確認は必須（仕様書 3.1）",
     "placeholders": {
-      "email": { "type": "String" }
+      "email": {
+        "type": "String"
+      }
     }
   },
   "verifyEmailAutoDetect": "リンクを開くと、この画面も自動で次に進みます。",
   "verifyEmailResend": "確認メールを再送する",
   "verifyEmailRecheck": "確認が済んだので次へ",
-
   "homeTitle": "参加しているリスト",
   "homeEmpty": "まだどのリストにも参加していません。",
   "homeEmptyHint": "リストを作りたい場合は作成を申請してください。既にあるリストに入りたい場合は、参加している方から共有 URL を受け取ってください。",
   "requestNewList": "リスト作成を申請",
   "myRequests": "自分の申請",
-
   "roleListAdmin": "リスト管理者",
   "roleSuperUser": "Super User",
   "roleReadOnly": "Read Only",
   "roleSiteAdmin": "サイト管理者",
-
   "itemCount": "{count, plural, other{{count}件}}",
   "@itemCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "quotaUsage": "{used} / {total}",
   "@quotaUsage": {
     "description": "容量使用量。リスト管理者以上に表示（仕様書 7.4）",
     "placeholders": {
-      "used": { "type": "String" },
-      "total": { "type": "String" }
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
     }
   },
-
   "columnSeq": "連番",
   "columnDate": "日付",
   "columnRegistrant": "登録者",
-
   "sortBy": "並び替え",
   "searchHint": "曲名・アーティスト名・ファイル名で検索",
   "showDeletedItems": "削除済みも表示",
@@ -85,7 +83,6 @@
   "@withdrawnUser": {
     "description": "退会・除外・離脱したユーザーの表示名（仕様書 3.5 / 5.4）"
   },
-
   "addItem": "追加",
   "editItem": "編集",
   "deleteItem": "削除",
@@ -99,10 +96,7 @@
   "artistLabel": "アーティスト名（任意）",
   "commentLabel": "コメント（任意）",
   "edit": "編集",
-  "inviteExpiryNote": "有効期限：{until} まで。この URL は 1 回しか使えません。",
-  "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
   "cancelUpload": "アップロードを中止",
-  "revokeInvite": "招待を取り消す",
   "authInvalidEmail": "メールアドレスの形式が正しくありません。",
   "authUserDisabled": "このアカウントは無効になっています。",
   "authWrongCredential": "メールアドレスまたはパスワードが違います。",
@@ -128,10 +122,6 @@
   "playbackFailed": "再生できませんでした。もう一度お試しください。",
   "showDetails": "詳細",
   "close": "閉じる",
-  "copyInviteUrlAs": "招待 URL をコピー：{role}",
-  "@copyInviteUrlAs": { "placeholders": { "role": { "type": "String" } } },
-  "inviteUrlCopied": "招待 URL をコピーしました。",
-  "inviteUrlCopyFailed": "招待 URL を作れませんでした。",
   "removeMemberBody": "このメンバーをリストから外します。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。あらためて参加申請することもできます。",
   "leaveListBody": "このリストから抜けます。\n\n登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。",
   "noPendingRequests": "保留中の申請はありません。",
@@ -143,28 +133,76 @@
   "quotaGraceNote": "削除した項目のファイルは一定期間保持されるため、削除してもすぐには空きが増えません。",
   "shareUrl": "共有 URL",
   "shareUrlNote": "この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。",
-  "@deleteListBody": { "placeholders": { "name": { "type": "String" } } },
+  "@deleteListBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "noPendingListRequests": "保留中の申請はありません。",
   "requesterLabel": "申請者",
   "trackCountLabel": "登録曲数",
   "trackCountValue": "{count, plural, other{約 {count} 曲}}",
-  "@trackCountValue": { "placeholders": { "count": { "type": "int" } } },
+  "@trackCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userCountValue": "{count, plural, other{{count} 人}}",
-  "@userCountValue": { "placeholders": { "count": { "type": "int" } } },
+  "@userCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noListsYet": "リストはまだありません。",
   "changeQuota": "容量上限を変更",
   "changeQuotaBody": "「{name}」の上限を MB 単位で入力してください。",
-  "@changeQuotaBody": { "placeholders": { "name": { "type": "Object" } } },
+  "@changeQuotaBody": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
   "siteAdminCountSummary": "サイト管理者 {admins} 人 / 全 {total} 人",
   "memberCountHeading": "{count, plural, other{メンバー（{count}）}}",
-  "@memberCountHeading": { "placeholders": { "count": { "type": "int" } } },
+  "@memberCountHeading": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "changeRoleTo": "役割を変更：{role}",
-  "@changeRoleTo": { "placeholders": { "role": { "type": "String" } } },
+  "@changeRoleTo": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "approveAs": "承認：{role}",
-  "@approveAs": { "placeholders": { "role": { "type": "String" } } },
+  "@approveAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "withdrawIrreversible": "この操作は取り消せません。",
   "noItemsHint": "右下の「{addItem}」から音源や URL を登録できます。",
-  "@noItemsHint": { "placeholders": { "addItem": { "type": "String" } } },
+  "@noItemsHint": {
+    "placeholders": {
+      "addItem": {
+        "type": "String"
+      }
+    }
+  },
   "removeSiteAdmin": "管理者から外す",
   "siteAdminGranted": "サイト管理者にしました。反映には本人の再ログインが必要です。",
   "siteAdminRevoked": "サイト管理者から外しました。反映には本人の再ログインが必要です。",
@@ -178,7 +216,16 @@
   "purgeGraceHelp": "初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。",
   "invalidNumber": "数値を正しく入力してください。",
   "saved": "保存しました。",
-  "@siteAdminCountSummary": { "placeholders": { "admins": { "type": "Object" }, "total": { "type": "Object" } } },
+  "@siteAdminCountSummary": {
+    "placeholders": {
+      "admins": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "verificationResent": "確認メールを再送しました。",
   "verificationNotYet": "まだ確認が済んでいないようです。メール内のリンクを開いてください。",
   "displayNameHelper": "後から変更できます",
@@ -186,25 +233,51 @@
   "noItemsYet": "まだ項目がありません。",
   "noSearchResults": "該当する項目が見つかりませんでした。",
   "deleteItemBody": "{days, plural, other{この項目を削除します。\n\nファイル本体は {days} 日間保持され、その間はリスト管理者以上が復元できます。}}",
-  "@deleteItemBody": { "placeholders": { "days": { "type": "int" } } },
+  "@deleteItemBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "restorableUntil": "{date} まではリスト管理者が復元できます。",
-  "@restorableUntil": { "placeholders": { "date": { "type": "Object" } } },
+  "@restorableUntil": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
   "noCommentsYet": "まだコメントはありません。",
   "replyingTo": "「{body}」への返信",
-  "@replyingTo": { "placeholders": { "body": { "type": "Object" } } },
-  "inviteReceived": "招待を受け取りました",
-  "joinThisList": "このリストに参加します。",
+  "@replyingTo": {
+    "placeholders": {
+      "body": {
+        "type": "Object"
+      }
+    }
+  },
   "join": "参加する",
   "fileWithSize": "{name}（{size}）",
-  "@fileWithSize": { "placeholders": { "name": { "type": "Object" }, "size": { "type": "Object" } } },
+  "@fileWithSize": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
   "fileReplaceNotSupported": "ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。",
   "save": "保存",
   "cancel": "キャンセル",
-
   "uploadProgress": "アップロード中… {percent}%",
   "@uploadProgress": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "uploadFailed": "アップロードに失敗しました。もう一度お試しください。",
@@ -215,37 +288,24 @@
   "quotaRemaining": "残り {remaining}",
   "@quotaRemaining": {
     "placeholders": {
-      "remaining": { "type": "String" }
+      "remaining": {
+        "type": "String"
+      }
     }
   },
-
   "comments": "コメント",
   "writeComment": "コメントを書く",
   "reply": "返信",
   "commentDeleted": "削除されました",
-
   "conflictBody": "ほかの方がこの項目を更新しました。最新の内容を読み込み直してください。",
   "@conflictBody": {
     "description": "同時編集の検出（仕様書 6.3）"
   },
   "reload": "読み込み直す",
-
   "joinRequestBody": "このリストの中身は、参加が承認されるまで表示されません。",
   "joinRequestButton": "参加を申請",
   "joinRequestSent": "参加を申請しました。承認されるまでお待ちください。",
   "leaveList": "このリストから抜ける",
-
-  "inviteAccepted": "リストに参加しました。",
-  "inviteExpired": "招待の有効期限が切れています。招待した方に再発行を依頼してください。",
-  "@inviteExpired": {
-    "description": "有効期限は受諾時点で判定（仕様書 3.3）"
-  },
-  "inviteAlreadyUsed": "この招待はすでに使用されています。招待した方に再発行を依頼してください。",
-  "inviteRevoked": "この招待は取り消されています。",
-  "inviteNotFound": "招待が見つかりません。URL をご確認ください。",
-  "inviteAlreadyMember": "すでにこのリストに参加しています。",
-  "createInvite": "招待 URL を発行",
-
   "myRequestsEmpty": "まだ申請はありません。",
   "myJoinRequests": "自分の参加申請",
   "open": "開く",
@@ -255,7 +315,6 @@
   "requestAgain": "もう一度申請する",
   "approve": "承認",
   "reject": "却下",
-
   "members": "メンバー",
   "manageMembers": "メンバー管理",
   "joinRequests": "参加申請",
@@ -263,7 +322,6 @@
   "listSettings": "リスト設定",
   "deleteList": "リストを削除",
   "deleteListWarning": "リストを削除すると、そのリストのファイル・コメントもすべて削除されます。この操作は取り消せません。",
-
   "siteAdminListRequests": "リスト作成申請",
   "siteAdminLists": "リストと容量",
   "siteAdminUsers": "ユーザー管理",
@@ -275,14 +333,12 @@
   "@lastSiteAdminBlocked": {
     "description": "最後のサイト管理者は降格・退会できない（仕様書 4.5）"
   },
-
   "displayName": "表示名",
   "language": "表示言語",
   "notificationSettings": "通知設定",
   "notificationMaster": "すべての通知",
   "withdraw": "退会する",
   "withdrawWarning": "退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。",
-
   "notifyItemAdded": "曲が追加された",
   "notifyCommentAdded": "コメントが付いた",
   "notifyQuotaNotice": "容量が 80% を超えた",
@@ -290,7 +346,6 @@
   "notifyListRequested": "リスト作成の申請があった",
   "notifyJoinRequested": "参加申請があった",
   "notifyRequestApproved": "申請が承認された",
-
   "notifyItemAddedDetail": "参加しているリストに曲が追加されたとき。管理しているリストも含みます。",
   "notifyCommentAddedDetail": "自分が管理しているリスト、または自分の投稿にコメントが付いたとき。",
   "notifyQuotaNoticeDetail": "管理しているリストの使用容量が上限の 80% を超えたとき。",
@@ -298,11 +353,8 @@
   "notifyListRequestedDetail": "リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。",
   "notifyJoinRequestedDetail": "管理しているリストに参加を申し込まれたとき。",
   "notifyRequestApprovedDetail": "自分が出した申請が承認されたとき。",
-
   "notificationsEmpty": "通知はありません。",
   "markAllAsRead": "すべて既読にする",
-
-
   "functionErrorSignInRequired": "ログインが必要です。",
   "functionErrorEmailNotVerified": "メールアドレスの確認が済んでいません。確認メールのリンクを開いてください。",
   "functionErrorSiteAdminOnly": "この操作はサイト管理者のみ行えます。",
@@ -318,18 +370,49 @@
   "functionErrorInvalidQuota": "上限は 1 バイト以上で指定してください。",
   "functionErrorLastSiteAdmin": "あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。",
   "functionErrorAlreadyMember": "すでにこのリストに参加しています。",
-  "functionErrorInviteNotFound": "招待が見つかりません。URL をご確認ください。",
-  "functionErrorInviteExpired": "この招待は有効期限が切れています。",
-  "functionErrorInviteAlreadyUsed": "この招待は既に使われています。",
-  "functionErrorInviteRevoked": "この招待は取り消されています。",
   "functionErrorInviteRoleNotAllowed": "招待でリスト管理者は付与できません。",
   "functionErrorRoleNotAllowed": "役割は Super User か Read Only を指定してください。",
   "functionErrorMissingField": "入力が足りません。",
   "functionErrorFieldTooLong": "入力が長すぎます。",
   "functionErrorListNameTaken": "「{listName}」は既に使われているか、申請中です。",
-  "@functionErrorListNameTaken": { "placeholders": { "listName": { "type": "String" } } },
-
+  "@functionErrorListNameTaken": {
+    "placeholders": {
+      "listName": {
+        "type": "String"
+      }
+    }
+  },
   "errorGeneric": "エラーが発生しました。しばらくしてからもう一度お試しください。",
   "errorNoPermission": "この操作を行う権限がありません。",
-  "notFound": "ページが見つかりません。"
+  "notFound": "ページが見つかりません。",
+  "createShareLink": "共有リンクを作る",
+  "copyShareLinkAs": "リンクをコピー（参加すると {role}）",
+  "@copyShareLinkAs": {
+    "description": "共有リンクをコピーする操作（仕様書 3.3）",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLinkCopied": "リンクをコピーしました。",
+  "shareLinkReusableNote": "有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。",
+  "shareLinkCopyFailed": "リンクを作れませんでした。もう一度お試しください。",
+  "copyItemShareLink": "この曲のリンクをコピー",
+  "revokeShareLink": "リンクを取り消す",
+  "shareLinkRevokedDone": "リンクを取り消しました。以降このリンクからは入れません。",
+  "shareLinkReceived": "リンクが共有されました",
+  "shareLinkChooseHint": "どちらかを選んでください。あとから変えられます。",
+  "shareLinkJoinTitle": "参加する",
+  "shareLinkJoinBody": "メンバーになります。メンバー一覧に名前が出て、曲が追加されると通知が届きます。役割によっては曲やコメントを追加できます。",
+  "shareLinkViewTitle": "参加せずに見る",
+  "shareLinkViewBody": "メンバーにはなりません。曲の一覧を見て、音を聴くことはできます。メンバー一覧には出ず、通知も届きません。書き込みもできません。",
+  "shareLinkChangeLaterNote": "「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。",
+  "shareLinkNotFound": "リンクが見つかりません。URL をご確認ください。",
+  "shareLinkRevoked": "このリンクは取り消されています。共有した方に新しいリンクを依頼してください。",
+  "functionErrorShareLinkNotFound": "リンクが見つかりません。URL をご確認ください。",
+  "functionErrorShareLinkRevoked": "このリンクは取り消されています。",
+  "functionErrorItemNotFound": "曲が見つかりません。",
+  "viewersTitle": "参加せずに見ている人",
+  "viewersEmpty": "まだいません。"
 }

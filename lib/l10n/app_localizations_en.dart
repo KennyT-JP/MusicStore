@@ -198,15 +198,7 @@ class AppL10nEn extends AppL10n {
   String get edit => 'Edit';
 
   @override
-  String inviteExpiryNote(String until) {
-    return 'Valid until $until. This URL can only be used once.';
-  }
-
-  @override
   String get cancelUpload => 'Cancel upload';
-
-  @override
-  String get revokeInvite => 'Revoke invite';
 
   @override
   String get authInvalidEmail => 'That email address is not valid.';
@@ -288,17 +280,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get close => 'Close';
-
-  @override
-  String copyInviteUrlAs(String role) {
-    return 'Copy invite URL: $role';
-  }
-
-  @override
-  String get inviteUrlCopied => 'Invite URL copied.';
-
-  @override
-  String get inviteUrlCopyFailed => 'Could not create the invite URL.';
 
   @override
   String get removeMemberBody =>
@@ -506,12 +487,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get inviteReceived => 'You have an invite';
-
-  @override
-  String get joinThisList => 'You will join this list.';
-
-  @override
   String get join => 'Join';
 
   @override
@@ -578,29 +553,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get leaveList => 'Leave this list';
-
-  @override
-  String get inviteAccepted => 'You have joined the list.';
-
-  @override
-  String get inviteExpired =>
-      'This invitation has expired. Please ask for a new one.';
-
-  @override
-  String get inviteAlreadyUsed =>
-      'This invitation has already been used. Please ask for a new one.';
-
-  @override
-  String get inviteRevoked => 'This invitation has been revoked.';
-
-  @override
-  String get inviteNotFound => 'Invitation not found. Please check the URL.';
-
-  @override
-  String get inviteAlreadyMember => 'You are already a member of this list.';
-
-  @override
-  String get createInvite => 'Create invite URL';
 
   @override
   String get myRequestsEmpty => 'You have no requests yet.';
@@ -801,20 +753,6 @@ class AppL10nEn extends AppL10n {
   String get functionErrorAlreadyMember => 'You have already joined this list.';
 
   @override
-  String get functionErrorInviteNotFound =>
-      'That invite was not found. Please check the URL.';
-
-  @override
-  String get functionErrorInviteExpired => 'This invite has expired.';
-
-  @override
-  String get functionErrorInviteAlreadyUsed =>
-      'This invite has already been used.';
-
-  @override
-  String get functionErrorInviteRevoked => 'This invite has been revoked.';
-
-  @override
   String get functionErrorInviteRoleNotAllowed =>
       'Invites cannot grant the list admin role.';
 
@@ -841,4 +779,79 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get notFound => 'Page not found.';
+
+  @override
+  String get createShareLink => 'Create a share link';
+
+  @override
+  String copyShareLinkAs(String role) {
+    return 'Copy link (join as $role)';
+  }
+
+  @override
+  String get shareLinkCopied => 'Link copied.';
+
+  @override
+  String get shareLinkReusableNote =>
+      'It never expires and can be used by any number of people, any number of times. Revoke it to stop it.';
+
+  @override
+  String get shareLinkCopyFailed =>
+      'Could not create the link. Please try again.';
+
+  @override
+  String get copyItemShareLink => 'Copy a link to this track';
+
+  @override
+  String get revokeShareLink => 'Revoke link';
+
+  @override
+  String get shareLinkRevokedDone => 'Link revoked. It can no longer be used.';
+
+  @override
+  String get shareLinkReceived => 'A link was shared with you';
+
+  @override
+  String get shareLinkChooseHint => 'Choose one. You can change this later.';
+
+  @override
+  String get shareLinkJoinTitle => 'Join';
+
+  @override
+  String get shareLinkJoinBody =>
+      'You become a member. Your name appears in the member list and you are notified when tracks are added. Depending on your role you can add tracks and comments.';
+
+  @override
+  String get shareLinkViewTitle => 'View without joining';
+
+  @override
+  String get shareLinkViewBody =>
+      'You do not become a member. You can browse the tracks and listen to them. You will not appear in the member list, receive no notifications, and cannot post.';
+
+  @override
+  String get shareLinkChangeLaterNote =>
+      'If you choose to view only and later want to join, just open the same link again.';
+
+  @override
+  String get shareLinkNotFound => 'Link not found. Please check the URL.';
+
+  @override
+  String get shareLinkRevoked =>
+      'This link has been revoked. Please ask for a new one.';
+
+  @override
+  String get functionErrorShareLinkNotFound =>
+      'Link not found. Please check the URL.';
+
+  @override
+  String get functionErrorShareLinkRevoked => 'This link has been revoked.';
+
+  @override
+  String get functionErrorItemNotFound => 'Track not found.';
+
+  @override
+  String get viewersTitle => 'Viewing without joining';
+
+  @override
+  String get viewersEmpty => 'No one yet.';
 }

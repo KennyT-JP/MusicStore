@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,12 +13,16 @@ import '../../data/models/app_user.dart';
 import '../../data/models/list_item.dart';
 import '../../domain/comment_tree.dart';
 import '../../domain/display_name.dart';
+import '../../data/repositories/functions_repository.dart';
 import '../../domain/permissions.dart';
+import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../format.dart';
 import '../routes.dart';
+import '../share_url.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_message.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
   const ItemDetailScreen({
@@ -107,6 +112,10 @@ class _ItemHeader extends ConsumerWidget {
               ),
               Text('#${item.seq}', style: theme.textTheme.titleMedium),
               const Spacer(),
+              // **この曲を指すリンクを配れる（仕様書 3.3）。**
+              // 開いた人は、参加するか見るだけかをその場で選べる。
+              if (Permissions.canCreateShareLink(access) && !item.isDeleted)
+                _ItemShareLinkButton(listId: listId, itemId: item.id),
               if (canEdit)
                 IconButton(
                   tooltip: l10n.editItem,
@@ -704,5 +713,81 @@ class _AuthorLine extends ConsumerWidget {
             : theme.colorScheme.primary,
       ),
     );
+  }
+}
+
+
+/// この曲を指す共有リンクをコピーする（仕様書 3.3）。
+///
+/// **リストのリンクと同じ性質。** 無期限で、何度でも、複数人が使える。
+/// 開いた人は「参加する」か「参加せずに見る」かを選ぶ。
+class _ItemShareLinkButton extends ConsumerStatefulWidget {
+  const _ItemShareLinkButton({required this.listId, required this.itemId});
+
+  final String listId;
+  final String itemId;
+
+  @override
+  ConsumerState<_ItemShareLinkButton> createState() =>
+      _ItemShareLinkButtonState();
+}
+
+class _ItemShareLinkButtonState extends ConsumerState<_ItemShareLinkButton> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return IconButton(
+      tooltip: l10n.copyItemShareLink,
+      icon: _busy
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.link),
+      onPressed: _busy ? null : _copy,
+    );
+  }
+
+  Future<void> _copy() async {
+    final l10n = AppL10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _busy = true);
+    try {
+      // **役割は「参加する」を選んだ人に付く。** 曲を配る相手には
+      // 書き込みまで許す理由が薄いので、閲覧のみを既定にする。
+      final linkId = await ref
+          .read(functionsRepositoryProvider)
+          .createShareLink(
+            listId: widget.listId,
+            role: ListRole.readOnly,
+            itemId: widget.itemId,
+          );
+
+      await Clipboard.setData(
+        ClipboardData(text: buildShareUrl(AppRoutes.shareLink(linkId))),
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${l10n.shareLinkCopied}\n${l10n.shareLinkReusableNote}',
+          ),
+        ),
+      );
+    } on FunctionsCallException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(describeFunctionsError(context, e))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shareLinkCopyFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

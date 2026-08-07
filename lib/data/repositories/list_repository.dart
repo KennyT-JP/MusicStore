@@ -64,6 +64,15 @@ class ListRepository {
       .snapshots()
       .map((s) => s.docs.map(ListMember.fromDoc).toList());
 
+  /// 参加せずに見るだけの人を並べる（仕様書 3.3）。
+  ///
+  /// **リスト管理者だけが読める**（firestore.rules）。
+  /// 誰が中身を見ているかを、リストを預かる人には分かるようにしておく。
+  Stream<List<String>> watchViewers(String listId) => _db
+      .collection(FirestorePaths.listViewers(listId))
+      .snapshots()
+      .map((s) => s.docs.map((d) => d.id).toList());
+
   // 自分のメンバー情報だけを 1 件見る経路は用意していない。
   // 役割は watchMyMemberships（横断）から取っており、リストごとに
   // もう 1 本購読を張ると読み取りが二重になる。

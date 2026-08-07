@@ -63,6 +63,12 @@ class FirestorePaths {
 
   static String listMembers(String listId) => '${list(listId)}/$members';
 
+  /// 参加せずに見るだけの人（仕様書 3.3）。
+  ///
+  /// **メンバーとは別に持つ。** メンバー一覧にも人数にも通知の宛先にも
+  /// 入れないため。書き込むのは Cloud Functions だけ。
+  static String listViewers(String listId) => '${list(listId)}/viewers';
+
   static String listMember(String listId, String uid) =>
       '${listMembers(listId)}/$uid';
 

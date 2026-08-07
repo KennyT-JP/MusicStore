@@ -19,7 +19,6 @@ import '../../domain/quota.dart';
 import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
-import '../format.dart';
 import '../routes.dart';
 import '../share_url.dart';
 import '../widgets/async_view.dart';
@@ -60,8 +59,8 @@ class ListMembersScreen extends ConsumerWidget {
               // 判定関数はあるのに呼ばれておらず、Read Only にも招待発行の
               // 入口が見えていた。押すとサーバーに拒否され、意味の分からない
               // エラーになる（監査 第2回）。
-              if (Permissions.canCreateInvite(access))
-                _InviteSection(listId: listId),
+              if (Permissions.canCreateShareLink(access))
+                _ShareLinkSection(listId: listId),
               const Divider(height: 32),
               Text(
                 l10n.memberCountHeading(list.length),
@@ -81,6 +80,13 @@ class ListMembersScreen extends ConsumerWidget {
                   ),
                   isSelf: member.uid == myUid,
                 ),
+
+              // **参加せずに見ている人（仕様書 3.3）。**
+              // リンクから「参加しない」を選んだ人。メンバーではないので
+              // 上の人数には入らない。**誰が見ているかは、リストを
+              // 預かる人には分かるようにしておく。**
+              if (Permissions.canManageMembers(access))
+                _ViewersSection(listId: listId),
             ],
           );
         },
@@ -122,22 +128,21 @@ class _AdminHeader extends ConsumerWidget {
 }
 
 /// 招待 URL の発行（仕様書 3.3）。
-class _InviteSection extends ConsumerStatefulWidget {
-  const _InviteSection({required this.listId});
+class _ShareLinkSection extends ConsumerStatefulWidget {
+  const _ShareLinkSection({required this.listId});
 
   final String listId;
 
   @override
-  ConsumerState<_InviteSection> createState() => _InviteSectionState();
+  ConsumerState<_ShareLinkSection> createState() => _ShareLinkSectionState();
 }
 
-class _InviteSectionState extends ConsumerState<_InviteSection> {
+class _ShareLinkSectionState extends ConsumerState<_ShareLinkSection> {
   ListRole _role = ListRole.superUser;
   bool _busy = false;
   String? _error;
   String? _inviteUrl;
   String? _inviteId;
-  DateTime? _expiresAt;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +151,10 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.createInvite, style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          l10n.createShareLink,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         if (_error != null) ...[
           ErrorMessage(_error!),
@@ -154,8 +162,9 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
         ],
         Row(
           children: [
-            // 招待時に付与する役割をあらかじめ指定する（仕様書 3.3）。
-            // リスト管理者は招待では付与できない。
+            // **「参加する」を選んだ人に付く役割**をあらかじめ決める（3.3）。
+            // 参加せずに見るだけの人には関係しない。
+            // リスト管理者はリンクでは付与できない。
             SegmentedButton<ListRole>(
               segments: [
                 ButtonSegment(
@@ -173,7 +182,7 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
             const SizedBox(width: 12),
             FilledButton(
               onPressed: _busy ? null : _create,
-              child: Text(l10n.createInvite),
+              child: Text(l10n.createShareLink),
             ),
           ],
         ),
@@ -192,21 +201,22 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    // 有効期限は受諾した時点で判定される（仕様書 3.3）。
-                    l10n.inviteExpiryNote(formatDateTime(_expiresAt!)),
+                    // **期限が無いことを必ず伝える（仕様書 3.3）。**
+                    // 配ったあとも生き続けるので、止めるには取り消しが要る。
+                    l10n.shareLinkReusableNote,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 4),
-                  // **取消の導線（仕様書 3.3）。** revokeInvite は実装済み
-                  // だったが、画面から呼ぶ場所が無かった（監査 S16）。
-                  // 誤って渡した URL を無効にできないと、取り消す手段が
-                  // 「期限切れを待つ」しかなくなる。
+                  // **取消の導線（仕様書 3.3）。**
+                  // 期限が無くなったぶん、ここが唯一の止める手段になった。
+                  // 以前は画面から呼ぶ場所が無く、取り消す手段が
+                  // 「期限切れを待つ」しかなかった（監査 S16）。
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       onPressed: _busy ? null : _revoke,
                       icon: const Icon(Icons.link_off),
-                      label: Text(l10n.revokeInvite),
+                      label: Text(l10n.revokeShareLink),
                     ),
                   ),
                 ],
@@ -228,15 +238,14 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
       _error = null;
     });
     try {
-      await ref.read(functionsRepositoryProvider).revokeInvite(id);
+      await ref.read(functionsRepositoryProvider).revokeShareLink(id);
       if (mounted) {
         setState(() {
           _inviteUrl = null;
           _inviteId = null;
-          _expiresAt = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppL10n.of(context).inviteRevoked)),
+          SnackBar(content: Text(AppL10n.of(context).shareLinkRevokedDone)),
         );
       }
     } catch (error) {
@@ -260,13 +269,12 @@ class _InviteSectionState extends ConsumerState<_InviteSection> {
     try {
       final result = await ref
           .read(functionsRepositoryProvider)
-          .createInvite(listId: widget.listId, role: _role);
+          .createShareLink(listId: widget.listId, role: _role);
 
       if (mounted) {
         setState(() {
-          _inviteUrl = buildShareUrl(AppRoutes.invite(result.inviteId));
-          _inviteId = result.inviteId;
-          _expiresAt = result.expiresAt;
+          _inviteUrl = buildShareUrl(AppRoutes.shareLink(result));
+          _inviteId = result;
         });
       }
     } on FunctionsCallException catch (e) {
@@ -746,3 +754,79 @@ class _ShareUrlCard extends StatelessWidget {
 /// アプリ内のパスから、人に渡せる URL を組み立てる（仕様書 5.3 / 3.3）。
 ///
 /// Flutter Web は既定でハッシュ方式の URL を使うため、`#` を挟む。
+
+
+/// 参加せずに見ている人を並べる（仕様書 3.3）。
+///
+/// メンバーではないので、人数にも通知の宛先にも入らない。
+/// **それでも誰が見ているかは分かるようにしておく。**
+/// 分からないままだと、リンクを配ったあと誰に届いたのか追えない。
+class _ViewersSection extends ConsumerWidget {
+  const _ViewersSection({required this.listId});
+
+  final String listId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    final viewers = ref.watch(listViewersProvider(listId));
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        Text(l10n.viewersTitle, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        viewers.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => Text(
+            l10n.errorGeneric,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+          data: (uids) {
+            if (uids.isEmpty) {
+              return Text(
+                l10n.viewersEmpty,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              );
+            }
+            return Column(
+              children: [
+                for (final uid in uids)
+                  _ViewerTile(listId: listId, uid: uid),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ViewerTile extends ConsumerWidget {
+  const _ViewerTile({required this.listId, required this.uid});
+
+  final String listId;
+  final String uid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 表示名は ID 指定で 1 件ずつ引く。一覧としての取得は禁じてある
+    // （全会員のメールアドレスを一括収集できてしまうため／監査 S2）。
+    final users =
+        ref.watch(userDirectoryProvider(userDirectoryKey({uid}))).value ??
+        const {};
+    final name = users[uid]?.displayName ?? uid;
+
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.visibility_outlined),
+      title: Text(name),
+    );
+  }
+}

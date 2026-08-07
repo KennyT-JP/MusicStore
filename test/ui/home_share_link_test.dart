@@ -94,15 +94,15 @@ void main() {
 
     final l10n = await AppL10n.delegate.load(const Locale('ja'));
     expect(
-      find.text(l10n.copyInviteUrlAs(l10n.roleSuperUser)),
+      find.text(l10n.copyShareLinkAs(l10n.roleSuperUser)),
       findsOneWidget,
     );
     expect(
-      find.text(l10n.copyInviteUrlAs(l10n.roleReadOnly)),
+      find.text(l10n.copyShareLinkAs(l10n.roleReadOnly)),
       findsOneWidget,
     );
     expect(
-      find.text(l10n.copyInviteUrlAs(l10n.roleListAdmin)),
+      find.text(l10n.copyShareLinkAs(l10n.roleListAdmin)),
       findsNothing,
     );
   });

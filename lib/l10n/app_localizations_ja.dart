@@ -195,15 +195,7 @@ class AppL10nJa extends AppL10n {
   String get edit => '編集';
 
   @override
-  String inviteExpiryNote(String until) {
-    return '有効期限：$until まで。この URL は 1 回しか使えません。';
-  }
-
-  @override
   String get cancelUpload => 'アップロードを中止';
-
-  @override
-  String get revokeInvite => '招待を取り消す';
 
   @override
   String get authInvalidEmail => 'メールアドレスの形式が正しくありません。';
@@ -279,17 +271,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get close => '閉じる';
-
-  @override
-  String copyInviteUrlAs(String role) {
-    return '招待 URL をコピー：$role';
-  }
-
-  @override
-  String get inviteUrlCopied => '招待 URL をコピーしました。';
-
-  @override
-  String get inviteUrlCopyFailed => '招待 URL を作れませんでした。';
 
   @override
   String get removeMemberBody =>
@@ -482,12 +463,6 @@ class AppL10nJa extends AppL10n {
   }
 
   @override
-  String get inviteReceived => '招待を受け取りました';
-
-  @override
-  String get joinThisList => 'このリストに参加します。';
-
-  @override
   String get join => '参加する';
 
   @override
@@ -550,27 +525,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get leaveList => 'このリストから抜ける';
-
-  @override
-  String get inviteAccepted => 'リストに参加しました。';
-
-  @override
-  String get inviteExpired => '招待の有効期限が切れています。招待した方に再発行を依頼してください。';
-
-  @override
-  String get inviteAlreadyUsed => 'この招待はすでに使用されています。招待した方に再発行を依頼してください。';
-
-  @override
-  String get inviteRevoked => 'この招待は取り消されています。';
-
-  @override
-  String get inviteNotFound => '招待が見つかりません。URL をご確認ください。';
-
-  @override
-  String get inviteAlreadyMember => 'すでにこのリストに参加しています。';
-
-  @override
-  String get createInvite => '招待 URL を発行';
 
   @override
   String get myRequestsEmpty => 'まだ申請はありません。';
@@ -760,18 +714,6 @@ class AppL10nJa extends AppL10n {
   String get functionErrorAlreadyMember => 'すでにこのリストに参加しています。';
 
   @override
-  String get functionErrorInviteNotFound => '招待が見つかりません。URL をご確認ください。';
-
-  @override
-  String get functionErrorInviteExpired => 'この招待は有効期限が切れています。';
-
-  @override
-  String get functionErrorInviteAlreadyUsed => 'この招待は既に使われています。';
-
-  @override
-  String get functionErrorInviteRevoked => 'この招待は取り消されています。';
-
-  @override
   String get functionErrorInviteRoleNotAllowed => '招待でリスト管理者は付与できません。';
 
   @override
@@ -797,4 +739,76 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get notFound => 'ページが見つかりません。';
+
+  @override
+  String get createShareLink => '共有リンクを作る';
+
+  @override
+  String copyShareLinkAs(String role) {
+    return 'リンクをコピー（参加すると $role）';
+  }
+
+  @override
+  String get shareLinkCopied => 'リンクをコピーしました。';
+
+  @override
+  String get shareLinkReusableNote =>
+      '有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。';
+
+  @override
+  String get shareLinkCopyFailed => 'リンクを作れませんでした。もう一度お試しください。';
+
+  @override
+  String get copyItemShareLink => 'この曲のリンクをコピー';
+
+  @override
+  String get revokeShareLink => 'リンクを取り消す';
+
+  @override
+  String get shareLinkRevokedDone => 'リンクを取り消しました。以降このリンクからは入れません。';
+
+  @override
+  String get shareLinkReceived => 'リンクが共有されました';
+
+  @override
+  String get shareLinkChooseHint => 'どちらかを選んでください。あとから変えられます。';
+
+  @override
+  String get shareLinkJoinTitle => '参加する';
+
+  @override
+  String get shareLinkJoinBody =>
+      'メンバーになります。メンバー一覧に名前が出て、曲が追加されると通知が届きます。役割によっては曲やコメントを追加できます。';
+
+  @override
+  String get shareLinkViewTitle => '参加せずに見る';
+
+  @override
+  String get shareLinkViewBody =>
+      'メンバーにはなりません。曲の一覧を見て、音を聴くことはできます。メンバー一覧には出ず、通知も届きません。書き込みもできません。';
+
+  @override
+  String get shareLinkChangeLaterNote =>
+      '「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。';
+
+  @override
+  String get shareLinkNotFound => 'リンクが見つかりません。URL をご確認ください。';
+
+  @override
+  String get shareLinkRevoked => 'このリンクは取り消されています。共有した方に新しいリンクを依頼してください。';
+
+  @override
+  String get functionErrorShareLinkNotFound => 'リンクが見つかりません。URL をご確認ください。';
+
+  @override
+  String get functionErrorShareLinkRevoked => 'このリンクは取り消されています。';
+
+  @override
+  String get functionErrorItemNotFound => '曲が見つかりません。';
+
+  @override
+  String get viewersTitle => '参加せずに見ている人';
+
+  @override
+  String get viewersEmpty => 'まだいません。';
 }

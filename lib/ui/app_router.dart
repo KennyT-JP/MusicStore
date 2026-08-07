@@ -176,9 +176,9 @@ GoRouter buildAppRouter({
 
           // --- 招待の受諾 ---
           GoRoute(
-            path: AppRoutes.invitePattern,
+            path: AppRoutes.shareLinkPattern,
             builder: (context, state) =>
-                AcceptInviteScreen(inviteId: state.pathParameters['inviteId']!),
+                ShareLinkScreen(linkId: state.pathParameters['linkId']!),
           ),
 
           // --- サイト管理 ---

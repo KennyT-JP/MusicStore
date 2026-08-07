@@ -445,23 +445,11 @@ abstract class AppL10n {
   /// **'編集'**
   String get edit;
 
-  /// No description provided for @inviteExpiryNote.
-  ///
-  /// In ja, this message translates to:
-  /// **'有効期限：{until} まで。この URL は 1 回しか使えません。'**
-  String inviteExpiryNote(String until);
-
   /// No description provided for @cancelUpload.
   ///
   /// In ja, this message translates to:
   /// **'アップロードを中止'**
   String get cancelUpload;
-
-  /// No description provided for @revokeInvite.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待を取り消す'**
-  String get revokeInvite;
 
   /// No description provided for @authInvalidEmail.
   ///
@@ -612,24 +600,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'閉じる'**
   String get close;
-
-  /// No description provided for @copyInviteUrlAs.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待 URL をコピー：{role}'**
-  String copyInviteUrlAs(String role);
-
-  /// No description provided for @inviteUrlCopied.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待 URL をコピーしました。'**
-  String get inviteUrlCopied;
-
-  /// No description provided for @inviteUrlCopyFailed.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待 URL を作れませんでした。'**
-  String get inviteUrlCopyFailed;
 
   /// No description provided for @removeMemberBody.
   ///
@@ -919,18 +889,6 @@ abstract class AppL10n {
   /// **'「{body}」への返信'**
   String replyingTo(Object body);
 
-  /// No description provided for @inviteReceived.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待を受け取りました'**
-  String get inviteReceived;
-
-  /// No description provided for @joinThisList.
-  ///
-  /// In ja, this message translates to:
-  /// **'このリストに参加します。'**
-  String get joinThisList;
-
   /// No description provided for @join.
   ///
   /// In ja, this message translates to:
@@ -1044,48 +1002,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'このリストから抜ける'**
   String get leaveList;
-
-  /// No description provided for @inviteAccepted.
-  ///
-  /// In ja, this message translates to:
-  /// **'リストに参加しました。'**
-  String get inviteAccepted;
-
-  /// 有効期限は受諾時点で判定（仕様書 3.3）
-  ///
-  /// In ja, this message translates to:
-  /// **'招待の有効期限が切れています。招待した方に再発行を依頼してください。'**
-  String get inviteExpired;
-
-  /// No description provided for @inviteAlreadyUsed.
-  ///
-  /// In ja, this message translates to:
-  /// **'この招待はすでに使用されています。招待した方に再発行を依頼してください。'**
-  String get inviteAlreadyUsed;
-
-  /// No description provided for @inviteRevoked.
-  ///
-  /// In ja, this message translates to:
-  /// **'この招待は取り消されています。'**
-  String get inviteRevoked;
-
-  /// No description provided for @inviteNotFound.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待が見つかりません。URL をご確認ください。'**
-  String get inviteNotFound;
-
-  /// No description provided for @inviteAlreadyMember.
-  ///
-  /// In ja, this message translates to:
-  /// **'すでにこのリストに参加しています。'**
-  String get inviteAlreadyMember;
-
-  /// No description provided for @createInvite.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待 URL を発行'**
-  String get createInvite;
 
   /// No description provided for @myRequestsEmpty.
   ///
@@ -1453,30 +1369,6 @@ abstract class AppL10n {
   /// **'すでにこのリストに参加しています。'**
   String get functionErrorAlreadyMember;
 
-  /// No description provided for @functionErrorInviteNotFound.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待が見つかりません。URL をご確認ください。'**
-  String get functionErrorInviteNotFound;
-
-  /// No description provided for @functionErrorInviteExpired.
-  ///
-  /// In ja, this message translates to:
-  /// **'この招待は有効期限が切れています。'**
-  String get functionErrorInviteExpired;
-
-  /// No description provided for @functionErrorInviteAlreadyUsed.
-  ///
-  /// In ja, this message translates to:
-  /// **'この招待は既に使われています。'**
-  String get functionErrorInviteAlreadyUsed;
-
-  /// No description provided for @functionErrorInviteRevoked.
-  ///
-  /// In ja, this message translates to:
-  /// **'この招待は取り消されています。'**
-  String get functionErrorInviteRevoked;
-
   /// No description provided for @functionErrorInviteRoleNotAllowed.
   ///
   /// In ja, this message translates to:
@@ -1524,6 +1416,138 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'ページが見つかりません。'**
   String get notFound;
+
+  /// No description provided for @createShareLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有リンクを作る'**
+  String get createShareLink;
+
+  /// 共有リンクをコピーする操作（仕様書 3.3）
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピー（参加すると {role}）'**
+  String copyShareLinkAs(String role);
+
+  /// No description provided for @shareLinkCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクをコピーしました。'**
+  String get shareLinkCopied;
+
+  /// No description provided for @shareLinkReusableNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。'**
+  String get shareLinkReusableNote;
+
+  /// No description provided for @shareLinkCopyFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクを作れませんでした。もう一度お試しください。'**
+  String get shareLinkCopyFailed;
+
+  /// No description provided for @copyItemShareLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'この曲のリンクをコピー'**
+  String get copyItemShareLink;
+
+  /// No description provided for @revokeShareLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクを取り消す'**
+  String get revokeShareLink;
+
+  /// No description provided for @shareLinkRevokedDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクを取り消しました。以降このリンクからは入れません。'**
+  String get shareLinkRevokedDone;
+
+  /// No description provided for @shareLinkReceived.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクが共有されました'**
+  String get shareLinkReceived;
+
+  /// No description provided for @shareLinkChooseHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'どちらかを選んでください。あとから変えられます。'**
+  String get shareLinkChooseHint;
+
+  /// No description provided for @shareLinkJoinTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加する'**
+  String get shareLinkJoinTitle;
+
+  /// No description provided for @shareLinkJoinBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーになります。メンバー一覧に名前が出て、曲が追加されると通知が届きます。役割によっては曲やコメントを追加できます。'**
+  String get shareLinkJoinBody;
+
+  /// No description provided for @shareLinkViewTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加せずに見る'**
+  String get shareLinkViewTitle;
+
+  /// No description provided for @shareLinkViewBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'メンバーにはなりません。曲の一覧を見て、音を聴くことはできます。メンバー一覧には出ず、通知も届きません。書き込みもできません。'**
+  String get shareLinkViewBody;
+
+  /// No description provided for @shareLinkChangeLaterNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。'**
+  String get shareLinkChangeLaterNote;
+
+  /// No description provided for @shareLinkNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクが見つかりません。URL をご確認ください。'**
+  String get shareLinkNotFound;
+
+  /// No description provided for @shareLinkRevoked.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリンクは取り消されています。共有した方に新しいリンクを依頼してください。'**
+  String get shareLinkRevoked;
+
+  /// No description provided for @functionErrorShareLinkNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクが見つかりません。URL をご確認ください。'**
+  String get functionErrorShareLinkNotFound;
+
+  /// No description provided for @functionErrorShareLinkRevoked.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリンクは取り消されています。'**
+  String get functionErrorShareLinkRevoked;
+
+  /// No description provided for @functionErrorItemNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'曲が見つかりません。'**
+  String get functionErrorItemNotFound;
+
+  /// No description provided for @viewersTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'参加せずに見ている人'**
+  String get viewersTitle;
+
+  /// No description provided for @viewersEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだいません。'**
+  String get viewersEmpty;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

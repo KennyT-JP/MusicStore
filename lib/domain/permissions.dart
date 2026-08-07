@@ -114,11 +114,11 @@ class Permissions {
   static bool canManageMembers(ListAccess access) =>
       access.hasAtLeast(ListRole.listAdmin);
 
-  /// 招待 URL を発行できるか。
+  /// 共有リンクを発行できるか。
   ///
   /// サイト管理者は誰に対しても、リスト管理者は自分のリストへのみ（3.3）。
   /// この関数は 1 つのリストに対する判定なので、両者とも同じ条件になる。
-  static bool canCreateInvite(ListAccess access) =>
+  static bool canCreateShareLink(ListAccess access) =>
       access.hasAtLeast(ListRole.listAdmin);
 
   /// リストを削除できるか。リスト管理者以上（5.5）。

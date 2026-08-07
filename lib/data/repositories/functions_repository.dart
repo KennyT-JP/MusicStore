@@ -7,7 +7,7 @@ library;
 
 import 'package:cloud_functions/cloud_functions.dart';
 
-import '../../domain/invite.dart';
+import '../../domain/share_link.dart';
 import '../../domain/role.dart';
 import '../models/requests.dart';
 
@@ -112,51 +112,61 @@ class FunctionsRepository {
   }) => _call('rejectJoinRequest', {'listId': listId, 'uid': uid});
 
   // -------------------------------------------------------------------
-  // 招待 URL（仕様書 3.3）
+  // 共有リンク（仕様書 3.3）
   // -------------------------------------------------------------------
 
-  /// 招待 URL を発行する（リスト管理者以上）。
+  /// 共有リンクを発行する（リスト管理者以上）。
   ///
-  /// 返る ID がそのまま `/invite/{inviteId}` の URL になる。
-  Future<({String inviteId, DateTime expiresAt})> createInvite({
+  /// 返る ID がそのまま `/s/{linkId}` の URL になる。
+  ///
+  /// **無期限で、何度でも、複数人が使える。** [itemId] を渡すと、
+  /// その曲を指すリンクになる。
+  Future<String> createShareLink({
     required String listId,
     required ListRole role,
+    String? itemId,
   }) async {
-    final result = await _call('createInvite', {
+    final result = await _call('createShareLink', {
       'listId': listId,
       'role': role.wireName,
+      if (itemId != null) 'itemId': itemId,
     });
-    return (
-      inviteId: result['inviteId'] as String,
-      expiresAt: DateTime.fromMillisecondsSinceEpoch(
-        (result['expiresAt'] as num).toInt(),
-      ),
-    );
+    return result['linkId'] as String;
   }
 
-  /// 招待を受諾する。
+  /// 共有リンクを開いた人を受け入れる。
   ///
-  /// 有効期限は受諾した時点で判定される（仕様書 3.3）。
-  /// 受け入れられない場合は [InviteRejection] に対応する例外を投げる。
-  Future<String> acceptInvite(String inviteId) async {
+  /// [join] が true ならメンバーになり、false なら参加せずに見るだけ。
+  Future<ShareLinkResult> acceptShareLink(
+    String linkId, {
+    required bool join,
+  }) async {
     try {
-      final result = await _call('acceptInvite', {'inviteId': inviteId});
-      return result['listId'] as String;
+      final result = await _call('acceptShareLink', {
+        'linkId': linkId,
+        'mode': join ? 'join' : 'view',
+      });
+      return ShareLinkResult(
+        listId: result['listId'] as String,
+        itemId: result['itemId'] as String?,
+        joined: result['joined'] == true,
+      );
     } on FunctionsCallException catch (e) {
-      // **招待そのものの理由でない失敗を、招待の失敗に潰さない。**
-      // 以前はあらゆる例外を InviteRejection に丸め、既定を notFound に
-      // していた。未ログイン・メール未確認・通信の失敗でも
-      // 「招待が見つかりません。URL をご確認ください。」と出て、
-      // 利用者は直しようのないことを指示されていた（監査 第2回）。
+      // **リンクそのものの理由でない失敗を、リンクの失敗に潰さない。**
+      // 以前はあらゆる例外を丸め、既定を「見つかりません」にしていた。
+      // 未ログイン・メール未確認・通信の失敗でも「URL をご確認ください」
+      // と出て、利用者は直しようのないことを指示されていた（監査 第2回）。
       final rejection = _rejectionFrom(e.reason);
       if (rejection == null) rethrow;
-      throw InviteRejectedException(rejection);
+      throw ShareLinkRejectedException(rejection);
     }
   }
 
-  /// 招待を取り消す（リスト管理者以上）。
-  Future<void> revokeInvite(String inviteId) =>
-      _call('revokeInvite', {'inviteId': inviteId});
+  /// 共有リンクを取り消す（リスト管理者以上）。
+  ///
+  /// **期限が無いので、これが唯一の止める手段。**
+  Future<void> revokeShareLink(String linkId) =>
+      _call('revokeShareLink', {'linkId': linkId});
 
   // -------------------------------------------------------------------
   // サイト管理者と退会（仕様書 4.4 / 4.5 / 3.5）
@@ -240,19 +250,33 @@ class FunctionsRepository {
   ///
   /// **当てはまらなければ null を返す。** 既定を notFound にすると、
   /// 招待と関係のない失敗まで「招待が見つかりません」になってしまう。
-  InviteRejection? _rejectionFrom(String? reason) => switch (reason) {
-    'inviteExpired' => InviteRejection.expired,
-    'inviteAlreadyUsed' => InviteRejection.alreadyUsed,
-    'inviteRevoked' => InviteRejection.revoked,
-    'alreadyMember' => InviteRejection.alreadyMember,
-    'inviteNotFound' => InviteRejection.notFound,
+  ShareLinkRejection? _rejectionFrom(String? reason) => switch (reason) {
+    'shareLinkRevoked' => ShareLinkRejection.revoked,
+    'shareLinkNotFound' => ShareLinkRejection.notFound,
     _ => null,
   };
 }
 
-/// 招待を受諾できなかったときに投げる（仕様書 3.3）。
-class InviteRejectedException implements Exception {
-  const InviteRejectedException(this.reason);
+/// 共有リンクを受け入れられなかったときに投げる（仕様書 3.3）。
+class ShareLinkRejectedException implements Exception {
+  const ShareLinkRejectedException(this.reason);
 
-  final InviteRejection reason;
+  final ShareLinkRejection reason;
+}
+
+/// リンクを受け入れた結果（仕様書 3.3）。
+class ShareLinkResult {
+  const ShareLinkResult({
+    required this.listId,
+    required this.joined,
+    this.itemId,
+  });
+
+  final String listId;
+
+  /// 曲を指すリンクなら、その曲。
+  final String? itemId;
+
+  /// メンバーになったか。false なら閲覧だけ。
+  final bool joined;
 }

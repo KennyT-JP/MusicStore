@@ -225,13 +225,13 @@ void main() {
         expect(Permissions.canManageMembers(access), isTrue);
         expect(Permissions.canDeleteList(access), isTrue);
         expect(Permissions.canViewQuota(access), isTrue);
-        expect(Permissions.canCreateInvite(access), isTrue);
+        expect(Permissions.canCreateShareLink(access), isTrue);
       }
       for (final access in [readOnly, superUser, outsider]) {
         expect(Permissions.canManageMembers(access), isFalse);
         expect(Permissions.canDeleteList(access), isFalse);
         expect(Permissions.canViewQuota(access), isFalse);
-        expect(Permissions.canCreateInvite(access), isFalse);
+        expect(Permissions.canCreateShareLink(access), isFalse);
       }
     });
 

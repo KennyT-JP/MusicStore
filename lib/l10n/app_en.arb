@@ -1,15 +1,11 @@
 {
   "@@locale": "en",
-
   "appTitle": "Music Lists",
-
   "navHome": "Home",
   "navNotifications": "Notifications",
   "navSettings": "Settings",
   "navSiteAdmin": "Site admin",
-
   "environmentBannerStaging": "Staging",
-
   "signIn": "Sign in",
   "signUp": "Create account",
   "signOut": "Sign out",
@@ -25,37 +21,30 @@
   "forgotPassword": "Forgot your password?",
   "resetPassword": "Reset password",
   "resetPasswordSent": "We sent you a reset link. Please check your email.",
-
   "verifyEmailTitle": "Check your email",
   "verifyEmailBody": "We sent a verification email to {email}. Open the link in that email to start using the app.",
   "verifyEmailAutoDetect": "Once you open the link, this page moves on by itself.",
   "verifyEmailResend": "Resend verification email",
   "verifyEmailRecheck": "I have verified, continue",
-
   "homeTitle": "Your lists",
   "homeEmpty": "You have not joined any list yet.",
   "homeEmptyHint": "To start a new list, submit a request. To join an existing one, ask a member for its share URL.",
   "requestNewList": "Request a new list",
   "myRequests": "My requests",
-
   "roleListAdmin": "List admin",
   "roleSuperUser": "Super User",
   "roleReadOnly": "Read Only",
   "roleSiteAdmin": "Site admin",
-
   "itemCount": "{count, plural, =1{1 item} other{{count} items}}",
   "quotaUsage": "{used} / {total}",
-
   "columnSeq": "No.",
   "columnDate": "Date",
   "columnRegistrant": "Added by",
-
   "sortBy": "Sort by",
   "searchHint": "Search by title, artist, or file name",
   "showDeletedItems": "Show deleted items",
   "itemDeleted": "Deleted",
   "withdrawnUser": "Former member",
-
   "addItem": "Add",
   "editItem": "Edit",
   "deleteItem": "Delete",
@@ -69,10 +58,7 @@
   "artistLabel": "Artist (optional)",
   "commentLabel": "Comment (optional)",
   "edit": "Edit",
-  "inviteExpiryNote": "Valid until {until}. This URL can only be used once.",
-  "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
   "cancelUpload": "Cancel upload",
-  "revokeInvite": "Revoke invite",
   "authInvalidEmail": "That email address is not valid.",
   "authUserDisabled": "This account has been disabled.",
   "authWrongCredential": "The email address or password is incorrect.",
@@ -98,10 +84,6 @@
   "playbackFailed": "Could not play this. Please try again.",
   "showDetails": "Details",
   "close": "Close",
-  "copyInviteUrlAs": "Copy invite URL: {role}",
-  "@copyInviteUrlAs": { "placeholders": { "role": { "type": "String" } } },
-  "inviteUrlCopied": "Invite URL copied.",
-  "inviteUrlCopyFailed": "Could not create the invite URL.",
   "removeMemberBody": "This member will be removed from the list.\n\nTheir items and comments stay, but their name will be shown as \"Former member\". They can request to join again.",
   "leaveListBody": "You will leave this list.\n\nYour items and comments stay, but your name will be shown as \"Former member\".",
   "noPendingRequests": "There are no pending requests.",
@@ -113,28 +95,76 @@
   "quotaGraceNote": "Files from deleted items are kept for a while, so deleting does not free space immediately.",
   "shareUrl": "Share URL",
   "shareUrlNote": "Anyone with this URL can request to join. They cannot see the contents until approved.",
-  "@deleteListBody": { "placeholders": { "name": { "type": "String" } } },
+  "@deleteListBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "noPendingListRequests": "There are no pending requests.",
   "requesterLabel": "Requested by",
   "trackCountLabel": "Tracks",
   "trackCountValue": "{count, plural, =1{About 1 track} other{About {count} tracks}}",
-  "@trackCountValue": { "placeholders": { "count": { "type": "int" } } },
+  "@trackCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userCountValue": "{count, plural, =1{1 person} other{{count} people}}",
-  "@userCountValue": { "placeholders": { "count": { "type": "int" } } },
+  "@userCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noListsYet": "There are no lists yet.",
   "changeQuota": "Change storage limit",
   "changeQuotaBody": "Enter the limit for \"{name}\" in MB.",
-  "@changeQuotaBody": { "placeholders": { "name": { "type": "Object" } } },
+  "@changeQuotaBody": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
   "siteAdminCountSummary": "{admins} of {total} users are site admins",
   "memberCountHeading": "{count, plural, =1{Members (1)} other{Members ({count})}}",
-  "@memberCountHeading": { "placeholders": { "count": { "type": "int" } } },
+  "@memberCountHeading": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "changeRoleTo": "Change role: {role}",
-  "@changeRoleTo": { "placeholders": { "role": { "type": "String" } } },
+  "@changeRoleTo": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "approveAs": "Approve as {role}",
-  "@approveAs": { "placeholders": { "role": { "type": "String" } } },
+  "@approveAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
   "withdrawIrreversible": "This cannot be undone.",
   "noItemsHint": "Use \"{addItem}\" at the bottom right to add a file or a URL.",
-  "@noItemsHint": { "placeholders": { "addItem": { "type": "String" } } },
+  "@noItemsHint": {
+    "placeholders": {
+      "addItem": {
+        "type": "String"
+      }
+    }
+  },
   "removeSiteAdmin": "Remove as administrator",
   "siteAdminGranted": "They are now a site admin. The change applies after they sign in again.",
   "siteAdminRevoked": "They are no longer a site admin. The change applies after they sign in again.",
@@ -148,7 +178,16 @@
   "purgeGraceHelp": "Default 30. List administrators can restore during this period, and the space stays used.",
   "invalidNumber": "Please enter a valid number.",
   "saved": "Saved.",
-  "@siteAdminCountSummary": { "placeholders": { "admins": { "type": "Object" }, "total": { "type": "Object" } } },
+  "@siteAdminCountSummary": {
+    "placeholders": {
+      "admins": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "verificationResent": "Verification email resent.",
   "verificationNotYet": "Not verified yet. Please open the link in the email.",
   "displayNameHelper": "You can change this later",
@@ -156,47 +195,59 @@
   "noItemsYet": "There are no items yet.",
   "noSearchResults": "No items matched your search.",
   "deleteItemBody": "{days, plural, =1{This item will be deleted.\n\nThe file is kept for 1 day, and list admins can restore it during that time.} other{This item will be deleted.\n\nThe file is kept for {days} days, and list admins can restore it during that time.}}",
-  "@deleteItemBody": { "placeholders": { "days": { "type": "int" } } },
+  "@deleteItemBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "restorableUntil": "List administrators can restore this until {date}.",
-  "@restorableUntil": { "placeholders": { "date": { "type": "Object" } } },
+  "@restorableUntil": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
   "noCommentsYet": "There are no comments yet.",
   "replyingTo": "Replying to \"{body}\"",
-  "@replyingTo": { "placeholders": { "body": { "type": "Object" } } },
-  "inviteReceived": "You have an invite",
-  "joinThisList": "You will join this list.",
+  "@replyingTo": {
+    "placeholders": {
+      "body": {
+        "type": "Object"
+      }
+    }
+  },
   "join": "Join",
   "fileWithSize": "{name} ({size})",
-  "@fileWithSize": { "placeholders": { "name": { "type": "Object" }, "size": { "type": "Object" } } },
+  "@fileWithSize": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
   "fileReplaceNotSupported": "Replacing the file is not implemented yet. You can still change the title, artist and date.",
   "save": "Save",
   "cancel": "Cancel",
-
   "uploadProgress": "Uploading… {percent}%",
   "uploadFailed": "Upload failed. Please try again.",
   "quotaExceeded": "Storage limit reached. Please contact the list admin.",
   "quotaRemaining": "{remaining} left",
-
   "comments": "Comments",
   "writeComment": "Write a comment",
   "reply": "Reply",
   "commentDeleted": "Deleted",
-
   "conflictBody": "Someone else updated this item. Please reload the latest version.",
   "reload": "Reload",
-
   "joinRequestBody": "The contents of this list stay hidden until your request is approved.",
   "joinRequestButton": "Request to join",
   "joinRequestSent": "Your request has been sent. Please wait for approval.",
   "leaveList": "Leave this list",
-
-  "inviteAccepted": "You have joined the list.",
-  "inviteExpired": "This invitation has expired. Please ask for a new one.",
-  "inviteAlreadyUsed": "This invitation has already been used. Please ask for a new one.",
-  "inviteRevoked": "This invitation has been revoked.",
-  "inviteNotFound": "Invitation not found. Please check the URL.",
-  "inviteAlreadyMember": "You are already a member of this list.",
-  "createInvite": "Create invite URL",
-
   "myRequestsEmpty": "You have no requests yet.",
   "myJoinRequests": "Your join requests",
   "open": "Open",
@@ -206,7 +257,6 @@
   "requestAgain": "Request again",
   "approve": "Approve",
   "reject": "Reject",
-
   "members": "Members",
   "manageMembers": "Manage members",
   "joinRequests": "Join requests",
@@ -214,7 +264,6 @@
   "listSettings": "List settings",
   "deleteList": "Delete list",
   "deleteListWarning": "Deleting this list also deletes all of its files and comments. This cannot be undone.",
-
   "siteAdminListRequests": "List requests",
   "siteAdminLists": "Lists and storage",
   "siteAdminUsers": "Users",
@@ -223,14 +272,12 @@
   "assignListAdmin": "Assign a list admin",
   "promoteToSiteAdmin": "Make site admin",
   "lastSiteAdminBlocked": "You are currently the only site admin. Please appoint another site admin first.",
-
   "displayName": "Display name",
   "language": "Language",
   "notificationSettings": "Notifications",
   "notificationMaster": "All notifications",
   "withdraw": "Delete my account",
   "withdrawWarning": "Your items and comments stay in the lists after you leave. Your name will be shown as \"Former member\".",
-
   "notifyItemAdded": "A song was added",
   "notifyCommentAdded": "A comment was posted",
   "notifyQuotaNotice": "Storage passed 80%",
@@ -238,7 +285,6 @@
   "notifyListRequested": "A list was requested",
   "notifyJoinRequested": "Someone asked to join",
   "notifyRequestApproved": "Your request was approved",
-
   "notifyItemAddedDetail": "When a song is added to a list you belong to, including lists you manage.",
   "notifyCommentAddedDetail": "When a comment is posted on a list you manage, or on something you posted.",
   "notifyQuotaNoticeDetail": "When a list you manage passes 80% of its storage limit.",
@@ -246,11 +292,8 @@
   "notifyListRequestedDetail": "When someone requests a new list. Site admins only.",
   "notifyJoinRequestedDetail": "When someone asks to join a list you manage.",
   "notifyRequestApprovedDetail": "When a request you submitted is approved.",
-
   "notificationsEmpty": "No notifications.",
   "markAllAsRead": "Mark all as read",
-
-
   "functionErrorSignInRequired": "Please sign in.",
   "functionErrorEmailNotVerified": "Your email address is not verified yet. Please open the link in the verification email.",
   "functionErrorSiteAdminOnly": "Only site admins can do this.",
@@ -266,18 +309,49 @@
   "functionErrorInvalidQuota": "The limit must be at least 1 byte.",
   "functionErrorLastSiteAdmin": "You are currently the only site admin. Please appoint another site admin first.",
   "functionErrorAlreadyMember": "You have already joined this list.",
-  "functionErrorInviteNotFound": "That invite was not found. Please check the URL.",
-  "functionErrorInviteExpired": "This invite has expired.",
-  "functionErrorInviteAlreadyUsed": "This invite has already been used.",
-  "functionErrorInviteRevoked": "This invite has been revoked.",
   "functionErrorInviteRoleNotAllowed": "Invites cannot grant the list admin role.",
   "functionErrorRoleNotAllowed": "Please choose Super User or Read Only.",
   "functionErrorMissingField": "Something required is missing.",
   "functionErrorFieldTooLong": "That value is too long.",
   "functionErrorListNameTaken": "\"{listName}\" is already in use or pending.",
-  "@functionErrorListNameTaken": { "placeholders": { "listName": { "type": "String" } } },
-
+  "@functionErrorListNameTaken": {
+    "placeholders": {
+      "listName": {
+        "type": "String"
+      }
+    }
+  },
   "errorGeneric": "Something went wrong. Please try again later.",
   "errorNoPermission": "You do not have permission to do this.",
-  "notFound": "Page not found."
+  "notFound": "Page not found.",
+  "createShareLink": "Create a share link",
+  "copyShareLinkAs": "Copy link (join as {role})",
+  "@copyShareLinkAs": {
+    "description": "共有リンクをコピーする操作（仕様書 3.3）",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLinkCopied": "Link copied.",
+  "shareLinkReusableNote": "It never expires and can be used by any number of people, any number of times. Revoke it to stop it.",
+  "shareLinkCopyFailed": "Could not create the link. Please try again.",
+  "copyItemShareLink": "Copy a link to this track",
+  "revokeShareLink": "Revoke link",
+  "shareLinkRevokedDone": "Link revoked. It can no longer be used.",
+  "shareLinkReceived": "A link was shared with you",
+  "shareLinkChooseHint": "Choose one. You can change this later.",
+  "shareLinkJoinTitle": "Join",
+  "shareLinkJoinBody": "You become a member. Your name appears in the member list and you are notified when tracks are added. Depending on your role you can add tracks and comments.",
+  "shareLinkViewTitle": "View without joining",
+  "shareLinkViewBody": "You do not become a member. You can browse the tracks and listen to them. You will not appear in the member list, receive no notifications, and cannot post.",
+  "shareLinkChangeLaterNote": "If you choose to view only and later want to join, just open the same link again.",
+  "shareLinkNotFound": "Link not found. Please check the URL.",
+  "shareLinkRevoked": "This link has been revoked. Please ask for a new one.",
+  "functionErrorShareLinkNotFound": "Link not found. Please check the URL.",
+  "functionErrorShareLinkRevoked": "This link has been revoked.",
+  "functionErrorItemNotFound": "Track not found.",
+  "viewersTitle": "Viewing without joining",
+  "viewersEmpty": "No one yet."
 }

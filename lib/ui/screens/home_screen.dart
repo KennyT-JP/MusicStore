@@ -15,7 +15,6 @@ import '../../domain/quota.dart';
 import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
-import '../format.dart';
 import '../routes.dart';
 import '../share_url.dart';
 import '../widgets/async_view.dart';
@@ -139,8 +138,8 @@ class _ListCard extends ConsumerWidget {
                   // 付与する役割は選んだ時点で決まる。あとから
                   // 「どちらで招待したか」を思い出せるようにするため、
                   // 役割を項目名に出す。
-                  if (Permissions.canCreateInvite(access))
-                    _InviteMenu(listId: entry.list.id),
+                  if (Permissions.canCreateShareLink(access))
+                    _ShareLinkMenu(listId: entry.list.id),
                 ],
               ),
               const SizedBox(height: 8),
@@ -225,16 +224,16 @@ class _QuotaBar extends ConsumerWidget {
 ///
 /// 発行した URL は**1 回しか使えず、既定 24 時間で切れる**。
 /// 押した時点で招待が作られるので、配る直前に押してもらう。
-class _InviteMenu extends ConsumerStatefulWidget {
-  const _InviteMenu({required this.listId});
+class _ShareLinkMenu extends ConsumerStatefulWidget {
+  const _ShareLinkMenu({required this.listId});
 
   final String listId;
 
   @override
-  ConsumerState<_InviteMenu> createState() => _InviteMenuState();
+  ConsumerState<_ShareLinkMenu> createState() => _ShareLinkMenuState();
 }
 
-class _InviteMenuState extends ConsumerState<_InviteMenu> {
+class _ShareLinkMenuState extends ConsumerState<_ShareLinkMenu> {
   bool _busy = false;
 
   @override
@@ -250,43 +249,45 @@ class _InviteMenuState extends ConsumerState<_InviteMenu> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.more_vert),
-      tooltip: l10n.createInvite,
-      onSelected: _copyInviteUrl,
+      tooltip: l10n.createShareLink,
+      onSelected: _copyShareLink,
       itemBuilder: (context) => [
-        // 招待で付与できるのは Super User と Read Only だけ（仕様書 3.3）。
+        // **役割は「参加する」を選んだ人に付く（仕様書 3.3）。**
+        // 参加せずに見るだけの人には関係しない。
+        // 付与できるのは Super User と Read Only だけ。
         PopupMenuItem(
           value: ListRole.superUser,
-          child: Text(l10n.copyInviteUrlAs(l10n.roleSuperUser)),
+          child: Text(l10n.copyShareLinkAs(l10n.roleSuperUser)),
         ),
         PopupMenuItem(
           value: ListRole.readOnly,
-          child: Text(l10n.copyInviteUrlAs(l10n.roleReadOnly)),
+          child: Text(l10n.copyShareLinkAs(l10n.roleReadOnly)),
         ),
       ],
     );
   }
 
-  Future<void> _copyInviteUrl(ListRole role) async {
+  Future<void> _copyShareLink(ListRole role) async {
     final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
     setState(() => _busy = true);
     try {
-      final invite = await ref
+      final linkId = await ref
           .read(functionsRepositoryProvider)
-          .createInvite(listId: widget.listId, role: role);
+          .createShareLink(listId: widget.listId, role: role);
 
-      final url = buildShareUrl(AppRoutes.invite(invite.inviteId));
+      final url = buildShareUrl(AppRoutes.shareLink(linkId));
       await Clipboard.setData(ClipboardData(text: url));
       if (!mounted) return;
 
-      // **有効期限と 1 回限りであることを必ず添える。**
-      // URL だけ渡されると、あとで使おうとして切れていることに気づけない。
+      // **何度でも使えることを添える。** 以前は期限と 1 回限りを
+      // 伝えていた。いまはその逆で、配ったあとも生き続けることと、
+      // 止めるには取り消しが要ることを伝える必要がある。
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            '${l10n.inviteUrlCopied}\n'
-            '${l10n.inviteExpiryNote(formatDateTime(invite.expiresAt))}',
+            '${l10n.shareLinkCopied}\n${l10n.shareLinkReusableNote}',
           ),
         ),
       );
@@ -297,7 +298,7 @@ class _InviteMenuState extends ConsumerState<_InviteMenu> {
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.inviteUrlCopyFailed)));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shareLinkCopyFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
