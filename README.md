@@ -3,6 +3,7 @@
 メンバーが個々に録音した音源や、YouTube 等で見つけた楽曲を、1 つのリストに集約して共有するアプリです。まず Web 版を開発し、将来的に Android / iOS への展開も見据えています。
 
 - **作業の決めごと**：[CLAUDE.md](CLAUDE.md) — **配信の前には必ずテストを全件通す**
+- **引き継ぎ**：[docs/HANDOVER.md](docs/HANDOVER.md) — **担当を交代する人はここから**
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
@@ -103,10 +104,12 @@ lib/
     playback.dart          再生・一時停止・停止の移り変わり（8.1）
   data/
     firestore_paths.dart   Firestore / Storage のパス定義（13.2 / 13.7）
+    audio_player_handle.dart 音を鳴らす部分。テストで差し替えるための境界（8.1）
     models/                Firestore のドキュメントに対応するモデル
     repositories/          Firestore / Storage の読み書き
   providers/
     app_providers.dart     Riverpod のプロバイダ（認証・リスト・項目）
+    playback_provider.dart 再生の操作。画面と domain/playback.dart をつなぐ（8.1）
   env/
     app_environment.dart   本番・検証の切り替え（12.2）
     firebase_options.dart  Firebase の接続設定（クラウド分は要差し替え）
@@ -114,12 +117,15 @@ lib/
   ui/
     routes.dart            画面のパス定義（14.2）
     app_router.dart        画面遷移とリダイレクト判定（14.3）
+    share_url.dart         共有・招待 URL の組み立て（3.3）
+    format.dart            日時の表示形式
     shell/                 レスポンシブなアプリ外枠（14.1）
     screens/               各画面（14.2）
     widgets/               画面をまたいで使う部品
   l10n/                    日本語・英語の文言（2 章）。**画面の文字はすべてここを通す**
 
 functions/               Cloud Functions（TypeScript／仕様書 13.4）
+  src/errors.ts          エラーを符号で返す。画面が文言を引く（多言語化のため）
   src/domain/            権限・容量の規則（Flutter 側と同じ内容）
   src/triggers/          Firestore / Storage のトリガー
   src/callable/          申請の承認・招待・サイト管理者の操作
@@ -177,7 +183,16 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 
 ## 現在の状態
 
-仕様は確定済み、**検証環境（<https://music-storage-dev.web.app>）への配信まで完了**しています。
+仕様は確定済み、**検証環境と本番環境の両方への配信まで完了**しています。
+
+| 環境 | URL | 状態 |
+| --- | --- | --- |
+| 検証 | <https://music-storage-dev.web.app> | 配信済み |
+| 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-06 時点の版） |
+
+**未配信の変更があります。** 一覧からの再生・ホームからの招待・確認メールの
+日本語化と、配信のキャッシュ指定の修正が、ブランチにあって本番にはありません。
+次に何をすればよいかは [docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
 
 ### 画面（20 / 20 実装済み）
 
@@ -187,8 +202,8 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 | サインアップ | 登録と確認メールの送信 |
 | メール確認待ち | 再送・確認の取り直し |
 | パスワード再設定 | リセットリンクの送信 |
-| ホーム（参加リスト一覧） | リスト名・項目数・自分の役割。管理者には容量 |
-| リスト詳細（項目一覧） | 並び替え・検索・削除済みの表示切替 |
+| ホーム（参加リスト一覧） | リスト名・項目数・自分の役割。管理者には容量と招待 URL のコピー |
+| リスト詳細（項目一覧） | 並び替え・検索・削除済みの表示切替。**行の左から直接再生**（8.1） |
 | 項目詳細 | ファイル／URL の再生・ダウンロード、コメントスレッド |
 | 項目の追加・編集 | ファイル／URL のタブ切替、進捗表示、容量チェック |
 | 通知一覧 | 未読の強調、対象への遷移、すべて既読 |
@@ -226,6 +241,6 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 - **利用者向けマニュアル**（未作成。画面を見ただけでは推測できない業務ルールが多いため）
 - **手動テストケース台帳**（仕様 12.6 が「別途整備する」としたまま。手動側の網羅性を測れていません）
 - 項目編集時の**ファイル差し替え**（未実装。ファイル → URL の切り替えだけは通り、旧ファイルは 24 時間で消えます）
-- 本番環境の構築 — Firestore と Cloud Storage の**ロケーションは作成後に変更できません**（仕様書 12.1 / 12.2）
-- 予算アラートの設定（仕様書 12.1）— 自動停止を実装しない方針のため、唯一の歯止めです
+- 本番の**予算アラートの設定**（仕様書 12.1）— 自動停止を実装しない方針のため、唯一の歯止めです
 - 依存パッケージの脆弱性確認（`npm audit` / `flutter pub outdated` を 2 回の監査でどちらも未実行）
+- 古いブラウザに残った**アイコンフォントの手当て**（2026-08-07 の不具合の残り。[docs/HANDOVER.md](docs/HANDOVER.md) 参照）
