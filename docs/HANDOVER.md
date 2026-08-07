@@ -46,7 +46,7 @@
 
 | 実行するもの | 件数 | エミュレータ |
 | --- | --- | --- |
-| `flutter analyze` / `flutter test` | 247 | 不要 |
+| `flutter analyze` / `flutter test` | 251 | 不要 |
 | `cd rules-test && npm test` | 111 | スクリプトが自動で起動・終了 |
 | `cd functions && npm test` | 78 | 不要 |
 | `cd functions && npm run test:integration` | 47 | **別のウィンドウで `npm run serve` が必要** |
@@ -237,7 +237,7 @@ catch (_) { ...再生できませんでした... }   // ← 中身を捨てて�
 cd C:\Users\1206441\MusicStore
 git pull origin claude/attachment-continuation-ryb7wv
 git log --oneline -1                  :: ec97064 が出ることを確認
-flutter test                          :: 247 件
+flutter test                          :: 251 件
 scripts\deploy.cmd
 ```
 
@@ -254,7 +254,7 @@ scripts\deploy.cmd
 **検証環境で鳴ることを確認してから**、テストを全件通します。
 
 ```
-flutter test                                   :: 247 件
+flutter test                                   :: 251 件
 cd functions && npm test                       :: 78 件
 cd ..\rules-test && npm test                   :: 111 件
 （1枚目）cd ..\functions && npm run serve

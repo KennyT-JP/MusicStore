@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -17,22 +17,110 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="録音した音源や見つけた楽曲を、1 つのリストに集めて共有するアプリです。">
+  <meta name="theme-color" content="#1B5E9E">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="music_list_app">
+  <meta name="apple-mobile-web-app-title" content="音楽リスト">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>music_list_app</title>
+  <title>音楽リスト</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    **表示までの待ち時間を縮めるための指定。**
+
+    Flutter Web は「index.html を読む → flutter_bootstrap.js →
+    main.dart.js → 描画に必要なものを取りに行く」と、順番に辿って
+    初めて必要なファイルが分かる作りになっている。**先に分かっている分は
+    先に取りに行かせる。**
+
+    - main.dart.js（圧縮後およそ 1.1MB）はどの画面でも必ず要る
+    - 描画部（CanvasKit、圧縮後およそ 2.1MB）は Google の配信網から取る。
+      接続の確立だけでも往復が要るので、先に済ませておく
+  -->
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
+  <style>
+    /*
+      **読み込み中に白い画面を出さない。**
+
+      Flutter は必要なものを取り終えるまで何も描かない。この間、既定では
+      真っ白なページのままになり、止まっているのか読み込み中なのかが
+      分からない。ここは HTML と CSS だけで作ってあるので、
+      **アプリの読み込みを 1 バイトも待たずに出る。**
+
+      消すのは Flutter が最初の描画を終えたとき（下の flutter-first-frame）。
+    */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #F8F9FF;               /* 明るい配色の surface に合わせる */
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html, body { background: #111318; }
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      /* 読み込みが一瞬で終わるときに、ちらつかせない。 */
+      animation: fade-in 0.2s ease-out 0.3s both;
+    }
+
+    @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+    #loading .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(27, 94, 158, 0.25);
+      border-top-color: #1B5E9E;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg) } }
+
+    #loading .label {
+      color: #43474E;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #loading .spinner { border-color: rgba(164, 202, 255, 0.25); border-top-color: #A4CAFF; }
+      #loading .label { color: #C3C6CF; }
+    }
+
+    /* 動きを控える設定の端末では回さない。 */
+    @media (prefers-reduced-motion: reduce) {
+      #loading .spinner { animation: none; }
+      #loading { animation: none; }
+    }
+  </style>
 </head>
 <body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="label">読み込んでいます…</div>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -42,5 +130,13 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Flutter が最初の描画を終えたら、読み込み中の表示を消す。
+    // このイベントは Flutter 側が発火する。
+    window.addEventListener('flutter-first-frame', function () {
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    });
+  </script>
 </body>
 </html>

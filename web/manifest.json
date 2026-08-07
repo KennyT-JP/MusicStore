@@ -1,12 +1,12 @@
 {
-    "name": "music_list_app",
-    "short_name": "music_list_app",
+    "name": "音楽リスト",
+    "short_name": "音楽リスト",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F8F9FF",
+    "theme_color": "#1B5E9E",
+    "description": "録音した音源や見つけた楽曲を、1 つのリストに集めて共有するアプリです。",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
