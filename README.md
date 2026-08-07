@@ -162,7 +162,7 @@ docs/                    仕様書・セットアップ手順・開発ログ
 ```sh
 flutter test                        # 242 件
 cd rules-test && npm test           # 111 件（Firestore ルール 98 件・Storage 13 件）
-cd functions && npm test            # 76 件（サーバー側のドメインロジック・通知）
+cd functions && npm test            # 78 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 47 件（要エミュレータ）
 ```
 

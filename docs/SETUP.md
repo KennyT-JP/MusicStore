@@ -238,7 +238,40 @@ Firebase CLI は関数を**新規作成したとき**にこの設定を入れま
 Cloud Build の失敗などで途中まで進んだ場合、作成後の設定だけが飛ばされることがあります。
 その場合、あとから `firebase deploy` を繰り返しても更新扱いになるため直りません。
 
-**直し方は作り直しです。**
+> **2026-08-07 に本番で実際に起きました。** 初回の本番配信で 20 件が
+> 「Failed to create」となり、再実行したところ「update」で成功しました。
+> **関数はできたが、呼び出しの許可だけが入らない**状態です。
+> 配信ログの `create` / `update` を見れば予測できます。
+> 失敗した直後の再実行が `update` になっていたら、この症状を疑ってください。
+
+**対象は `onCall` の 15 件だけです。** トリガー（`onFileUploaded` など）と
+定期実行は利用者が直接呼ばないので、呼び出しの許可とは無関係です。
+消す必要はありません。
+
+#### 直し方 1：許可だけ与える（推奨・作り直さない）
+
+[Cloud Shell](https://console.cloud.google.com/) を開いて実行します
+（`gcloud` が最初から入っています）。**関数は消えず、止まりません。**
+
+```sh
+PROJECT=music-storage-d79b2      # 検証環境なら music-storage-dev
+REGION=asia-northeast1
+
+for f in submitListRequest approveListRequest rejectListRequest \
+         submitJoinRequest approveJoinRequest rejectJoinRequest \
+         createInvite acceptInvite revokeInvite \
+         grantSiteAdmin revokeSiteAdmin withdrawAccount \
+         listSiteUsers setListQuota assignListAdmin; do
+  gcloud functions add-invoker-policy-binding "$f" \
+    --region="$REGION" --member=allUsers --project="$PROJECT"
+done
+```
+
+すでに許可が入っているものは、そのまま通ります（何度実行しても安全です）。
+
+#### 直し方 2：作り直す
+
+`gcloud` が使えない場合です。**消えている間、その操作はエラーになります。**
 
 ```sh
 firebase functions:delete submitListRequest approveListRequest rejectListRequest \
@@ -246,26 +279,26 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   createInvite acceptInvite revokeInvite \
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin \
-  onItemCreated onItemWritten onCommentCreated onMemberWritten onListDeleted \
-  purgeDeletedFiles \
-  --region asia-northeast1 --project music-storage-dev --force
+  --region asia-northeast1 --project music-storage-d79b2 --force
 
-firebase functions:delete onFileUploaded onFileDeleted \
-  --region us-east1 --project music-storage-dev --force
-
-./scripts/deploy.sh --no-build --only=functions
+./scripts/deploy.sh prod --no-build --only=functions
 ```
 
 削除してから作り直すと、Firebase CLI が呼び出しの許可を含めて設定し直します。
 データ（Firestore・Storage）には影響しません。
 
-`gcloud` が使える環境（Google Cloud コンソールの Cloud Shell など）なら、
-作り直さずに許可だけ与えることもできます。
+#### どちらの場合も、直ったことの確かめ方
 
-```sh
-gcloud functions add-invoker-policy-binding submitListRequest \
-  --region=asia-northeast1 --member=allUsers --project=music-storage-dev
+アプリからリスト作成を申請し、`internal` が出なくなることを確認します。
+ログにこれが**出ていなければ**直っています。
+
 ```
+The request was not authenticated. ... Empty Authorization header value.
+```
+
+> **`internal` は「関数の中で想定外の例外が出た」ときにも出ます。**
+> ログに上の行が無い場合は別の原因です。ログの本文を読んでください。
+
 
 ### 監査対応を配信するとき（既存データの手当て）
 
@@ -820,7 +853,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 flutter test      # 242 件
 flutter analyze
 
-cd functions && npm test   # 76 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # 78 件（サーバー側のドメインロジック・通知）
 ```
 
 権限判定・容量上限・連番・招待 URL・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。

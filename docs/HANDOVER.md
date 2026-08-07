@@ -48,7 +48,7 @@
 | --- | --- | --- |
 | `flutter analyze` / `flutter test` | 242 | 不要 |
 | `cd rules-test && npm test` | 111 | スクリプトが自動で起動・終了 |
-| `cd functions && npm test` | 76 | 不要 |
+| `cd functions && npm test` | 78 | 不要 |
 | `cd functions && npm run test:integration` | 47 | **別のウィンドウで `npm run serve` が必要** |
 
 > **注意：作業用のコンテナ内では `rules-test` が緑になりません。**
@@ -122,6 +122,38 @@ Flutter はアイコン用の `MaterialIcons-Regular.otf` を、**そのビル�
 **この件から学んだこと：**
 「ファイル名が変わらない = 中身が変わらない」ではありません。
 [AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) の観点 6 に追記してあります。
+
+### 本番でリスト作成の申請が `internal` で失敗する
+
+**症状：** 本番環境でリスト作成を申請すると `internal` とだけ表示される。
+
+**原因：Cloud Run の呼び出し許可が入っていません。** アプリのコードではありません。
+
+`onCall` の関数は、Cloud Run の側で「誰でも呼べる」状態にしておく必要があります
+（利用者の確認は関数の中で `request.auth` を見て行う設計です）。
+Firebase CLI は関数を**新規作成したときだけ**この設定を入れます。
+
+**2026-08-07 の初回本番配信は、20 件が「Failed to create」で失敗し、
+再実行で「update」になって成功しました。** 関数はできたが、
+**作成時にしか入らない呼び出し許可だけが入らなかった**状態です。
+以後 `firebase deploy` を何度繰り返しても更新扱いなので直りません。
+
+**直し方は [SETUP.md](SETUP.md) の「呼び出し可能関数が `internal` で失敗するとき」にあります。**
+Cloud Shell から `gcloud functions add-invoker-policy-binding` を
+**onCall の 15 件**に対して実行するのが早く、関数を止めずに済みます。
+トリガーと定期実行は利用者が直接呼ばないので、対象外です。
+
+**確かめ方：** Cloud Functions のログに次が出ていれば、この原因で確定です。
+
+```
+The request was not authenticated. ... Empty Authorization header value.
+```
+
+**出ていなければ別の原因です。** `internal` は関数の中で想定外の例外が出たときにも出ます。
+ログの本文を読んでください。
+
+`functions/test/setup_doc.test.ts` で、手順書の関数一覧が実装とずれないよう固定しました。
+一覧から漏れた関数は、復旧手順を実行しても直らないためです。
 
 ---
 
