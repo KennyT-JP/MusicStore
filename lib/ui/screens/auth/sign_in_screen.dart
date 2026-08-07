@@ -70,7 +70,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             const SizedBox(height: 16),
           ],
           FilledButton.tonalIcon(
-            onPressed: _busy ? null : () => _run(auth.signInWithGoogle),
+            onPressed: _busy
+                ? null
+                : () => _run(
+                    () => auth.signInWithGoogle(
+                      // 登録時の表示言語を、その人の設定として残す（2 章）。
+                      languageCode: Localizations.localeOf(context).languageCode,
+                    ),
+                  ),
             icon: const Icon(Icons.account_circle_outlined),
             label: Text(l10n.signInWithGoogle),
           ),
@@ -141,6 +148,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   void _submit(dynamic auth) {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    _run(() => auth.signInWithEmail(_email.text, _password.text));
+    // 初回のログインで users を作るときに、表示言語として残す（2 章）。
+    final languageCode = Localizations.localeOf(context).languageCode;
+    _run(
+      () => auth.signInWithEmail(
+        _email.text,
+        _password.text,
+        languageCode: languageCode,
+      ),
+    );
   }
 }

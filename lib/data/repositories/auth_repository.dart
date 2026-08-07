@@ -39,19 +39,23 @@ class AuthRepository {
   ///
   /// Web ではポップアップを使う。モバイル版を作るときは
   /// google_sign_in パッケージ経由に差し替える必要がある。
-  Future<void> signInWithGoogle() async {
+  Future<void> signInWithGoogle({required String languageCode}) async {
     final provider = GoogleAuthProvider();
     final credential = await _auth.signInWithPopup(provider);
-    await _ensureUserDocument(credential.user);
+    await _ensureUserDocument(credential.user, languageCode: languageCode);
   }
 
   /// メールアドレスとパスワードでログインする。
-  Future<void> signInWithEmail(String email, String password) async {
+  Future<void> signInWithEmail(
+    String email,
+    String password, {
+    required String languageCode,
+  }) async {
     final credential = await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
-    await _ensureUserDocument(credential.user);
+    await _ensureUserDocument(credential.user, languageCode: languageCode);
   }
 
   /// メールアドレスとパスワードで登録する。
@@ -76,7 +80,11 @@ class AuthRepository {
     // updateDisplayName はサーバー側を更新するだけで、手元の User の
     // displayName は reload するまで空のまま。渡さずに user から読むと、
     // 「まだ空」と判断してメールアドレスの @ より前を採用してしまう。
-    await _ensureUserDocument(user, displayName: displayName);
+    await _ensureUserDocument(
+      user,
+      displayName: displayName,
+      languageCode: languageCode,
+    );
 
     // **メールの言語は送る直前に指定する（仕様書 2 章）。**
     // 指定しないと Firebase の既定（英語）で届く。画面が日本語なのに
@@ -135,7 +143,11 @@ class AuthRepository {
   /// クライアント側でも用意する。すでにあれば何もしない。
   /// [displayName] は登録画面で入力された名前。
   /// 指定がなければ Auth 側の表示名を使う（Google 連携のとき）。
-  Future<void> _ensureUserDocument(User? user, {String? displayName}) async {
+  Future<void> _ensureUserDocument(
+    User? user, {
+    String? displayName,
+    required String languageCode,
+  }) async {
     if (user == null) return;
     final ref = _db.doc(FirestorePaths.user(user.uid));
     final snapshot = await ref.get();
@@ -148,11 +160,19 @@ class AuthRepository {
         entered: displayName,
         authDisplayName: user.displayName,
         email: user.email,
-        fallback: 'ユーザー',
+        // 名前もメールアドレスも無いときの最後の受け皿。
+        // 画面に出る文字ではなく、この人の**表示名として保存される**値。
+        // 英語で使っている人に日本語の名前が付くのを避ける。
+        fallback: languageCode == 'ja' ? 'ユーザー' : 'User',
       ),
       email: user.email ?? '',
       photoUrl: user.photoURL,
-      locale: 'ja',
+      // **表示言語は、いま使っている言語で作る（仕様書 2 章）。**
+      // ここを 'ja' 固定にしていたため、英語で登録した人も
+      // 登録し終えた瞬間に日本語へ切り替わっていた（監査 第3回）。
+      // 確認メールだけは使っている言語で送っていたので、
+      // メールは英語・画面は日本語という食い違いになっていた。
+      locale: const {'ja', 'en'}.contains(languageCode) ? languageCode : 'en',
       isWithdrawn: false,
       notificationSettings: NotificationSettings.defaults(),
     );

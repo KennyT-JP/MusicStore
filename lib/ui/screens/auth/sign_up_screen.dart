@@ -73,7 +73,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             const SizedBox(height: 16),
           ],
           FilledButton.tonalIcon(
-            onPressed: _busy ? null : () => _run(auth.signInWithGoogle),
+            onPressed: _busy
+                ? null
+                : () => _run(
+                    () => auth.signInWithGoogle(
+                      // 登録時の表示言語を、その人の設定として残す（2 章）。
+                      languageCode: Localizations.localeOf(context).languageCode,
+                    ),
+                  ),
             icon: const Icon(Icons.account_circle_outlined),
             label: Text(l10n.signInWithGoogle),
           ),

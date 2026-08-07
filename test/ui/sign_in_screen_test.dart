@@ -20,8 +20,16 @@ void main() {
 
   setUp(() {
     auth = _FakeAuthRepository();
-    when(() => auth.signInWithGoogle()).thenAnswer((_) async {});
-    when(() => auth.signInWithEmail(any(), any())).thenAnswer((_) async {});
+    when(
+      () => auth.signInWithGoogle(languageCode: any(named: 'languageCode')),
+    ).thenAnswer((_) async {});
+    when(
+      () => auth.signInWithEmail(
+        any(),
+        any(),
+        languageCode: any(named: 'languageCode'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   Widget wrap(Widget child) => ProviderScope(
@@ -62,8 +70,15 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'ログイン'));
     await tester.pumpAndSettle();
 
+    // **表示言語も渡すこと。** users を作るときの表示言語になる（2 章）。
+    // 'ja' を固定で書いていたため、英語で登録した人も登録し終えた瞬間に
+    // 日本語へ切り替わっていた（監査 第3回）。
     verify(
-      () => auth.signInWithEmail('user@example.com', 'password'),
+      () => auth.signInWithEmail(
+        'user@example.com',
+        'password',
+        languageCode: 'ja',
+      ),
     ).called(1);
   });
 
@@ -74,6 +89,12 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'ログイン'));
     await tester.pumpAndSettle();
 
-    verifyNever(() => auth.signInWithEmail(any(), any()));
+    verifyNever(
+      () => auth.signInWithEmail(
+        any(),
+        any(),
+        languageCode: any(named: 'languageCode'),
+      ),
+    );
   });
 }
