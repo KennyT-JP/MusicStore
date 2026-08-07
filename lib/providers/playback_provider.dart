@@ -30,6 +30,23 @@ final downloadUrlResolverProvider = Provider<DownloadUrlResolver>(
   (ref) => ref.watch(itemRepositoryProvider).downloadUrl,
 );
 
+/// 直近の再生の失敗。
+///
+/// **握りつぶさない。** 以前は「再生できませんでした」とだけ出していたため、
+/// URL の取得に失敗したのか、ブラウザが自動再生を拒んだのか、
+/// 音の形式が読めなかったのかを、誰も区別できなかった（2026-08-07）。
+final playbackErrorProvider =
+    NotifierProvider<PlaybackErrorController, Object?>(
+      PlaybackErrorController.new,
+    );
+
+class PlaybackErrorController extends Notifier<Object?> {
+  @override
+  Object? build() => null;
+
+  void report(Object? error) => state = error;
+}
+
 /// いま何を、どういう状況で鳴らしているか。
 ///
 /// **アプリ全体で 1 つ。** リストを移動しても鳴り続けてよいし、
@@ -40,6 +57,14 @@ final playbackProvider = NotifierProvider<PlaybackController, PlaybackState>(
 
 class PlaybackController extends Notifier<PlaybackState> {
   StreamSubscription<void>? _completion;
+  StreamSubscription<Object>? _errors;
+
+  /// 一度取り出した再生用の URL。
+  ///
+  /// **2 度目の再生を速くするために持つ。** ブラウザは「利用者が触った直後」
+  /// でないと音を鳴らさないことがある。毎回 Storage へ問い合わせていると、
+  /// その待ち時間のあいだに間に合わなくなる。
+  final _urls = <String, String>{};
 
   @override
   PlaybackState build() {
@@ -50,7 +75,17 @@ class PlaybackController extends Notifier<PlaybackState> {
     _completion = handle.onCompleted.listen((_) {
       state = PlaybackPolicy.completed(state);
     });
-    ref.onDispose(() => _completion?.cancel());
+
+    // 鳴らし始められなかったとき。鳴っている表示のままにしない。
+    _errors = handle.onError.listen((error) {
+      state = PlaybackPolicy.stop(state).state;
+      ref.read(playbackErrorProvider.notifier).report(error);
+    });
+
+    ref.onDispose(() {
+      _completion?.cancel();
+      _errors?.cancel();
+    });
 
     return const PlaybackState();
   }
@@ -66,6 +101,7 @@ class PlaybackController extends Notifier<PlaybackState> {
 
     final transition = PlaybackPolicy.play(state, item.id);
     state = transition.state;
+    ref.read(playbackErrorProvider.notifier).report(null);
 
     final handle = ref.read(audioPlayerHandleProvider);
     try {
@@ -73,11 +109,16 @@ class PlaybackController extends Notifier<PlaybackState> {
         await handle.resume();
         return;
       }
-      final url = await ref.read(downloadUrlResolverProvider)(file.storagePath);
+      final url =
+          _urls[item.id] ??=
+              await ref.read(downloadUrlResolverProvider)(file.storagePath);
       await handle.playFrom(url);
-    } catch (_) {
-      // 取得や再生に失敗したら、鳴っている表示のままにしない。
+    } catch (error) {
+      // 取得や読み込みに失敗したら、鳴っている表示のままにしない。
+      // 次に押したときに取り直せるよう、覚えた URL も捨てる。
+      _urls.remove(item.id);
       state = PlaybackPolicy.stop(state).state;
+      ref.read(playbackErrorProvider.notifier).report(error);
       rethrow;
     }
   }

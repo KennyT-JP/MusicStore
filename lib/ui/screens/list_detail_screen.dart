@@ -488,6 +488,13 @@ class _PlaybackButtons extends ConsumerWidget {
     final controller = ref.read(playbackProvider.notifier);
     final playing = playback.isPlaying(item.id);
 
+    // 失敗はここで受ける。鳴らし始めの失敗は play() の外から届くため
+    // （ブラウザが自動再生を拒む場合など）、状態の変化として拾う。
+    ref.listen<Object?>(playbackErrorProvider, (previous, next) {
+      if (next == null || !playback.isActive(item.id)) return;
+      _showFailure(context, next);
+    });
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -510,17 +517,45 @@ class _PlaybackButtons extends ConsumerWidget {
     );
   }
 
+  /// 失敗を知らせる。
+  ///
+  /// **「再生できませんでした」だけで終わらせない。** 何が起きたのかを
+  /// 「詳細」から読めるようにする。以前は握りつぶしていたため、
+  /// 利用者も開発側も原因を切り分けられなかった（2026-08-07）。
+  void _showFailure(BuildContext context, Object error) {
+    final l10n = AppL10n.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.playbackFailed),
+        action: SnackBarAction(
+          label: l10n.showDetails,
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(l10n.playbackFailed),
+              content: SelectableText('$error'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(AppL10n.of(context).close),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _play(
     BuildContext context,
     WidgetRef ref,
     PlaybackController controller,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppL10n.of(context);
     try {
       await controller.play(item);
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.playbackFailed)));
+    } catch (error) {
+      if (context.mounted) _showFailure(context, error);
     }
   }
 }

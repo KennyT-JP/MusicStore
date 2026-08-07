@@ -619,6 +619,18 @@ abstract class AppL10n {
   /// **'再生できませんでした。もう一度お試しください。'**
   String get playbackFailed;
 
+  /// No description provided for @showDetails.
+  ///
+  /// In ja, this message translates to:
+  /// **'詳細'**
+  String get showDetails;
+
+  /// No description provided for @close.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get close;
+
   /// No description provided for @copyInviteUrlAs.
   ///
   /// In ja, this message translates to:

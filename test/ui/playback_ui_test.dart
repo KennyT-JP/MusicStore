@@ -4,6 +4,8 @@
 /// 確かめる。音を鳴らす側は差し替えてある。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +25,10 @@ const _listId = 'list-1';
 /// 何を頼まれたかだけを覚える、音の側の差し替え。
 class _FakeHandle implements AudioPlayerHandle {
   final calls = <String>[];
+  final _errors = StreamController<Object>.broadcast();
+
+  /// 鳴らし始められなかったことにする（ブラウザが自動再生を拒んだ等）。
+  void failToStart(Object error) => _errors.add(error);
 
   @override
   Future<void> playFrom(String url) async => calls.add('playFrom:$url');
@@ -40,7 +46,10 @@ class _FakeHandle implements AudioPlayerHandle {
   Stream<void> get onCompleted => const Stream.empty();
 
   @override
-  Future<void> dispose() async {}
+  Stream<Object> get onError => _errors.stream;
+
+  @override
+  Future<void> dispose() async => _errors.close();
 }
 
 ListItem _fileItem(int seq) => ListItem(
@@ -87,13 +96,18 @@ ListItem _urlItem(int seq) => ListItem(
   status: ContentStatus.active,
 );
 
-Widget _app(List<ListItem> items, _FakeHandle handle) => ProviderScope(
+Widget _app(
+  List<ListItem> items,
+  _FakeHandle handle, {
+  void Function()? onLookup,
+}) => ProviderScope(
   overrides: [
     audioPlayerHandleProvider.overrideWithValue(handle),
     // Storage に繋がずに URL を返す。
-    downloadUrlResolverProvider.overrideWithValue(
-      (path) async => 'https://example.com/$path',
-    ),
+    downloadUrlResolverProvider.overrideWithValue((path) async {
+      onLookup?.call();
+      return 'https://example.com/$path';
+    }),
     listProvider(_listId).overrideWith(
       (ref) => Stream.value(
         const MusicList(
@@ -233,6 +247,65 @@ void main() {
     // **先頭から鳴らし直さない。** resume を頼むこと。
     expect(handle.calls, contains('resume'));
     expect(handle.calls.any((c) => c.startsWith('playFrom')), isFalse);
+  });
+
+  testWidgets('鳴らし始められなかったら、原因を読める形で知らせる', (tester) async {
+    // **握りつぶさない。** 「再生できませんでした」だけでは、
+    // 自動再生を拒まれたのか、音が読めなかったのかを切り分けられない。
+    final handle = _FakeHandle();
+    await tester.pumpWidget(_app([_fileItem(1)], handle));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+
+    handle.failToStart('NotAllowedError: play() failed');
+    await tester.pump();
+
+    expect(find.text('再生できませんでした。もう一度お試しください。'), findsOneWidget);
+
+    // 「詳細」から技術的な内容を読める。
+    await tester.pumpAndSettle(); // 通知が出きるまで待つ
+    await tester.tap(find.text('詳細'));
+    await tester.pumpAndSettle();
+
+    final detail = tester.widget<SelectableText>(find.byType(SelectableText));
+    expect(detail.data, contains('NotAllowedError'));
+  });
+
+  testWidgets('鳴らし始めに失敗したら、再生ボタンに戻す', (tester) async {
+    // 鳴っていないのに一時停止のボタンが出たままにしない。
+    final handle = _FakeHandle();
+    await tester.pumpWidget(_app([_fileItem(1)], handle));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+
+    handle.failToStart('NotAllowedError: play() failed');
+    await tester.pump();
+
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(find.byIcon(Icons.pause), findsNothing);
+  });
+
+  testWidgets('2 度目の再生で URL を取り直さない（間に合わなくなるため）', (tester) async {
+    var lookups = 0;
+    final handle = _FakeHandle();
+    await tester.pumpWidget(
+      _app([_fileItem(1)], handle, onLookup: () => lookups++),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+
+    expect(lookups, 1, reason: '2 度目は覚えた URL を使う');
   });
 
   testWidgets('2 曲あっても、操作の対象は 1 つだけ', (tester) async {

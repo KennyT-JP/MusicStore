@@ -293,6 +293,12 @@ class AppL10nEn extends AppL10n {
   String get playbackFailed => 'Could not play this. Please try again.';
 
   @override
+  String get showDetails => 'Details';
+
+  @override
+  String get close => 'Close';
+
+  @override
   String copyInviteUrlAs(String role) {
     return 'Copy invite URL: $role';
   }

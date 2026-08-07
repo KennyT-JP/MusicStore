@@ -99,6 +99,8 @@
   "pausePlayback": "Pause",
   "stopPlayback": "Stop",
   "playbackFailed": "Could not play this. Please try again.",
+  "showDetails": "Details",
+  "close": "Close",
   "copyInviteUrlAs": "Copy invite URL: {role}",
   "@copyInviteUrlAs": { "placeholders": { "role": { "type": "String" } } },
   "inviteUrlCopied": "Invite URL copied.",

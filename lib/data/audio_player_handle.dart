@@ -5,6 +5,8 @@
 /// これを介して確かめられるようにする。
 library;
 
+import 'dart:async';
+
 import 'package:just_audio/just_audio.dart';
 
 /// 再生を頼む先。
@@ -24,6 +26,12 @@ abstract class AudioPlayerHandle {
   /// 最後まで鳴り終わったことを知らせる。
   Stream<void> get onCompleted;
 
+  /// 鳴らし始められなかったことを知らせる。
+  ///
+  /// **再生の開始は待てない**（`JustAudioHandle._start` 参照）ので、
+  /// 失敗はこちらへ流す。
+  Stream<Object> get onError;
+
   Future<void> dispose();
 }
 
@@ -32,6 +40,7 @@ class JustAudioHandle implements AudioPlayerHandle {
   JustAudioHandle([AudioPlayer? player]) : _player = player ?? AudioPlayer();
 
   final AudioPlayer _player;
+  final _errors = StreamController<Object>.broadcast();
 
   /// いま読み込んである URL。同じ曲を繰り返すときに読み直さない。
   String? _loaded;
@@ -45,11 +54,27 @@ class JustAudioHandle implements AudioPlayerHandle {
       // 同じ曲を先頭から。読み直さずに位置だけ戻す。
       await _player.seek(Duration.zero);
     }
-    await _player.play();
+    _start();
   }
 
   @override
-  Future<void> resume() => _player.play();
+  Future<void> resume() async => _start();
+
+  /// 鳴らし始める。
+  ///
+  /// **`play()` を待ってはいけない。** just_audio の `play()` が返す Future は
+  /// 「再生を始めた」ではなく「**再生が終わった／止まった**」ときに完了する。
+  /// 待つと、曲の長さのあいだ呼び出し側が止まったままになる。
+  ///
+  /// 待たない代わりに、鳴らし始められなかったときだけ `onError` へ流す。
+  /// ブラウザが自動再生を拒む（NotAllowedError）のがここに出る。
+  void _start() {
+    unawaited(
+      _player.play().catchError((Object error) {
+        if (!_errors.isClosed) _errors.add(error);
+      }),
+    );
+  }
 
   @override
   Future<void> pause() => _player.pause();
@@ -68,5 +93,11 @@ class JustAudioHandle implements AudioPlayerHandle {
       .where((state) => state == ProcessingState.completed);
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Stream<Object> get onError => _errors.stream;
+
+  @override
+  Future<void> dispose() async {
+    await _errors.close();
+    await _player.dispose();
+  }
 }

@@ -284,6 +284,12 @@ class AppL10nJa extends AppL10n {
   String get playbackFailed => '再生できませんでした。もう一度お試しください。';
 
   @override
+  String get showDetails => '詳細';
+
+  @override
+  String get close => '閉じる';
+
+  @override
   String copyInviteUrlAs(String role) {
     return '招待 URL をコピー：$role';
   }
