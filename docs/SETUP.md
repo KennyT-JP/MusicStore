@@ -582,6 +582,30 @@ Flutter はアイコン用の `MaterialIcons-Regular.otf` を、**そのビル�
 
 シークレット ウィンドウで開いて直るなら、原因はキャッシュだと切り分けられます。
 
+### 配信が `Cannot determine backend specification` で止まるとき
+
+**再実行しても直りません。** firebase は配信の前に、関数のコードを一度
+読み込んで「どんな関数があるか」を聞き出します。その待ち時間が
+既定で **10 秒**しかなく、そこを超えると出ます。
+
+`scripts/deploy.cmd` は `FUNCTIONS_DISCOVERY_TIMEOUT` を 120 秒にして
+起動します。**エミュレータの起動（`npm run serve`）にも同じ制限があります。**
+
+それでも超える場合は、まず単体で読めるか確かめてください。
+
+```sh
+cd functions
+npm run build
+node -e "require('./lib/index.js'); console.log('読み込めました')"
+```
+
+読めるのに配信で超えるなら、Node の版が `functions/package.json` の指定
+（22）と違うことが多いです。配信のログに次の 1 行が出ていないか見てください。
+
+```
+!  functions: Your requested "node" version "22" doesn't match your global version "24".
+```
+
 ### 統合テストが「submitListRequest が見つかりません」で止まるとき
 
 **エミュレータを起動したウィンドウの出力を見てください。** 原因は 2 通りあり、
@@ -909,7 +933,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 274 件
+flutter test      # 278 件
 flutter analyze
 
 cd functions && npm test   # 75 件（サーバー側のドメインロジック・通知）

@@ -160,7 +160,7 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 274 件
+flutter test                        # 278 件
 cd rules-test && npm test           # 124 件（Firestore ルール 111 件・Storage 13 件）
 cd functions && npm test            # 75 件（サーバー側のドメインロジック・通知）
 cd functions && npm run test:integration  # 55 件（要エミュレータ）

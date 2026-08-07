@@ -47,7 +47,7 @@
 
 | 実行するもの | 件数 | エミュレータ |
 | --- | --- | --- |
-| `flutter analyze` / `flutter test` | 274 | 不要 |
+| `flutter analyze` / `flutter test` | 278 | 不要 |
 | `cd rules-test && npm test` | 124 | スクリプトが自動で起動・終了 |
 | `cd functions && npm test` | 75 | 不要 |
 | `cd functions && npm run test:integration` | 55 | **別のウィンドウで `npm run serve` が必要** |
@@ -238,7 +238,7 @@ catch (_) { ...再生できませんでした... }   // ← 中身を捨てて�
 cd C:\Users\1206441\MusicStore
 git pull origin claude/attachment-continuation-ryb7wv
 git log --oneline -1                  :: ec97064 が出ることを確認
-flutter test                          :: 274 件
+flutter test                          :: 278 件
 scripts\deploy.cmd
 ```
 
@@ -255,7 +255,7 @@ scripts\deploy.cmd
 **検証環境で鳴ることを確認してから**、テストを全件通します。
 
 ```
-flutter test                                   :: 274 件
+flutter test                                   :: 278 件
 cd functions && npm test                       :: 75 件
 cd ..\rules-test && npm test                   :: 124 件
 （1枚目）cd ..\functions && npm run serve
@@ -355,6 +355,25 @@ git checkout -B claude/attachment-continuation-ryb7wv origin/claude/attachment-c
 
 **「見えない」の原因は、コード・ビルド成果物・配信・キャッシュのどこにでもあります。**
 層ごとに切り分けてください。
+
+### 同じ制限が別の入口にもある
+
+**2026-08-07 に、自分の申し送りを読んだ翌ターンにやりました。**
+
+関数の中身を読む工程には 10 秒の制限があり、Node の版が違うと超えます。
+エミュレータの起動でこれに当たり、`functions/serve.mjs` で待ち時間を
+延ばしました。**配信（`scripts/deploy.mjs`）を忘れていました。**
+数十分後、同じエラーで配信が止まりました。
+
+| 入口 | 直した順 |
+| --- | --- |
+| `functions/serve.mjs`（エミュレータ） | 先に直した |
+| `scripts/deploy.mjs`（配信） | **忘れた** |
+
+**環境変数や設定を 1 か所に入れたら、同じものを渡している入口を
+全部数えること。** このリポジトリで firebase を起動する場所は
+`scripts/deploy.mjs`・`scripts/dev-emulators.mjs`・`functions/serve.mjs`・
+`rules-test/run.mjs` の 4 つあります。
 
 ### 「配信済みのはず」と決めつけない
 

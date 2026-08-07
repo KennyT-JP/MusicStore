@@ -151,7 +151,21 @@ const noProxy = [process.env.NO_PROXY, '127.0.0.1', 'localhost', '::1']
 
 const code = await run('firebase', ['emulators:start', '--project', PROJECT], {
   cwd: root,
-  env: { ...process.env, NO_PROXY: noProxy, no_proxy: noProxy },
+  env: {
+    ...process.env,
+    NO_PROXY: noProxy,
+    no_proxy: noProxy,
+    // **関数の中身を読む工程の待ち時間（既定 10 秒）を延ばす。**
+    // 超えると「Cannot determine backend specification」となり、
+    // **関数が 1 つも読み込まれないまま** All emulators ready! が出る。
+    // Node の版が functions/package.json の指定（22）と違うと起きやすい。
+    //
+    // 同じ制限が functions/serve.mjs と scripts/deploy.mjs にもある。
+    // **firebase を起動する場所は 4 つあり、rules-test/run.mjs だけは
+    // firestore と storage しか起動しないので要らない。**
+    FUNCTIONS_DISCOVERY_TIMEOUT:
+      process.env.FUNCTIONS_DISCOVERY_TIMEOUT ?? '120',
+  },
 });
 
 process.exit(code ?? 1);

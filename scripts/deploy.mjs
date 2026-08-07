@@ -48,10 +48,34 @@ const target = wantsProd
 // -------------------------------------------------------------------------
 // 部品
 
+/**
+ * 子プロセスへ渡す環境変数。
+ *
+ * **関数の中身を調べる工程の待ち時間を延ばす。**
+ * firebase は配信の前に、この コードを一度読み込んで
+ * どんな関数があるかを聞き出す。既定の待ち時間は **10 秒**しかなく、
+ * Node の版が `functions/package.json` の指定（22）と違うときや、
+ * 初回の読み込みが遅いときにここを超える。
+ *
+ * ```
+ * Error: User code failed to load. Cannot determine backend specification.
+ *        Timeout after 10000.
+ * ```
+ *
+ * **同じ制限がエミュレータの起動にもある**（`functions/serve.mjs`）。
+ * 2026-08-07 にエミュレータ側だけ直し、こちらを忘れて配信で同じ形に
+ * ぶつかった。**片側だけ塞ぐと、もう片側で同じことが起きる**
+ * （docs/AUDIT-CHECKLIST.md 観点 4）。
+ */
+const childEnv = {
+  ...process.env,
+  FUNCTIONS_DISCOVERY_TIMEOUT: process.env.FUNCTIONS_DISCOVERY_TIMEOUT ?? '120',
+};
+
 function run(command, args, options = {}) {
   return new Promise((resolve) => {
     // Windows では firebase / flutter の実体が .bat や .cmd なので shell 経由で起動する。
-    const child = spawn(command, args, { stdio: 'inherit', shell: isWindows, cwd: root, ...options });
+    const child = spawn(command, args, { stdio: 'inherit', shell: isWindows, cwd: root, env: childEnv, ...options });
     child.on('error', () => resolve(null));
     child.on('close', (code) => resolve(code));
   });
@@ -59,7 +83,7 @@ function run(command, args, options = {}) {
 
 function capture(command, args) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { shell: isWindows, cwd: root });
+    const child = spawn(command, args, { shell: isWindows, cwd: root, env: childEnv });
     let out = '';
     child.stdout?.on('data', (d) => (out += d));
     child.stderr?.on('data', (d) => (out += d));
@@ -247,7 +271,20 @@ console.log('\n==> デプロイ');
     const cmd = isWindows ? 'scripts\\deploy.cmd' : './scripts/deploy.sh';
     const to = `${cmd}${wantsProd ? ' prod' : ''}`;
 
-    console.error('  よくある原因（いずれも初回特有で、再実行すれば通ります）:');
+    console.error('  まず、エラーの本文を読んでください。');
+    console.error('  **「再実行すれば通る」ものと、通らないものがあります。**');
+    console.error('');
+    console.error('  ▼ 再実行しても通らないもの');
+    console.error('   ・Cannot determine backend specification. Timeout after ...');
+    console.error('     → 関数の中身を読む工程が制限時間を超えています。');
+    console.error(`       このスクリプトは ${childEnv.FUNCTIONS_DISCOVERY_TIMEOUT} 秒に延ばして`);
+    console.error('       いますが、それでも超える場合は、まず単体で読めるか確かめてください:');
+    console.error('         cd functions');
+    console.error('         npm run build');
+    console.error('         node -e "require(\'./lib/index.js\'); console.log(\'読み込めました\')"');
+    console.error('       Node の版が functions/package.json の指定と違うと起きやすいです。');
+    console.error('');
+    console.error('  ▼ 再実行で通ることが多いもの（いずれも初回特有）');
     console.error('   ・送信が途中で切れた → そのまま再実行');
     console.error('     （hosting の uploading が途中で止まった場合など）');
     console.error('   ・初回は権限が行き渡るまで数分かかる → そのまま数分待って再実行');
