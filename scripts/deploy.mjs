@@ -13,7 +13,7 @@
  * 処理の本体をここに置いている理由は dev-emulators.mjs の冒頭を参照。
  */
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,6 +72,62 @@ function fail(message, howToFix) {
   console.error(`\n[エラー] ${message}`);
   if (howToFix) console.error(`         → ${howToFix}`);
   process.exit(1);
+}
+
+/** Flutter が生成する、この版で使う部品（プラグイン）の一覧。 */
+const pluginsFile = join(root, '.flutter-plugins-dependencies');
+
+/** 前回ビルドしたときの部品一覧を控えておく場所。 */
+const pluginsMemo = join(root, 'build', '.plugins-of-last-build');
+
+/** いまの部品一覧。Flutter の版によって書式が変わるので中身は解釈しない。 */
+function currentPlugins() {
+  try {
+    return readFileSync(pluginsFile, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 部品の顔ぶれが前回のビルドから変わっていたら `flutter clean` する。
+ *
+ * **変わっていなければ何もしない。** 毎回消すとビルドが数分延びる。
+ */
+async function ensureCleanBuildIfPluginsChanged() {
+  const now = currentPlugins();
+  // 一覧が無い＝まだ一度も pub get していない。ビルド側が教えてくれる。
+  if (now === null) return;
+
+  let previous = null;
+  try {
+    previous = readFileSync(pluginsMemo, 'utf8');
+  } catch {
+    // 控えが無い（このスクリプトで初めてビルドする）。
+    // 既存の生成物が古い可能性を否定できないので、一度だけ作り直す。
+  }
+
+  if (previous === now) return;
+
+  console.log('\n==> 部品の顔ぶれが前回のビルドと違うため、生成物を作り直します');
+  console.log('    （足した部品が組み込まれないまま配信されるのを防ぐため）');
+  const code = await run('flutter', ['clean']);
+  if (code !== 0) fail('flutter clean に失敗しました。');
+
+  const getCode = await run('flutter', ['pub', 'get']);
+  if (getCode !== 0) fail('flutter pub get に失敗しました。');
+}
+
+/** ビルドが通ったので、そのときの部品一覧を控える。 */
+function rememberPlugins() {
+  const now = currentPlugins();
+  if (now === null) return;
+  try {
+    mkdirSync(dirname(pluginsMemo), { recursive: true });
+    writeFileSync(pluginsMemo, now);
+  } catch {
+    // 控えられなくても配信は続ける。次回に一度余分に作り直すだけ。
+  }
 }
 
 // -------------------------------------------------------------------------
@@ -154,10 +210,22 @@ if (wantsProd && !skipConfirm) {
 if (skipBuild) {
   console.log('\n==> Flutter Web のビルドは省略（--no-build）');
 } else {
+  // **部品（プラグイン）の一覧が前回のビルドから変わっていたら、作り直す。**
+  //
+  // 追加した部品が組み込まれないままビルドされることがある。前に作った
+  // 生成物が残っていると、古い部品一覧がそのまま使われるためである。
+  // 画面は動くのに、その部品を使う操作だけが
+  // `MissingPluginException(No implementation found for method ...)`
+  // で失敗する、という出方をする。ビルドも配信も成功するので気づけない。
+  // （2026-08-07、just_audio を足したときに実際に起きた）
+  await ensureCleanBuildIfPluginsChanged();
+
   console.log('\n==> Flutter Web をビルド');
   const code = await run('flutter', ['build', 'web', '--release', ...target.dartDefine]);
   if (code === null) fail('flutter コマンドが見つかりません。', 'https://docs.flutter.dev/get-started/install');
   if (code !== 0) fail('flutter build web に失敗しました。');
+
+  rememberPlugins();
 }
 
 // functions のビルドは firebase.json の predeploy が行う。

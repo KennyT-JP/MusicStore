@@ -589,10 +589,26 @@ Flutter はアイコン用の `MaterialIcons-Regular.otf` を、**そのビル�
 
 | 詳細に出る内容 | 原因 | 対処 |
 | --- | --- | --- |
+| `MissingPluginException(No implementation found for method init on channel com.ryanheise.just_audio.methods)` | **`just_audio` の Web 版が組み込まれないままビルドされています。**アプリのコードの問題ではありません | `flutter clean` → `flutter pub get` → 配信し直す（下の囲みを参照） |
 | `NotAllowedError: play() failed because the user didn't interact...` | ブラウザが自動再生を止めています。画面に一度も触れていない状態とみなされました | **もう一度再生ボタンを押してください。** 2 度目は URL を取り直さないぶん速く、通ることが多いです |
 | `[firebase_storage/object-not-found]` | Storage にファイルがありません。猶予期間の掃除で消えたか、登録が途中で失敗しています | 項目を登録し直してください |
 | `[firebase_storage/unauthorized]` | そのリストのメンバーとして読む権限がありません | メンバーに入っているか、メール確認が済んでいるかを確かめてください |
 | `PlatformException(4, Failed to load URL...)` | ブラウザがその音を読めません。形式が対応外か、通信が途中で切れています | 別の端末・別のブラウザで試し、mp3 で登録し直してください |
+
+> **`MissingPluginException` は、足した部品が組み込まれなかったという意味です。**
+>
+> 前に作った生成物が残っていると、**古い部品一覧がそのまま使われる**ことがあります。
+> ビルドも配信も成功し、画面も動くのに、**その部品を使う操作だけが失敗します。**
+> 気づきにくいので、`scripts/deploy.mjs` に手当てを入れてあります。
+> 部品の顔ぶれが前回のビルドと変わっていたら、自動で `flutter clean` します。
+>
+> 手で直すときは次のとおりです。
+>
+> ```sh
+> flutter clean
+> flutter pub get
+> scripts\deploy.cmd
+> ```
 
 > **再生ボタンが出るのは、音として鳴らせるファイルだけです**（仕様 8.1）。
 > ファイルの種類は登録時に制限していない（7.1）ので、画像や書類も登録できますが、
