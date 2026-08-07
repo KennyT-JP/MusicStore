@@ -526,6 +526,9 @@ class _PlaybackButtons extends ConsumerWidget {
     final l10n = AppL10n.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        // **既定の 4 秒では押しそこねる。** 原因を読んでもらうための
+        // 通知なので、消えるまでの時間を延ばす。
+        duration: const Duration(seconds: 15),
         content: Text(l10n.playbackFailed),
         action: SnackBarAction(
           label: l10n.showDetails,
