@@ -582,6 +582,32 @@ Flutter はアイコン用の `MaterialIcons-Regular.otf` を、**そのビル�
 
 シークレット ウィンドウで開いて直るなら、原因はキャッシュだと切り分けられます。
 
+### 統合テストが「submitListRequest が見つかりません」で止まるとき
+
+**エミュレータを起動したウィンドウの出力を見てください。** 原因は 2 通りあり、
+片方に決めつけると調査が無駄になります（2026-08-07 に実際に遠回りしました）。
+
+| ウィンドウに出ているもの | 原因 | 対処 |
+| --- | --- | --- |
+| `Failed to load function definition from source: ... Timeout after 10000` | **関数が 1 つも読み込まれていない** | `npm run serve` を使う（待ち時間を 120 秒に延ばしてあります） |
+| URL に `music-storage-dev` が入っている | プロジェクト ID が違う | `npm run serve` を使う（`--project demo-musiclist` が入っています） |
+
+> **読み込みに失敗しても `All emulators ready!` は出ます。**
+> 表の枠が出たから起動できた、とは限りません。
+> その少し上に `!!` で始まる行が無いか確かめてください。
+
+読み込みが制限時間を超えるのは、`package.json` の `engines`（Node 22）と
+手元の Node の版が違うときに起きやすいです。`npm run serve` は
+`FUNCTIONS_DISCOVERY_TIMEOUT` を 120 秒にして起動します。
+
+それでも出る場合は、まず単体でビルドが通るか確かめてください。
+
+```sh
+cd functions
+npm run build
+node -e "require('./lib/index.js'); console.log('読み込めました')"
+```
+
 ### 一覧の再生ボタンで鳴らないとき
 
 「再生できませんでした」と出たら、**その通知の「詳細」を開いてください。**

@@ -117,7 +117,7 @@ async function preflight() {
 
   // 1. 関数エミュレータが、このプロジェクト ID で関数を配っているか。
   //    トークンを付けずに呼ぶので、正しければ「未認証」が返る。
-  //    プロジェクトが違えば、そんな関数は無いので 404 になる。
+  //    404 は「そんな関数は無い」。原因は 2 通りある。
   let res;
   try {
     res = await call('submitListRequest', {});
@@ -125,12 +125,30 @@ async function preflight() {
     stop(`関数エミュレータへ接続できません（${FN}）。`, `  ${error.message}`);
   }
   if (res.status === 404) {
+    // **原因を 1 つに決めつけない（2026-08-07）。**
+    // 以前はここで「プロジェクト ID が違います」とだけ出していた。
+    // 実際の原因は「関数が 1 つも読み込まれていない」ほうで、
+    // 読み込みに失敗しても All emulators ready! は出るため、
+    // 起動したウィンドウを見ない限り気づけない。
+    // 誤った原因を断定すると、そこから先の調査が全部無駄になる。
     stop(
-      '関数エミュレータは動いていますが、プロジェクト ID が違います。',
+      '関数エミュレータは動いていますが、submitListRequest が見つかりません。',
       '',
-      '  このテストは demo-musiclist を相手にしています。',
-      '  --project demo-musiclist を付けずに起動すると、.firebaserc の既定',
-      '  （検証環境 music-storage-dev）で立ち上がり、噛み合いません。'
+      '  考えられる原因は 2 つです。起動したウィンドウの出力を見てください。',
+      '',
+      '  【1】関数が 1 つも読み込まれていない',
+      '     次の 1 行が出ていませんか。',
+      '       Failed to load function definition from source:',
+      '       Cannot determine backend specification. Timeout after 10000.',
+      '     出ていたら、読み込みが制限時間を超えています。',
+      '     npm run serve は待ち時間を 120 秒に延ばしてあります。',
+      '     それでも出るなら、まず npm run build が通るか確かめてください。',
+      '',
+      '  【2】プロジェクト ID が違う',
+      '     このテストは demo-musiclist を相手にしています。',
+      '     --project demo-musiclist を付けずに起動すると、.firebaserc の',
+      '     既定（検証環境 music-storage-dev）で立ち上がり、噛み合いません。',
+      '     npm run serve を使えば付け忘れは起きません。'
     );
   }
 

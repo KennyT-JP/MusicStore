@@ -12,8 +12,8 @@
     "build:watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "//serve": "--project を付け忘れると .firebaserc の既定（検証環境 music-storage-dev）で立ち上がる。統合テストは demo-musiclist を相手にしているため、関数の URL もカスタムクレームの付与先も噛み合わなくなる。",
-    "serve": "npm run build && firebase emulators:start --project demo-musiclist --only functions,firestore,auth,storage,pubsub",
+    "//serve": "実行の中身は serve.mjs にある。関数の読み取り待ち時間を延ばす必要があり、その指定の書き方が OS で違うため（理由は serve.mjs の先頭）。",
+    "serve": "node serve.mjs",
     "deploy": "npm run build && firebase deploy --only functions",
     "test:integration": "node test/integration.mjs"
   },
