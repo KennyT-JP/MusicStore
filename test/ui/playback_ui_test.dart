@@ -249,6 +249,46 @@ void main() {
     expect(handle.calls.any((c) => c.startsWith('playFrom')), isFalse);
   });
 
+  testWidgets('曲が何曲あっても、知らせは 1 回だけ', (tester) async {
+    // **行ごとに知らせを出さない。** 出すと曲の数だけ同じ通知が重なる。
+    final handle = _FakeHandle();
+    await tester.pumpWidget(
+      _app([_fileItem(1), _fileItem(2), _fileItem(3)], handle),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow).first);
+    await tester.pump();
+    handle.failToStart('NotAllowedError: play() failed');
+    await tester.pumpAndSettle();
+
+    expect(find.text('再生できませんでした。もう一度お試しください。'), findsOneWidget);
+    expect(find.text('詳細'), findsOneWidget);
+  });
+
+  testWidgets('URL の取得に失敗したときも、詳細を読める', (tester) async {
+    // 押した処理の中で失敗する経路。鳴らし始めの失敗（下）とは別の道を通る。
+    final handle = _FakeHandle();
+    await tester.pumpWidget(
+      _app(
+        [_fileItem(1)],
+        handle,
+        onLookup: () => throw Exception('firebase_storage/object-not-found'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pumpAndSettle();
+
+    expect(find.text('詳細'), findsOneWidget);
+    await tester.tap(find.text('詳細'));
+    await tester.pumpAndSettle();
+
+    final detail = tester.widget<SelectableText>(find.byType(SelectableText));
+    expect(detail.data, contains('object-not-found'));
+  });
+
   testWidgets('鳴らし始められなかったら、原因を読める形で知らせる', (tester) async {
     // **握りつぶさない。** 「再生できませんでした」だけでは、
     // 自動再生を拒まれたのか、音が読めなかったのかを切り分けられない。

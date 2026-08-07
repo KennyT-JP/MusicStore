@@ -65,6 +65,17 @@ class ListDetailScreen extends ConsumerWidget {
     final list = ref.watch(listProvider(listId));
     final access = ref.watch(listAccessProvider(listId));
 
+    // 再生の失敗を知らせる（仕様書 8.1）。
+    //
+    // **画面に 1 つだけ置く。** 行ごとに置くと、曲の数だけ同じ通知が出る。
+    // また、鳴らし始めの失敗は再生ボタンを押した処理の**外から**届く
+    // （ブラウザが自動再生を拒む場合など）ので、行の状態を条件にすると
+    // そのときには対象が「停止」に戻っていて、通知が 1 つも出なくなる。
+    ref.listen<Object?>(playbackErrorProvider, (previous, next) {
+      if (next == null) return;
+      _showPlaybackFailure(context, next);
+    });
+
     // **未参加者はここで参加申請の画面へ振り替える（仕様書 5.3）。**
     // 共有 URL は誰でも開けるため、そのまま項目一覧を出そうとすると
     // ルールに弾かれて「権限がありません」になる。実装済みの
@@ -116,6 +127,40 @@ class ListDetailScreen extends ConsumerWidget {
               label: Text(l10n.addItem),
             )
           : null,
+    );
+  }
+
+  /// 再生できなかったことを知らせる。
+  ///
+  /// **「再生できませんでした」だけで終わらせない。** 何が起きたのかを
+  /// 「詳細」から読めるようにする。以前は例外を握りつぶしていたため、
+  /// URL の取得に失敗したのか、ブラウザが自動再生を拒んだのか、
+  /// 音の形式が読めなかったのかを、誰も区別できなかった（2026-08-07）。
+  void _showPlaybackFailure(BuildContext context, Object error) {
+    final l10n = AppL10n.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        // **既定の 4 秒では押しそこねる。** 原因を読んでもらうための
+        // 通知なので、消えるまでの時間を延ばす。
+        duration: const Duration(seconds: 15),
+        content: Text(l10n.playbackFailed),
+        action: SnackBarAction(
+          label: l10n.showDetails,
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(l10n.playbackFailed),
+              content: SelectableText('$error'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(AppL10n.of(context).close),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -488,13 +533,6 @@ class _PlaybackButtons extends ConsumerWidget {
     final controller = ref.read(playbackProvider.notifier);
     final playing = playback.isPlaying(item.id);
 
-    // 失敗はここで受ける。鳴らし始めの失敗は play() の外から届くため
-    // （ブラウザが自動再生を拒む場合など）、状態の変化として拾う。
-    ref.listen<Object?>(playbackErrorProvider, (previous, next) {
-      if (next == null || !playback.isActive(item.id)) return;
-      _showFailure(context, next);
-    });
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -502,9 +540,8 @@ class _PlaybackButtons extends ConsumerWidget {
           visualDensity: VisualDensity.compact,
           tooltip: playing ? l10n.pausePlayback : l10n.startPlayback,
           icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-          onPressed: () => playing
-              ? controller.pause()
-              : _play(context, ref, controller),
+          // 失敗の知らせは画面側で 1 つだけ受ける（ListDetailScreen）。
+          onPressed: () => playing ? controller.pause() : controller.play(item),
         ),
         if (playback.isActive(item.id))
           IconButton(
@@ -515,50 +552,5 @@ class _PlaybackButtons extends ConsumerWidget {
           ),
       ],
     );
-  }
-
-  /// 失敗を知らせる。
-  ///
-  /// **「再生できませんでした」だけで終わらせない。** 何が起きたのかを
-  /// 「詳細」から読めるようにする。以前は握りつぶしていたため、
-  /// 利用者も開発側も原因を切り分けられなかった（2026-08-07）。
-  void _showFailure(BuildContext context, Object error) {
-    final l10n = AppL10n.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        // **既定の 4 秒では押しそこねる。** 原因を読んでもらうための
-        // 通知なので、消えるまでの時間を延ばす。
-        duration: const Duration(seconds: 15),
-        content: Text(l10n.playbackFailed),
-        action: SnackBarAction(
-          label: l10n.showDetails,
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text(l10n.playbackFailed),
-              content: SelectableText('$error'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(AppL10n.of(context).close),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _play(
-    BuildContext context,
-    WidgetRef ref,
-    PlaybackController controller,
-  ) async {
-    try {
-      await controller.play(item);
-    } catch (error) {
-      if (context.mounted) _showFailure(context, error);
-    }
   }
 }

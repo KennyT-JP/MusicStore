@@ -116,10 +116,13 @@ class PlaybackController extends Notifier<PlaybackState> {
     } catch (error) {
       // 取得や読み込みに失敗したら、鳴っている表示のままにしない。
       // 次に押したときに取り直せるよう、覚えた URL も捨てる。
+      //
+      // **投げ直さない。** 知らせるのは playbackErrorProvider の役目で、
+      // 画面はそれを 1 か所で受ける。投げ直すと、受け手のいない失敗が
+      // 残るか、同じ通知が二重に出る。
       _urls.remove(item.id);
       state = PlaybackPolicy.stop(state).state;
       ref.read(playbackErrorProvider.notifier).report(error);
-      rethrow;
     }
   }
 
