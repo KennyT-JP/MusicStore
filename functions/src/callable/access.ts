@@ -118,9 +118,3 @@ export function requireString(
   return trimmed;
 }
 
-export function optionalString(data: unknown, key: string): string | undefined {
-  const value = (data as Record<string, unknown> | undefined)?.[key];
-  return typeof value === 'string' && value.trim().length > 0
-    ? value.trim()
-    : undefined;
-}

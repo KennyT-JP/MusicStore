@@ -9,12 +9,10 @@ import { describe, expect, test } from 'vitest';
 
 import {
   canStepDownAsSiteAdmin,
-  canWrite,
   effectiveRole,
   hasAtLeast,
   isAssignableRole,
   isListAdmin,
-  isMember,
   parseRole,
   type ListAccess,
 } from '../src/domain/roles';
@@ -56,13 +54,11 @@ describe('役割の階層（4.1）', () => {
   test('サイト管理者は全リストでリスト管理者と同等（4.2）', () => {
     expect(effectiveRole(siteAdmin)).toBe('listAdmin');
     expect(isListAdmin(siteAdmin)).toBe(true);
-    expect(isMember(siteAdmin)).toBe(true);
   });
 
   test('未参加者は何も持たない', () => {
     expect(effectiveRole(outsider)).toBeNull();
-    expect(isMember(outsider)).toBe(false);
-    expect(canWrite(outsider)).toBe(false);
+    expect(isListAdmin(outsider)).toBe(false);
   });
 
   test('未知の役割文字列は復元しない', () => {
@@ -87,17 +83,14 @@ describe('付与してよい役割（3.3 / 5.2）', () => {
   });
 });
 
-describe('項目の書き込み（4.2）', () => {
-  test('Super User 以上は書ける', () => {
-    expect(canWrite(superUser)).toBe(true);
-    expect(canWrite(listAdmin)).toBe(true);
-    expect(canWrite(siteAdmin)).toBe(true);
-  });
-
-  test('Read Only は書けない', () => {
-    expect(canWrite(readOnly)).toBe(false);
-  });
-});
+// **項目の書き込み（4.2）をここでは確かめない。**
+//
+// 項目とコメントはクライアントが直接書き込むため、判定を行うのは
+// firestore.rules であって、このサーバー側のコードではない。
+// かつてここに canWrite のテストがあったが、その canWrite は
+// **本番から一度も呼ばれていなかった**（監査 第3回）。
+// 通っているのに何も守らないテストは、守っている範囲を実際より
+// 広く見せる。確認は rules-test 側にある。
 
 describe('サイト管理者が 0 人になることの防止（4.5）', () => {
   test('最後の 1 人は降格・退会できない', () => {

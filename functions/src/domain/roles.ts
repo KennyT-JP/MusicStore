@@ -58,13 +58,23 @@ export function isListAdmin(access: ListAccess): boolean {
   return hasAtLeast(access, 'listAdmin');
 }
 
-export function canWrite(access: ListAccess): boolean {
-  return hasAtLeast(access, 'superUser');
-}
-
-export function isMember(access: ListAccess): boolean {
-  return effectiveRole(access) !== null;
-}
+/**
+ * **「Super User 以上か」「メンバーか」の判定はここに置かない。**
+ *
+ * かつて `canWrite` と `isMember` を用意し、テストも書いていたが、
+ * **本番からは一度も呼ばれていなかった**（監査 第3回）。
+ * 項目とコメントはクライアントが直接書き込むため、判定を行うのは
+ * `firestore.rules` の `canWrite()` / `isMember()` であって、
+ * ここではない。
+ *
+ * テストがあるのに本番から呼ばれていない関数は、守っているつもりの
+ * 範囲を実際より広く見せる。同じ指摘が 3 回続けて出ている
+ * （AUDIT-CHECKLIST 観点 4）。
+ *
+ * 呼び出し可能関数（onCall）で必要になるのは、いまのところ
+ * 「リスト管理者以上か」だけなので `isListAdmin` だけを置く。
+ * 増やすときは、**本番から呼ぶ場所と対で**足すこと。
+ */
 
 /**
  * サイト管理者が自分を降格・退会できるか（仕様書 4.5）。
