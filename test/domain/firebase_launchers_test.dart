@@ -27,6 +27,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/repo_files.dart';
+
 /// firebase を起動する入口。増やしたらここにも足すこと。
 ///
 /// `needsFunctions` が true のものは、関数を読み込むので待ち時間が要る。
@@ -105,17 +107,16 @@ void main() {
       // **一覧から漏れた入口は、この見張りの外側になる。**
       final found = <String>[];
       for (final dir in ['scripts', 'functions', 'rules-test']) {
-        for (final file in Directory(dir).listSync(recursive: true)) {
-          if (file is! File) continue;
-          if (!file.path.endsWith('.mjs') && !file.path.endsWith('.js')) {
-            continue;
-          }
-          if (file.path.contains('node_modules')) continue;
-          final source = file.readAsStringSync();
-          if (source.contains("'emulators:start'") ||
-              source.contains("'emulators:exec'") ||
-              source.contains("'deploy',")) {
-            found.add(file.path);
+        for (final extension in ['.mjs', '.js']) {
+          for (final entry in filesUnder(dir, extension: extension)) {
+            final source = entry.file.readAsStringSync();
+            if (source.contains("'emulators:start'") ||
+                source.contains("'emulators:exec'") ||
+                source.contains("'deploy',")) {
+              // **`/` にそろえてから比べる。** Windows では円記号区切りで
+              // 返るため、そのままだと一覧と一致しない（2026-08-07）。
+              found.add(entry.path);
+            }
           }
         }
       }

@@ -23,6 +23,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/repo_files.dart';
+
 Set<String> _keysOf(String path) {
   final map = jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
   return map.keys.where((k) => !k.startsWith('@')).toSet();
@@ -32,11 +34,15 @@ Set<String> _keysOf(String path) {
 String _allSource() {
   final buffer = StringBuffer();
   for (final dir in ['lib', 'test']) {
-    for (final file in Directory(dir).listSync(recursive: true)) {
-      if (file is! File || !file.path.endsWith('.dart')) continue;
+    for (final entry in filesUnder(dir)) {
       // 生成物は「使っている」に数えない。定義を写しただけのため。
-      if (file.path.contains('/l10n/')) continue;
-      buffer.write(file.readAsStringSync());
+      //
+      // **除外し損ねると、この確認は常に通る。** 生成物にはすべての
+      // 文言が定義として並んでいるので、どれも「使われている」ことに
+      // なってしまう。Windows では区切りが違って除外できていなかった
+      // （2026-08-07）。`filesUnder` が `/` にそろえて返す。
+      if (entry.path.contains('/l10n/')) continue;
+      buffer.write(entry.file.readAsStringSync());
     }
   }
   return buffer.toString();

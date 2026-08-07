@@ -19,15 +19,19 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/repo_files.dart';
+
 /// `lib/` のうち、本番コードとみなす場所。
 ///
 /// `lib/domain/` 自身は「定義側」なので、参照元としては数えない。
-List<File> _productionFiles() => Directory('lib')
-    .listSync(recursive: true)
-    .whereType<File>()
-    .where((f) => f.path.endsWith('.dart'))
-    .where((f) => !f.path.startsWith('lib/domain/'))
-    .where((f) => !f.path.startsWith('lib/l10n/')) // 生成物
+/// **除外は `/` にそろえたパスで行う。** Windows では円記号区切りで
+/// 返るため、そのままだと `lib/domain/` を除外できず、
+/// **定義側どうしの参照を「本番から呼ばれている」と数えてしまう**
+/// （見逃す側に倒れる／2026-08-07）。
+List<File> _productionFiles() => filesUnder('lib')
+    .where((e) => !e.path.startsWith('lib/domain/'))
+    .where((e) => !e.path.startsWith('lib/l10n/')) // 生成物
+    .map((e) => e.file)
     .toList();
 
 void main() {
@@ -62,11 +66,8 @@ void main() {
   });
 
   test('lib/domain のモジュールはすべて本番から使われている', () {
-    final modules = Directory('lib/domain')
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'))
-        .map((f) => f.uri.pathSegments.last)
+    final modules = filesUnder('lib/domain')
+        .map((e) => e.path.split('/').last)
         .toList();
 
     expect(modules, isNotEmpty);
@@ -88,10 +89,7 @@ void main() {
   test('リポジトリの公開メソッドが本番から呼ばれている', () {
     // 呼び出し元の無い公開メソッドは、たいてい「同じことを別の場所で
     // 直接やっている」印。isListNameTaken と canWithdraw がそうだった。
-    final repositories = Directory('lib/data/repositories')
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'));
+    final repositories = filesUnder('lib/data/repositories').map((e) => e.file);
 
     final unused = <String>[];
     for (final file in repositories) {
