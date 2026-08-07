@@ -883,13 +883,13 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 266 件
+flutter test      # 274 件
 flutter analyze
 
-cd functions && npm test   # 77 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # 75 件（サーバー側のドメインロジック・通知）
 ```
 
-権限判定・容量上限・連番・招待 URL・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
+権限判定・容量上限・連番・共有リンク・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
 
 > **権限と容量の規則は Dart と TypeScript の両方に持っています。**
 > Flutter 側（`lib/domain/`）は画面の出し分けに、Cloud Functions 側
@@ -903,7 +903,7 @@ cd functions && npm test   # 77 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 111 件（Firestore 98 件・Storage 13 件。スキップなし）
+npm test          # 124 件（Firestore 98 件・Storage 13 件。スキップなし）
 ```
 
 Firestore ルールは 92 件すべて検証できます。
@@ -944,7 +944,7 @@ Firestore ルールは 92 件すべて検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（47 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（54 件）。
 
 ```sh
 # ターミナル 1

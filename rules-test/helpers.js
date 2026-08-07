@@ -20,6 +20,8 @@ export const UID = {
   superUser: 'u-super-user',
   readOnly: 'u-read-only',
   outsider: 'u-outsider',
+  // 共有リンクから「参加せずに見る」を選んだ人（仕様書 3.3）。
+  viewer: 'u-viewer',
 };
 
 /** エミュレータを立ち上げ、ルールを読み込む。 */
@@ -82,7 +84,6 @@ export async function seed(env) {
     const db = ctx.firestore();
 
     await db.doc('siteConfig/global').set({
-      inviteExpiryHours: 24,
       defaultQuotaBytes: 1073741824,
       itemPurgeGraceDays: 30,
       orphanFileGraceHours: 24,
@@ -103,6 +104,10 @@ export async function seed(env) {
     });
     await db.doc(`users/${UID.outsider}`).set({
       displayName: '部外者',
+      isWithdrawn: false,
+    });
+    await db.doc(`users/${UID.viewer}`).set({
+      displayName: '見るだけの人',
       isWithdrawn: false,
     });
 
@@ -147,6 +152,20 @@ export async function seed(env) {
       via: 'invite',
     });
 
+    // **参加せずに見るだけの人（仕様書 3.3）。**
+    // メンバーではないので members には入れない。
+    await db.doc(`lists/${LIST_ID}/viewers/${UID.viewer}`).set({
+      uid: UID.viewer,
+      viaLink: 'link-1',
+    });
+
+    await db.doc('shareLinks/link-1').set({
+      listId: LIST_ID,
+      role: 'readOnly',
+      createdBy: UID.listAdmin,
+      revoked: false,
+    });
+
     await db.doc(`lists/${LIST_ID}/items/${ITEM_ID}`).set({
       seq: 1,
       date: '2026-08-04',
@@ -166,13 +185,6 @@ export async function seed(env) {
         createdBy: UID.superUser,
         status: 'active',
       });
-
-    await db.doc('invites/secret-invite-id').set({
-      listId: LIST_ID,
-      role: 'superUser',
-      createdBy: UID.listAdmin,
-      status: 'active',
-    });
 
     await db.doc('listNames/テストリスト').set({ listId: LIST_ID });
 

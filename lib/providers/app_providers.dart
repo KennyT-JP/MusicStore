@@ -340,13 +340,10 @@ final itemCommentsProvider =
 /// サイト設定（仕様書 13.3 `siteConfig/global`）。
 class SiteConfig {
   const SiteConfig({
-    this.inviteExpiryHours = 24,
     this.itemPurgeGraceDays = 30,
     this.defaultQuotaBytes = kDefaultQuotaBytes,
     this.siteAdminCount = 1,
   });
-
-  final int inviteExpiryHours;
   final int itemPurgeGraceDays;
 
   /// 新規リストの容量上限の初期値（仕様書 13.3）。
@@ -367,7 +364,6 @@ final siteConfigProvider = StreamProvider<SiteConfig>(
       .map((doc) {
         final data = doc.data() ?? const {};
         return SiteConfig(
-          inviteExpiryHours: (data['inviteExpiryHours'] as num?)?.toInt() ?? 24,
           itemPurgeGraceDays:
               (data['itemPurgeGraceDays'] as num?)?.toInt() ?? 30,
           defaultQuotaBytes:

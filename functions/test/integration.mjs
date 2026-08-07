@@ -215,26 +215,53 @@ if (!listId) {
   check('同じ申請は二度承認できない', r.body?.error?.status === 'FAILED_PRECONDITION',
         r.body?.error?.status);
 
-  // --- 招待 URL（3.3） ---
+  // --- 共有リンク（3.3） ---
   const applicantFresh = await refresh(applicant);
-  r = await call('createInvite', { listId, role: 'superUser' }, applicantFresh.idToken);
-  const inviteId = r.body?.result?.inviteId;
-  check('リスト管理者は招待を発行できる', !!inviteId, `len=${inviteId?.length ?? 0}`);
+  r = await call('createShareLink', { listId, role: 'superUser' }, applicantFresh.idToken);
+  const linkId = r.body?.result?.linkId;
+  check('リスト管理者は共有リンクを発行できる', !!linkId, `len=${linkId?.length ?? 0}`);
 
-  r = await call('createInvite', { listId, role: 'listAdmin' }, applicantFresh.idToken);
-  check('招待でリスト管理者は付与できない', r.body?.error?.status === 'INVALID_ARGUMENT', r.body?.error?.status);
+  r = await call('createShareLink', { listId, role: 'listAdmin' }, applicantFresh.idToken);
+  check('リンクでリスト管理者は付与できない', r.body?.error?.status === 'INVALID_ARGUMENT', r.body?.error?.status);
 
-  r = await call('acceptInvite', { inviteId }, invitee.idToken);
-  check('招待を受諾できる', r.body?.result?.listId === listId, JSON.stringify(r.body).slice(0, 120));
+  r = await call('acceptShareLink', { linkId, mode: 'join' }, invitee.idToken);
+  check('リンクから参加できる', r.body?.result?.listId === listId, JSON.stringify(r.body).slice(0, 120));
 
   const im = await doc(`lists/${listId}/members/${invitee.localId}`);
-  check('受諾で指定の役割が付く', sv(im, 'role') === 'superUser', sv(im, 'role'));
+  check('参加で指定の役割が付く', sv(im, 'role') === 'superUser', sv(im, 'role'));
 
-  // --- ワンタイム性（3.3） ---
+  // --- 何度でも・複数人（3.3） ---
+  // **ここが以前と逆になっている。** 以前は「二度目は使えない」ことを
+  // 確かめていた。いまは「二度目も使える」ことを確かめる。
   const second = await signUp('inv2');
-  r = await call('acceptInvite', { inviteId }, second.idToken);
-  check('同じ招待は二度使えない（ワンタイム）', r.body?.error?.status === 'FAILED_PRECONDITION',
+  r = await call('acceptShareLink', { linkId, mode: 'join' }, second.idToken);
+  check('同じリンクを別の人がもう一度使える', r.body?.result?.listId === listId,
         r.body?.error?.message ?? r.body?.error?.status);
+
+  const im2 = await doc(`lists/${listId}/members/${second.localId}`);
+  check('2 人目にも役割が付く', sv(im2, 'role') === 'superUser', sv(im2, 'role'));
+
+  // 同じ人が二度開いても弾かれない。
+  r = await call('acceptShareLink', { linkId, mode: 'join' }, second.idToken);
+  check('同じ人が二度開いても通る', r.status === 200, r.body?.error?.status);
+
+  // --- 参加せずに見るだけ（3.3） ---
+  const viewer = await signUp('viewer');
+  r = await call('acceptShareLink', { linkId, mode: 'view' }, viewer.idToken);
+  check('参加せずに見るを選べる', r.body?.result?.joined === false,
+        JSON.stringify(r.body?.result));
+
+  const vm = await doc(`lists/${listId}/members/${viewer.localId}`);
+  check('見るだけの人はメンバーにならない', vm === null || vm.fields === undefined,
+        JSON.stringify(vm?.fields ?? null).slice(0, 80));
+
+  const vv = await doc(`lists/${listId}/viewers/${viewer.localId}`);
+  check('見るだけの人は viewers に入る', sv(vv, 'uid') === viewer.localId, sv(vv, 'uid'));
+
+  // 見るだけを選んだあとで参加できる。
+  r = await call('acceptShareLink', { linkId, mode: 'join' }, viewer.idToken);
+  check('あとから参加できる', r.body?.result?.joined === true,
+        JSON.stringify(r.body?.result));
 
   // --- メンバー数の集計（13.4） ---
   await sleep(5000);
@@ -319,17 +346,21 @@ if (!listId) {
   check('審査中なら再申請しても素通りしない（S13）',
         r.body?.result?.alreadyPending === true, JSON.stringify(r.body?.result));
 
-  // --- 招待の取消（3.3） ---
-  r = await call('createInvite', { listId, role: 'readOnly' }, applicantFresh.idToken);
-  const revokeToken = r.body?.result?.inviteId ?? r.body?.result?.token;
-  check('取消用の招待を発行できる', !!revokeToken);
+  // --- リンクの取消（3.3） ---
+  // **期限が無いので、これが唯一の止める手段。**
+  r = await call('createShareLink', { listId, role: 'readOnly' }, applicantFresh.idToken);
+  const revokeToken = r.body?.result?.linkId;
+  check('取消用のリンクを発行できる', !!revokeToken);
 
-  r = await call('revokeInvite', { inviteId: revokeToken }, applicantFresh.idToken);
-  check('招待を取り消せる（3.3）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+  r = await call('revokeShareLink', { linkId: revokeToken }, applicantFresh.idToken);
+  check('リンクを取り消せる（3.3）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
 
   const revoked = await signUp('rvk');
-  r = await call('acceptInvite', { inviteId: revokeToken }, revoked.idToken);
-  check('取り消した招待は使えない', r.status !== 200, r.body?.error?.status);
+  r = await call('acceptShareLink', { linkId: revokeToken, mode: 'join' }, revoked.idToken);
+  check('取り消したリンクは使えない', r.status !== 200, r.body?.error?.status);
+
+  r = await call('acceptShareLink', { linkId: revokeToken, mode: 'view' }, revoked.idToken);
+  check('取り消したリンクは閲覧にも使えない', r.status !== 200, r.body?.error?.status);
 
   // --- 容量上限の変更（7.2） ---
   r = await call('setListQuota', { listId, quotaBytes: 2 * 1024 * 1024 * 1024 }, siteAdmin.idToken);

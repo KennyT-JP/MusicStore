@@ -62,9 +62,16 @@ describe('未ログイン（3.1.1）', () => {
     await assertFails(getDoc(doc(anon, `lists/${LIST_ID}/items/${ITEM_ID}`)));
   });
 
-  test('招待も読めない', async () => {
+  test('共有リンクも読めない', async () => {
+    // **ログインしていない人には、リンクを知っていても見せない（3.3）。**
+    // 「参加せずに見る」もログインは要る、という決めごとがここで効く。
     const anon = db(asAnonymous(env));
-    await assertFails(getDoc(doc(anon, 'invites/secret-invite-id')));
+    await assertFails(getDoc(doc(anon, 'shareLinks/link-1')));
+  });
+
+  test('参加せずに見る人の中身も、未ログインでは読めない', async () => {
+    const anon = db(asAnonymous(env));
+    await assertFails(getDoc(doc(anon, `lists/${LIST_ID}/items/${ITEM_ID}`)));
   });
 });
 
@@ -554,31 +561,6 @@ describe('リスト作成申請（5.1）', () => {
   });
 });
 
-describe('招待 URL（3.3 / 13.3）', () => {
-  test('ID を知っていれば読める', async () => {
-    const outsider = db(asUser(env, UID.outsider));
-    await assertSucceeds(getDoc(doc(outsider, 'invites/secret-invite-id')));
-  });
-
-  test('発行はクライアントからできない', async () => {
-    const listAdmin = db(asUser(env, UID.listAdmin));
-    await assertFails(
-      setDoc(doc(listAdmin, 'invites/forged'), {
-        listId: LIST_ID,
-        role: 'listAdmin',
-        status: 'active',
-      }),
-    );
-  });
-
-  test('使用済みに書き換えられない（ワンタイム性は Functions が担保）', async () => {
-    const outsider = db(asUser(env, UID.outsider));
-    await assertFails(
-      updateDoc(doc(outsider, 'invites/secret-invite-id'), { status: 'used' }),
-    );
-  });
-});
-
 describe('リスト名の重複チェック（5.1 / 13.3）', () => {
   test('ID 直接指定なら存在を確認できる', async () => {
     const outsider = db(asUser(env, UID.outsider));
@@ -949,6 +931,137 @@ describe('連番の採番（6.2）', () => {
           contentType: 'image/png',
         },
       }),
+    );
+  });
+});
+
+/**
+ * 参加せずに見るだけの人（仕様書 3.3）
+ *
+ * 共有リンクを開いて「参加しない」を選んだ人。
+ * **読めるだけ。** メンバーではないので、書き込みは一切できない。
+ */
+describe('参加せずに見るだけの人（3.3）', () => {
+  test('曲の一覧を読める', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertSucceeds(
+      getDoc(doc(viewer, `lists/${LIST_ID}/items/${ITEM_ID}`)),
+    );
+  });
+
+  test('コメントを読める', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertSucceeds(
+      getDoc(doc(viewer, `lists/${LIST_ID}/items/${ITEM_ID}/comments/c1`)),
+    );
+  });
+
+  test('連番などの内部情報も読める（欠番の表示に要る）', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertSucceeds(getDoc(doc(viewer, `lists/${LIST_ID}/meta/stats`)));
+  });
+
+  // ---- ここから「できないこと」。読めるだけであることを確かめる ----
+
+  test('曲を追加できない', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertFails(
+      setDoc(doc(viewer, `lists/${LIST_ID}/items/from-viewer`), {
+        seq: 2,
+        createdBy: UID.viewer,
+        status: 'active',
+      }),
+    );
+  });
+
+  test('コメントを書けない', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertFails(
+      setDoc(doc(viewer, `lists/${LIST_ID}/items/${ITEM_ID}/comments/new`), {
+        body: 'コメント',
+        createdBy: UID.viewer,
+        status: 'active',
+      }),
+    );
+  });
+
+  test('メンバーになれない（自分で members に入れない）', async () => {
+    // **ここが破れると、閲覧のつもりの経路から書き込み権限を取れる。**
+    const viewer = db(asUser(env, UID.viewer));
+    await assertFails(
+      setDoc(doc(viewer, `lists/${LIST_ID}/members/${UID.viewer}`), {
+        uid: UID.viewer,
+        role: 'superUser',
+        via: 'invite',
+      }),
+    );
+  });
+
+  test('自分で閲覧権を作れない（Functions だけが書ける）', async () => {
+    // **ここが破れると、リンクを持っていない人が中身を読めてしまう。**
+    const outsider = db(asUser(env, UID.outsider));
+    await assertFails(
+      setDoc(doc(outsider, `lists/${LIST_ID}/viewers/${UID.outsider}`), {
+        uid: UID.outsider,
+      }),
+    );
+  });
+
+  test('リンクを持たない人は、やはり読めない', async () => {
+    // 閲覧を許したことで、部外者まで読めるようになっていないこと。
+    const outsider = db(asUser(env, UID.outsider));
+    await assertFails(
+      getDoc(doc(outsider, `lists/${LIST_ID}/items/${ITEM_ID}`)),
+    );
+  });
+
+  test('自分から閲覧をやめられる', async () => {
+    const viewer = db(asUser(env, UID.viewer));
+    await assertSucceeds(
+      deleteDoc(doc(viewer, `lists/${LIST_ID}/viewers/${UID.viewer}`)),
+    );
+  });
+
+  test('誰が見ているかはリスト管理者に分かる', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await assertSucceeds(
+      getDoc(doc(listAdmin, `lists/${LIST_ID}/viewers/${UID.viewer}`)),
+    );
+  });
+
+  test('ほかのメンバーには、閲覧者の一覧を見せない', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await assertFails(
+      getDoc(doc(superUser, `lists/${LIST_ID}/viewers/${UID.viewer}`)),
+    );
+  });
+});
+
+/**
+ * 共有リンクそのもの（仕様書 3.3 / 13.3）
+ */
+describe('共有リンク（3.3）', () => {
+  test('ID を知っていれば読める', async () => {
+    const outsider = db(asUser(env, UID.outsider));
+    await assertSucceeds(getDoc(doc(outsider, 'shareLinks/link-1')));
+  });
+
+  test('一覧としては引けない（すべてのリンクを集められない）', async () => {
+    const outsider = db(asUser(env, UID.outsider));
+    await assertFails(getDocs(collection(outsider, 'shareLinks')));
+  });
+
+  test('クライアントからは作れない', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await assertFails(
+      setDoc(doc(listAdmin, 'shareLinks/forged'), { listId: LIST_ID }),
+    );
+  });
+
+  test('クライアントからは取り消せない（Functions 経由のみ）', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await assertFails(
+      updateDoc(doc(listAdmin, 'shareLinks/link-1'), { revoked: true }),
     );
   });
 });

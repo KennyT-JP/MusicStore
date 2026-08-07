@@ -95,7 +95,7 @@ lib/
     permissions.dart       権限判定（4.2 / 6.3 / 9）
     quota.dart             容量上限の判定（7.2 / 7.3 / 7.5）
     sequence.dart          連番の採番（6.2）
-    invite.dart            招待を受諾できない理由（3.3）。判定はサーバー側
+    share_link.dart        共有リンクを受け入れられない理由（3.3）。判定はサーバー側
     comment_tree.dart      コメントの入れ子ツリー（9）
     item_query.dart        検索・並び替え（6.4）
     display_name.dart      表示名の解決と初期値の決定（3.4 / 3.5 / 5.4）
@@ -153,17 +153,17 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | 権限判定（`domain/permissions.dart`） | 間違えると見えてはいけない情報が見える |
 | 容量上限（`domain/quota.dart`） | 80%／90% の通知境界、上限超過時のブロック |
 | 連番（`domain/sequence.dart`） | 振り直しなし・欠番維持が崩れると復旧できない |
-| 招待 URL（`functions/src/domain/invite.ts`） | ワンタイム性・有効期限。**判定はサーバー側にある** |
+| 共有リンク（`functions/src/domain/share_link.ts`） | 取り消しの判定。**判定はサーバー側にある** |
 | 孤児ファイルの削除判断（`functions/src/domain/paths.ts`） | 消したら戻せない |
 | 死蔵の有無（`test/domain/no_dead_code_test.dart`） | テストがあっても本番から呼ばれていなければ守られていない |
 | リダイレクト判定（`ui/app_router.dart`） | 未ログインで内容が漏れないこと |
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
 ```sh
-flutter test                        # 266 件
-cd rules-test && npm test           # 111 件（Firestore ルール 98 件・Storage 13 件）
-cd functions && npm test            # 77 件（サーバー側のドメインロジック・通知）
-cd functions && npm run test:integration  # 47 件（要エミュレータ）
+flutter test                        # 274 件
+cd rules-test && npm test           # 124 件（Firestore ルール 111 件・Storage 13 件）
+cd functions && npm test            # 75 件（サーバー側のドメインロジック・通知）
+cd functions && npm run test:integration  # 54 件（要エミュレータ）
 ```
 
 **画面に出る文字は必ず `lib/l10n/*.arb` を通してください。** 直書きすると
@@ -223,8 +223,8 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 | 自分の申請一覧 | 申請中／承認／却下の確認と再申請 |
 | リスト作成の申請 | 4 項目の入力。名前の重複はサーバー側で判定 |
 | リスト参加申請 | 共有 URL を開いた未参加者向け |
-| 招待の受諾 | 期限切れ・使用済みなど理由別の表示 |
-| メンバー管理 | 役割変更・除外・離脱・招待 URL の発行 |
+| 共有リンク | 参加するか、参加せずに見るかを選ぶ（3.3） |
+| メンバー管理 | 役割変更・除外・離脱・共有リンクの発行と取消・閲覧者の一覧 |
 | 参加申請の承認 | 承認時に役割を決定 |
 | リスト設定 | 容量表示・共有 URL・リスト削除 |
 | サイト管理（4 画面） | 申請承認・リストと容量・ユーザー管理・サイト設定 |
@@ -241,7 +241,7 @@ cd functions && npm run test:integration  # 47 件（要エミュレータ）
 | 項目の増減 | `stats.itemCount` の更新（ホームの件数表示） |
 | リスト作成申請 | 申請・承認・却下 |
 | 参加申請 | 申請・承認・却下 |
-| 招待 URL | 発行・受諾（ワンタイム）・取消 |
+| 共有リンク | 発行・受け入れ（参加／閲覧）・取消 |
 | サイト管理者 | 昇格・降格（最後の 1 人はブロック） |
 | 退会 | 投稿を残して isWithdrawn を立てる |
 | 定期実行（毎日 4:00 JST） | 猶予期間切れファイルと孤児ファイルの削除（走査の続きを持ち越す） |

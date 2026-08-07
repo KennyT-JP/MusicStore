@@ -769,24 +769,6 @@ abstract class AppL10n {
   /// **'サイト管理者から外しました。反映には本人の再ログインが必要です。'**
   String get siteAdminRevoked;
 
-  /// No description provided for @inviteExpiryLabel.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待 URL の有効期限'**
-  String get inviteExpiryLabel;
-
-  /// No description provided for @unitHours.
-  ///
-  /// In ja, this message translates to:
-  /// **'時間'**
-  String get unitHours;
-
-  /// No description provided for @inviteExpiryHelp.
-  ///
-  /// In ja, this message translates to:
-  /// **'初期値 24。受諾した時点で期限内かを判定します。'**
-  String get inviteExpiryHelp;
-
   /// No description provided for @defaultQuotaLabel.
   ///
   /// In ja, this message translates to:

@@ -677,7 +677,6 @@ class SiteAdminSettingsScreen extends ConsumerStatefulWidget {
 
 class _SiteAdminSettingsScreenState
     extends ConsumerState<SiteAdminSettingsScreen> {
-  final _inviteHours = TextEditingController();
   final _quotaMb = TextEditingController();
   final _graceDays = TextEditingController();
   bool _loaded = false;
@@ -685,7 +684,6 @@ class _SiteAdminSettingsScreenState
 
   @override
   void dispose() {
-    _inviteHours.dispose();
     _quotaMb.dispose();
     _graceDays.dispose();
     super.dispose();
@@ -702,7 +700,6 @@ class _SiteAdminSettingsScreenState
         builder: (site) {
           if (!_loaded) {
             _loaded = true;
-            _inviteHours.text = '${site.inviteExpiryHours}';
             _graceDays.text = '${site.itemPurgeGraceDays}';
             // **定数ではなく設定から読む。** 定数で埋めていたため、
             // 別の項目を直して保存するたびに容量上限が 1GB へ戻っていた
@@ -715,12 +712,6 @@ class _SiteAdminSettingsScreenState
             children: [
               _SiteAdminHeader(title: l10n.siteAdminSettings),
               const SizedBox(height: 24),
-              _SettingField(
-                controller: _inviteHours,
-                label: l10n.inviteExpiryLabel,
-                suffix: l10n.unitHours,
-                help: l10n.inviteExpiryHelp,
-              ),
               _SettingField(
                 controller: _quotaMb,
                 label: l10n.defaultQuotaLabel,
@@ -746,13 +737,10 @@ class _SiteAdminSettingsScreenState
   }
 
   Future<void> _save() async {
-    final invite = int.tryParse(_inviteHours.text.trim());
     final quotaMb = int.tryParse(_quotaMb.text.trim());
     final grace = int.tryParse(_graceDays.text.trim());
 
-    if (invite == null ||
-        invite <= 0 ||
-        quotaMb == null ||
+    if (quotaMb == null ||
         quotaMb <= 0 ||
         grace == null ||
         grace < 0) {
@@ -766,7 +754,6 @@ class _SiteAdminSettingsScreenState
     try {
       // siteAdminCount は Functions が持つため、ここでは触らない（仕様書 4.5）。
       await ref.read(firestoreProvider).doc('siteConfig/global').set({
-        'inviteExpiryHours': invite,
         'defaultQuotaBytes': quotaMb * 1024 * 1024,
         'itemPurgeGraceDays': grace,
       }, SetOptions(merge: true));

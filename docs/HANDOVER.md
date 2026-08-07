@@ -47,10 +47,10 @@
 
 | 実行するもの | 件数 | エミュレータ |
 | --- | --- | --- |
-| `flutter analyze` / `flutter test` | 266 | 不要 |
-| `cd rules-test && npm test` | 111 | スクリプトが自動で起動・終了 |
-| `cd functions && npm test` | 77 | 不要 |
-| `cd functions && npm run test:integration` | 47 | **別のウィンドウで `npm run serve` が必要** |
+| `flutter analyze` / `flutter test` | 274 | 不要 |
+| `cd rules-test && npm test` | 124 | スクリプトが自動で起動・終了 |
+| `cd functions && npm test` | 75 | 不要 |
+| `cd functions && npm run test:integration` | 54 | **別のウィンドウで `npm run serve` が必要** |
 
 > **注意：作業用のコンテナ内では `rules-test` が緑になりません。**
 > Storage のルールランタイムから Firestore を引く通信がプロキシに遮られ、
@@ -238,7 +238,7 @@ catch (_) { ...再生できませんでした... }   // ← 中身を捨てて�
 cd C:\Users\1206441\MusicStore
 git pull origin claude/attachment-continuation-ryb7wv
 git log --oneline -1                  :: ec97064 が出ることを確認
-flutter test                          :: 266 件
+flutter test                          :: 274 件
 scripts\deploy.cmd
 ```
 
@@ -255,11 +255,11 @@ scripts\deploy.cmd
 **検証環境で鳴ることを確認してから**、テストを全件通します。
 
 ```
-flutter test                                   :: 266 件
-cd functions && npm test                       :: 77 件
-cd ..\rules-test && npm test                   :: 111 件
+flutter test                                   :: 274 件
+cd functions && npm test                       :: 75 件
+cd ..\rules-test && npm test                   :: 124 件
 （1枚目）cd ..\functions && npm run serve
-（2枚目）cd ..\functions && npm run test:integration   :: 47 件
+（2枚目）cd ..\functions && npm run test:integration   :: 54 件
 ```
 
 全件成功を確認してから配信します。

@@ -392,15 +392,6 @@ class AppL10nJa extends AppL10n {
   String get siteAdminRevoked => 'サイト管理者から外しました。反映には本人の再ログインが必要です。';
 
   @override
-  String get inviteExpiryLabel => '招待 URL の有効期限';
-
-  @override
-  String get unitHours => '時間';
-
-  @override
-  String get inviteExpiryHelp => '初期値 24。受諾した時点で期限内かを判定します。';
-
-  @override
   String get defaultQuotaLabel => '新規リストの容量上限';
 
   @override

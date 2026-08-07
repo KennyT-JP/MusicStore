@@ -409,16 +409,6 @@ class AppL10nEn extends AppL10n {
       'They are no longer a site admin. The change applies after they sign in again.';
 
   @override
-  String get inviteExpiryLabel => 'Invite URL expiry';
-
-  @override
-  String get unitHours => 'hours';
-
-  @override
-  String get inviteExpiryHelp =>
-      'Default 24. Checked when the invite is accepted.';
-
-  @override
   String get defaultQuotaLabel => 'Default storage limit for new lists';
 
   @override
