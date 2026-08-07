@@ -141,12 +141,6 @@ class AppL10nEn extends AppL10n {
   String get columnDate => 'Date';
 
   @override
-  String get columnTitle => 'Title';
-
-  @override
-  String get columnArtist => 'Artist';
-
-  @override
   String get columnRegistrant => 'Added by';
 
   @override
@@ -202,9 +196,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get edit => 'Edit';
-
-  @override
-  String get inviteRevokedDone => 'The invite has been revoked.';
 
   @override
   String inviteExpiryNote(String until) {
@@ -568,17 +559,11 @@ class AppL10nEn extends AppL10n {
   String get commentDeleted => 'Deleted';
 
   @override
-  String get conflictTitle => 'Could not save';
-
-  @override
   String get conflictBody =>
       'Someone else updated this item. Please reload the latest version.';
 
   @override
   String get reload => 'Reload';
-
-  @override
-  String get joinRequestTitle => 'Join this list';
 
   @override
   String get joinRequestBody =>
@@ -655,9 +640,6 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get removeMember => 'Remove from list';
-
-  @override
-  String get changeRole => 'Change role';
 
   @override
   String get listSettings => 'List settings';

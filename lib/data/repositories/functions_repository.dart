@@ -223,7 +223,10 @@ class FunctionsRepository {
 
       throw FunctionsCallException(
         e.code,
-        e.message ?? '処理に失敗しました。',
+        // **ここで日本語を書かない。** 文言は画面が l10n から引く
+        // （ui/widgets/error_message.dart）。空のときは画面側が
+        // 一般的な文言に倒す（監査 第3回）。
+        e.message ?? '',
         reason: reason is String ? reason : null,
         params: {
           for (final entry in map.entries)

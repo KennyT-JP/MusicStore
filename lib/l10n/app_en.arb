@@ -48,8 +48,6 @@
 
   "columnSeq": "No.",
   "columnDate": "Date",
-  "columnTitle": "Title",
-  "columnArtist": "Artist",
   "columnRegistrant": "Added by",
 
   "sortBy": "Sort by",
@@ -71,7 +69,6 @@
   "artistLabel": "Artist (optional)",
   "commentLabel": "Comment (optional)",
   "edit": "Edit",
-  "inviteRevokedDone": "The invite has been revoked.",
   "inviteExpiryNote": "Valid until {until}. This URL can only be used once.",
   "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
   "cancelUpload": "Cancel upload",
@@ -184,11 +181,9 @@
   "reply": "Reply",
   "commentDeleted": "Deleted",
 
-  "conflictTitle": "Could not save",
   "conflictBody": "Someone else updated this item. Please reload the latest version.",
   "reload": "Reload",
 
-  "joinRequestTitle": "Join this list",
   "joinRequestBody": "The contents of this list stay hidden until your request is approved.",
   "joinRequestButton": "Request to join",
   "joinRequestSent": "Your request has been sent. Please wait for approval.",
@@ -216,7 +211,6 @@
   "manageMembers": "Manage members",
   "joinRequests": "Join requests",
   "removeMember": "Remove from list",
-  "changeRole": "Change role",
   "listSettings": "List settings",
   "deleteList": "Delete list",
   "deleteListWarning": "Deleting this list also deletes all of its files and comments. This cannot be undone.",

@@ -9,6 +9,8 @@
 /// **符号の一覧はサーバー側と同じ内容にしてある。** 増やしたら両方直すこと。
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,33 +18,28 @@ import 'package:music_list_app/data/repositories/functions_repository.dart';
 import 'package:music_list_app/l10n/app_localizations.dart';
 import 'package:music_list_app/ui/widgets/error_message.dart';
 
-/// functions/src/errors.ts の ERROR_CODES と同じ内容。
-const _codes = <String>[
-  'signInRequired',
-  'emailNotVerified',
-  'siteAdminOnly',
-  'listAdminOnly',
-  'listNotFound',
-  'userNotFound',
-  'requestNotFound',
-  'requestAlreadyHandled',
-  'listNameTaken',
-  'listNameMissing',
-  'requesterUnknown',
-  'invalidTrackCount',
-  'invalidUserCount',
-  'invalidQuota',
-  'lastSiteAdmin',
-  'alreadyMember',
-  'inviteNotFound',
-  'inviteExpired',
-  'inviteAlreadyUsed',
-  'inviteRevoked',
-  'inviteRoleNotAllowed',
-  'roleNotAllowed',
-  'missingField',
-  'fieldTooLong',
-];
+/// サーバー側の符号（`functions/src/errors.ts` の `ERROR_CODES`）。
+///
+/// **書き写さずに、その場で読む。** 以前はここに同じ一覧を並べ、
+/// 「増やしたら両方直すこと」と注意書きを添えていた。
+/// 注意書きは守られないことがあるし、守られなかったときに気づけない。
+/// 符号を足して画面側の対応を忘れると、**英語表示でもサーバーの
+/// 日本語がそのまま出る**（監査 第2回で実際に起きた形）。
+List<String> _serverErrorCodes() {
+  final source = File('functions/src/errors.ts').readAsStringSync();
+  final block = RegExp(
+    r'ERROR_CODES\s*=\s*\[(.*?)\]',
+    dotAll: true,
+  ).firstMatch(source);
+  expect(block, isNotNull, reason: 'errors.ts の ERROR_CODES が読めません');
+
+  final codes = RegExp(r"'([A-Za-z]\w*)'")
+      .allMatches(block!.group(1)!)
+      .map((m) => m.group(1)!)
+      .toList();
+  expect(codes, isNotEmpty, reason: '符号を 1 つも読み取れませんでした');
+  return codes;
+}
 
 /// サーバーが返す控えの文（日本語）。これが画面に出たら翻訳漏れ。
 const _serverFallback = 'サーバーの文';
@@ -78,7 +75,7 @@ void main() {
       final results = <String, String>{};
 
       await _pump(tester, locale, (context) {
-        for (final code in _codes) {
+        for (final code in _serverErrorCodes()) {
           results[code] = describeFunctionsError(
             context,
             FunctionsCallException(
@@ -91,7 +88,7 @@ void main() {
         }
       });
 
-      for (final code in _codes) {
+      for (final code in _serverErrorCodes()) {
         final text = results[code]!;
         expect(text.trim(), isNotEmpty, reason: '$code の文言が空');
         expect(
@@ -107,7 +104,7 @@ void main() {
       final duplicates = <String>[];
 
       await _pump(tester, locale, (context) {
-        for (final code in _codes) {
+        for (final code in _serverErrorCodes()) {
           final text = describeFunctionsError(
             context,
             FunctionsCallException('internal', _serverFallback, reason: code),
@@ -128,7 +125,7 @@ void main() {
     final results = <String>[];
 
     await _pump(tester, const Locale('en'), (context) {
-      for (final code in _codes) {
+      for (final code in _serverErrorCodes()) {
         results.add(
           describeFunctionsError(
             context,

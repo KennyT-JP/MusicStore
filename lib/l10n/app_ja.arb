@@ -72,8 +72,6 @@
 
   "columnSeq": "連番",
   "columnDate": "日付",
-  "columnTitle": "曲名",
-  "columnArtist": "アーティスト名",
   "columnRegistrant": "登録者",
 
   "sortBy": "並び替え",
@@ -101,7 +99,6 @@
   "artistLabel": "アーティスト名（任意）",
   "commentLabel": "コメント（任意）",
   "edit": "編集",
-  "inviteRevokedDone": "招待を取り消しました。",
   "inviteExpiryNote": "有効期限：{until} まで。この URL は 1 回しか使えません。",
   "@inviteExpiryNote": { "placeholders": { "until": { "type": "String" } } },
   "cancelUpload": "アップロードを中止",
@@ -227,14 +224,12 @@
   "reply": "返信",
   "commentDeleted": "削除されました",
 
-  "conflictTitle": "保存できませんでした",
   "conflictBody": "ほかの方がこの項目を更新しました。最新の内容を読み込み直してください。",
   "@conflictBody": {
     "description": "同時編集の検出（仕様書 6.3）"
   },
   "reload": "読み込み直す",
 
-  "joinRequestTitle": "このリストに参加する",
   "joinRequestBody": "このリストの中身は、参加が承認されるまで表示されません。",
   "joinRequestButton": "参加を申請",
   "joinRequestSent": "参加を申請しました。承認されるまでお待ちください。",
@@ -265,7 +260,6 @@
   "manageMembers": "メンバー管理",
   "joinRequests": "参加申請",
   "removeMember": "リストから外す",
-  "changeRole": "役割を変更",
   "listSettings": "リスト設定",
   "deleteList": "リストを削除",
   "deleteListWarning": "リストを削除すると、そのリストのファイル・コメントもすべて削除されます。この操作は取り消せません。",

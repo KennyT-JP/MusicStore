@@ -331,18 +331,6 @@ abstract class AppL10n {
   /// **'日付'**
   String get columnDate;
 
-  /// No description provided for @columnTitle.
-  ///
-  /// In ja, this message translates to:
-  /// **'曲名'**
-  String get columnTitle;
-
-  /// No description provided for @columnArtist.
-  ///
-  /// In ja, this message translates to:
-  /// **'アーティスト名'**
-  String get columnArtist;
-
   /// No description provided for @columnRegistrant.
   ///
   /// In ja, this message translates to:
@@ -456,12 +444,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'編集'**
   String get edit;
-
-  /// No description provided for @inviteRevokedDone.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待を取り消しました。'**
-  String get inviteRevokedDone;
 
   /// No description provided for @inviteExpiryNote.
   ///
@@ -1027,12 +1009,6 @@ abstract class AppL10n {
   /// **'削除されました'**
   String get commentDeleted;
 
-  /// No description provided for @conflictTitle.
-  ///
-  /// In ja, this message translates to:
-  /// **'保存できませんでした'**
-  String get conflictTitle;
-
   /// 同時編集の検出（仕様書 6.3）
   ///
   /// In ja, this message translates to:
@@ -1044,12 +1020,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'読み込み直す'**
   String get reload;
-
-  /// No description provided for @joinRequestTitle.
-  ///
-  /// In ja, this message translates to:
-  /// **'このリストに参加する'**
-  String get joinRequestTitle;
 
   /// No description provided for @joinRequestBody.
   ///
@@ -1194,12 +1164,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'リストから外す'**
   String get removeMember;
-
-  /// No description provided for @changeRole.
-  ///
-  /// In ja, this message translates to:
-  /// **'役割を変更'**
-  String get changeRole;
 
   /// No description provided for @listSettings.
   ///

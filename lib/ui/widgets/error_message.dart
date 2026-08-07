@@ -117,6 +117,8 @@ String describeFunctionsError(
       e.params['listName'] ?? '',
     ),
     // まだ翻訳を用意していない符号。サーバーの文を出す。
-    _ => e.message,
+    // サーバーが文を返さなかったときは、一般的な文言に倒す。
+    // ここで日本語を書き足すと、英語表示でも日本語が出る。
+    _ => e.message.isEmpty ? l10n.errorGeneric : e.message,
   };
 }

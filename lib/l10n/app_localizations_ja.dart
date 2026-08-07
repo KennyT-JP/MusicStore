@@ -138,12 +138,6 @@ class AppL10nJa extends AppL10n {
   String get columnDate => '日付';
 
   @override
-  String get columnTitle => '曲名';
-
-  @override
-  String get columnArtist => 'アーティスト名';
-
-  @override
   String get columnRegistrant => '登録者';
 
   @override
@@ -199,9 +193,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get edit => '編集';
-
-  @override
-  String get inviteRevokedDone => '招待を取り消しました。';
 
   @override
   String inviteExpiryNote(String until) {
@@ -543,16 +534,10 @@ class AppL10nJa extends AppL10n {
   String get commentDeleted => '削除されました';
 
   @override
-  String get conflictTitle => '保存できませんでした';
-
-  @override
   String get conflictBody => 'ほかの方がこの項目を更新しました。最新の内容を読み込み直してください。';
 
   @override
   String get reload => '読み込み直す';
-
-  @override
-  String get joinRequestTitle => 'このリストに参加する';
 
   @override
   String get joinRequestBody => 'このリストの中身は、参加が承認されるまで表示されません。';
@@ -625,9 +610,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get removeMember => 'リストから外す';
-
-  @override
-  String get changeRole => '役割を変更';
 
   @override
   String get listSettings => 'リスト設定';
