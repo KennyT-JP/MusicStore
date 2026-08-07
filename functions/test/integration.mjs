@@ -282,9 +282,22 @@ if (!listId) {
         JSON.stringify(r.body?.result));
 
   // --- メンバー数の集計（13.4） ---
+  //
+  // **ここまでに参加した人を数える。** 人を増やしたら、この数も直すこと。
+  //
+  //   1. applicant … リストを作った人（listAdmin）
+  //   2. invitee  … リンクから参加
+  //   3. second   … 同じリンクから参加（複数人が使える／3.3）
+  //   4. viewer   … 見るだけを選んだあと、参加に切り替えた（3.3）
+  //
+  // **見るだけのままの人は数に入らない。** viewer は途中で参加へ
+  // 切り替えたので入っている。切り替えなければ 3 のままになる。
   await sleep(5000);
   const l2 = await doc(`lists/${listId}`);
-  check('memberCount が更新される', sv(l2, 'memberCount') === '2', `memberCount=${sv(l2,'memberCount')} adminCount=${sv(l2,'adminCount')}`);
+  check('memberCount が更新される', sv(l2, 'memberCount') === '4',
+        `memberCount=${sv(l2,'memberCount')} adminCount=${sv(l2,'adminCount')}`);
+  check('adminCount は増えない（リンクでは付与できない）', sv(l2, 'adminCount') === '1',
+        `adminCount=${sv(l2,'adminCount')}`);
 
   // --- 最後のサイト管理者は降格できない（4.5） ---
   r = await call('revokeSiteAdmin', { uid: siteAdmin.localId }, siteAdmin.idToken);

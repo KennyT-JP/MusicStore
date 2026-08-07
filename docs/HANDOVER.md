@@ -50,7 +50,7 @@
 | `flutter analyze` / `flutter test` | 274 | 不要 |
 | `cd rules-test && npm test` | 124 | スクリプトが自動で起動・終了 |
 | `cd functions && npm test` | 75 | 不要 |
-| `cd functions && npm run test:integration` | 54 | **別のウィンドウで `npm run serve` が必要** |
+| `cd functions && npm run test:integration` | 55 | **別のウィンドウで `npm run serve` が必要** |
 
 > **注意：作業用のコンテナ内では `rules-test` が緑になりません。**
 > Storage のルールランタイムから Firestore を引く通信がプロキシに遮られ、
@@ -259,7 +259,7 @@ flutter test                                   :: 274 件
 cd functions && npm test                       :: 75 件
 cd ..\rules-test && npm test                   :: 124 件
 （1枚目）cd ..\functions && npm run serve
-（2枚目）cd ..\functions && npm run test:integration   :: 54 件
+（2枚目）cd ..\functions && npm run test:integration   :: 55 件
 ```
 
 全件成功を確認してから配信します。
