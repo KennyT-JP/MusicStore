@@ -57,6 +57,24 @@ service cloud.firestore {
       return get(memberPath(listId)).data.role;
     }
 
+    // **参加せずに見るだけの人（仕様書 3.3）。**
+    //
+    // 共有リンクを開いて「参加しない」を選ぶと、Functions がここへ書く。
+    // メンバーとは別に持っているので、メンバー一覧にも人数にも
+    // 通知の宛先にも入らない。**読めるだけで、何も書けない。**
+    function viewerPath(listId) {
+      return /databases/$(database)/documents/lists/$(listId)/viewers/$(uid());
+    }
+
+    function isViewer(listId) {
+      return isVerified() && exists(viewerPath(listId));
+    }
+
+    /// 中身を見てよい人。メンバーか、閲覧だけの人。
+    function canRead(listId) {
+      return isMember(listId) || isViewer(listId);
+    }
+
     function isListAdmin(listId) {
       return isSiteAdmin() ||
         (isVerified() &&
@@ -175,7 +193,8 @@ service cloud.firestore {
       // ---------------------------------------------------------------
 
       match /meta/{docId} {
-        allow read: if isMember(listId);
+        // 閲覧だけの人にも読ませる。連番の欠番や容量の表示に要る。
+        allow read: if canRead(listId);
 
         // **連番の採番だけはクライアントが行う（6.2）。**
         // 項目の追加と同じトランザクションで nextSeq を 1 進める。
@@ -218,6 +237,25 @@ service cloud.firestore {
       // joinRequests（参加申請／5.2）
       // ---------------------------------------------------------------
 
+      // ---------------------------------------------------------------
+      // viewers（参加せずに見るだけの人／3.3）
+      // ---------------------------------------------------------------
+
+      match /viewers/{viewerUid} {
+        // 自分の行と、リスト管理者だけが見られる。
+        // **誰が見ているかはリスト管理者に分かるようにする。**
+        allow read: if isListAdmin(listId) ||
+          (isVerified() && uid() == viewerUid);
+
+        // **書けるのは Functions だけ。** クライアントから書けると、
+        // リンクを持っていない人が自分で閲覧権を作れてしまう。
+        allow create, update: if false;
+
+        // 自分から閲覧をやめることはできる。
+        allow delete: if isListAdmin(listId) ||
+          (isVerified() && uid() == viewerUid);
+      }
+
       match /joinRequests/{requesterUid} {
         allow read: if isListAdmin(listId) ||
           (isVerified() && uid() == requesterUid);
@@ -243,7 +281,8 @@ service cloud.firestore {
       // ---------------------------------------------------------------
 
       match /items/{itemId} {
-        allow read: if isMember(listId);
+        // **閲覧だけの人も読める（3.3）。** 書くのはメンバーだけ。
+        allow read: if canRead(listId);
 
         // ファイルの保存先が、この項目の場所であること（13.7）。
         //
@@ -306,7 +345,7 @@ service cloud.firestore {
         allow delete: if false;
 
         match /comments/{commentId} {
-          allow read: if isMember(listId);
+          allow read: if canRead(listId);
 
           // Read Only は一切書けない（9）。
           allow create: if canWrite(listId)
@@ -354,13 +393,15 @@ service cloud.firestore {
     // invites（招待 URL／3.3）
     // -----------------------------------------------------------------
 
-    match /invites/{inviteId} {
+    match /shareLinks/{linkId} {
       // ID を知っている人だけが到達できる。ID は推測できない値にする（13.3）。
+      //
+      // **期限が無いぶん、ID の推測されにくさがそのまま守りになる。**
+      // 一覧は決して許さない。許すと、すべてのリンクを集められる。
       allow get: if isVerified();
       allow list: if false;
 
-      // 発行・受諾とも Functions のみ。
-      // ワンタイム性はトランザクションで担保する（13.3）。
+      // 発行・受け入れ・取消とも Functions のみ（13.3）。
       allow write: if false;
     }
 

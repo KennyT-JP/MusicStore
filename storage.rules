@@ -41,6 +41,18 @@ service firebase.storage {
         (isVerified() && firestore.exists(memberPath(listId)));
     }
 
+    // **参加せずに見るだけの人（仕様書 3.3）。**
+    // 共有リンクを開いて「参加しない」を選んだ人。Firestore の
+    // viewers に居る。読めるだけで、アップロードも削除もできない。
+    function viewerPath(listId) {
+      return /databases/(default)/documents/lists/$(listId)/viewers/$(uid());
+    }
+
+    function canRead(listId) {
+      return isMember(listId) ||
+        (isVerified() && firestore.exists(viewerPath(listId)));
+    }
+
     function memberRole(listId) {
       return firestore.get(memberPath(listId)).data.role;
     }
@@ -63,7 +75,10 @@ service firebase.storage {
     match /lists/{listId}/items/{itemId}/{fileName} {
       // メンバーなら誰でも再生・ダウンロードできる。
       // Read Only も閲覧・再生は可（4.2）。
-      allow read: if isMember(listId);
+      //
+      // **参加せずに見るだけの人も再生できる（3.3）。**
+      // 一覧で曲名だけ見えても、聴けなければ共有の意味がない。
+      allow read: if canRead(listId);
 
       // アップロードは Super User 以上（4.2）。
       //

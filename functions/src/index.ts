@@ -11,7 +11,7 @@
  * | リストの削除 | onListDeleted |
  * | リスト作成の申請・承認・却下 | submitListRequest / approveListRequest / rejectListRequest |
  * | 参加申請の提出・承認・却下 | submitJoinRequest / approveJoinRequest / rejectJoinRequest |
- * | 招待 URL の発行・受諾・取消 | createInvite / acceptInvite / revokeInvite |
+ * | 共有リンクの発行・受け入れ・取消 | createShareLink / acceptShareLink / revokeShareLink |
  * | サイト管理者の昇格・降格 | grantSiteAdmin / revokeSiteAdmin |
  * | ユーザー一覧・容量上限・管理者の指名 | listSiteUsers / setListQuota / assignListAdmin |
  * | 退会 | withdrawAccount |
@@ -47,9 +47,9 @@ export {
   submitJoinRequest,
   approveJoinRequest,
   rejectJoinRequest,
-  createInvite,
-  acceptInvite,
-  revokeInvite,
+  createShareLink,
+  acceptShareLink,
+  revokeShareLink,
 } from './callable/membership';
 export {
   grantSiteAdmin,

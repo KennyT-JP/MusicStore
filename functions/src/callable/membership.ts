@@ -1,17 +1,17 @@
 /**
- * 参加申請の承認と招待 URL（仕様書 3.3 / 5.2 / 13.3）
+ * 参加申請の承認と共有リンク（仕様書 3.3 / 5.2 / 13.3）
  */
 import { randomBytes } from 'node:crypto';
 
-import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 
-import { REGION, paths, readSiteConfig } from '../config';
+import { REGION, paths } from '../config';
 import { isAssignableRole } from '../domain/roles';
 import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
 import { fail } from '../errors';
-import { evaluateInvite } from '../domain/invite';
+import { evaluateShareLink, type ShareLinkMode } from '../domain/share_link';
 
 /**
  * 参加を申請する（仕様書 5.2）。
@@ -153,138 +153,165 @@ export const rejectJoinRequest = onCall({ region: REGION }, async (request) => {
 });
 
 /**
- * 招待 URL を発行する（仕様書 3.3）。
+ * 共有リンクを発行する（仕様書 3.3）。
  *
  * 発行できるのはサイト管理者とリスト管理者。
  * ID は推測できないランダムな文字列にする（これがそのまま URL に載る）。
+ *
+ * **無期限・何度でも・複数人が使える。** 以前は「一度きり・24 時間」
+ * だったが、渡した相手が期限内に開けないと配り直しになっていた。
+ *
+ * `itemId` を渡すと、その曲を指すリンクになる（開くとその曲が出る）。
  */
-export const createInvite = onCall({ region: REGION }, async (request) => {
+export const createShareLink = onCall({ region: REGION }, async (request) => {
   const listId = requireString(request.data, 'listId', { maxLength: 200 });
   const adminUid = await requireListAdmin(request, listId);
 
-  const role = (request.data as Record<string, unknown>)?.role;
+  const data = (request.data ?? {}) as Record<string, unknown>;
+
+  const role = data.role;
   if (!isAssignableRole(role)) {
     throw fail('invalid-argument', 'inviteRoleNotAllowed');
   }
 
-  const config = await readSiteConfig();
+  // 曲を指すリンクなら、その曲が本当にこのリストにあることを確かめる。
+  // 確かめずに受け取ると、開いた人が「無い曲」へ案内される。
+  const itemId =
+    typeof data.itemId === 'string' && data.itemId.trim().length > 0
+      ? data.itemId.trim()
+      : undefined;
+  if (itemId) {
+    const item = await getFirestore().doc(paths.listItem(listId, itemId)).get();
+    if (!item.exists) throw fail('not-found', 'itemNotFound');
+  }
+
   // 256 ビット相当。総当たりで当てられない長さにする。
-  const inviteId = randomBytes(32).toString('base64url');
+  // **期限が無いぶん、ID の推測されにくさがそのまま守りになる。**
+  const linkId = randomBytes(32).toString('base64url');
 
-  const expiresAt = Timestamp.fromMillis(
-    Date.now() + config.inviteExpiryHours * 60 * 60 * 1000
-  );
+  await getFirestore()
+    .doc(paths.shareLink(linkId))
+    .set({
+      listId,
+      ...(itemId ? { itemId } : {}),
+      role,
+      createdBy: adminUid,
+      createdAt: FieldValue.serverTimestamp(),
+      revoked: false,
+    });
 
-  await getFirestore().doc(paths.invite(inviteId)).set({
-    listId,
-    role,
-    createdBy: adminUid,
-    createdAt: FieldValue.serverTimestamp(),
-    expiresAt,
-    status: 'active',
-  });
-
-  return { inviteId, expiresAt: expiresAt.toMillis() };
+  return { linkId, ...(itemId ? { itemId } : {}) };
 });
 
 /**
- * 招待を受諾する（仕様書 3.3）。
+ * 共有リンクを開いた人を受け入れる（仕様書 3.3）。
  *
- * **有効期限は受諾した時点で判定する。** URL を開いた時点ではなく、
- * サインアップやメール確認を終えて実際に参加処理が走る瞬間を見る。
+ * 受け取った人は 2 つから選ぶ。
  *
- * ワンタイム性はトランザクションで担保する。同じ URL を複数人が同時に
- * 開いても、成立するのは 1 人だけになる。
+ * - `join`：そのリストの**メンバーになる**。発行時に決めた役割が付く
+ * - `view`：**メンバーにはならず**、中身を見るだけ
+ *
+ * `view` を選んだ人は `lists/{listId}/viewers/{uid}` に入る。
+ * メンバー一覧にも人数にも通知の宛先にも入らない。
+ *
+ * **どちらもログインとメール確認は必要。** 誰が見たか分からない状態に
+ * しないため（3.3）。
  */
-export const acceptInvite = onCall({ region: REGION }, async (request) => {
+export const acceptShareLink = onCall({ region: REGION }, async (request) => {
   const uid = requireUid(request);
-  const inviteId = requireString(request.data, 'inviteId', { maxLength: 200 });
+  const linkId = requireString(request.data, 'linkId', { maxLength: 200 });
+
+  const rawMode = (request.data as Record<string, unknown>)?.mode;
+  if (rawMode !== 'join' && rawMode !== 'view') {
+    throw fail('invalid-argument', 'missingField', { field: 'mode' });
+  }
+  const mode: ShareLinkMode = rawMode;
 
   const db = getFirestore();
-  const inviteRef = db.doc(paths.invite(inviteId));
+  const linkRef = db.doc(paths.shareLink(linkId));
 
-  const listId = await db.runTransaction(async (tx) => {
-    const snapshot = await tx.get(inviteRef);
-    if (!snapshot.exists) {
-      throw fail('not-found', 'inviteNotFound');
-    }
-
+  return db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(linkRef);
     const data = snapshot.data() ?? {};
-    const expiresAt = data.expiresAt as Timestamp | undefined;
 
-    // メンバーかどうかは、受け入れる直前に確かめる必要がある。
-    // リスト ID が決まらないと引けないので、先に取り出しておく。
-    const candidateListId =
-      typeof data.listId === 'string' ? data.listId : '';
-    const member = candidateListId
-      ? await tx.get(db.doc(paths.listMember(candidateListId, uid)))
-      : null;
-
-    // **判断は domain/invite.ts に集めてある。**
-    // 以前はここに直接書かれており、同じ規則を持つ Flutter 側だけが
-    // テストされていた（監査 第2回）。
-    const decision = evaluateInvite({
-      invite: {
+    // **判断は domain/share_link.ts に集めてある。**
+    const decision = evaluateShareLink({
+      link: {
         exists: snapshot.exists,
-        status: data.status,
-        expiresAtMs: expiresAt?.toMillis(),
+        revoked: data.revoked,
         listId: data.listId,
+        itemId: data.itemId,
+        role: data.role,
       },
-      isAlreadyMember: member?.exists === true,
-      nowMs: Date.now(),
     });
 
     if (decision.rejection) {
       throw fail(
-        decision.rejection === 'alreadyMember'
-          ? 'already-exists'
-          : decision.rejection === 'inviteNotFound'
-            ? 'not-found'
-            : 'failed-precondition',
+        decision.rejection === 'shareLinkNotFound'
+          ? 'not-found'
+          : 'failed-precondition',
         decision.rejection
       );
     }
 
-    const targetListId = decision.listId!;
-    const memberRef = db.doc(paths.listMember(targetListId, uid));
+    const listId = decision.listId!;
+    const memberRef = db.doc(paths.listMember(listId, uid));
+    const member = await tx.get(memberRef);
 
-    tx.set(memberRef, {
-      uid,
-      role: data.role,
-      via: 'invite',
-      joinedAt: FieldValue.serverTimestamp(),
-      addedBy: data.createdBy,
-    });
+    // **すでにメンバーなら、そのまま通す。** 何度でも使えるリンクでは
+    // 同じ人が二度開くことが普通に起きる。役割は書き換えない。
+    if (member.exists) {
+      return { listId, itemId: decision.itemId, joined: true };
+    }
 
-    tx.update(inviteRef, {
-      status: 'used',
-      usedBy: uid,
-      usedAt: FieldValue.serverTimestamp(),
-    });
+    if (mode === 'join') {
+      tx.set(memberRef, {
+        uid,
+        role: data.role,
+        via: 'invite',
+        joinedAt: FieldValue.serverTimestamp(),
+        addedBy: data.createdBy,
+      });
+      // 参加したなら、閲覧だけの記録は要らない。
+      tx.delete(db.doc(paths.listViewer(listId, uid)));
+      return { listId, itemId: decision.itemId, joined: true };
+    }
 
-    return targetListId;
+    tx.set(
+      db.doc(paths.listViewer(listId, uid)),
+      {
+        uid,
+        viaLink: linkId,
+        firstSeenAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return { listId, itemId: decision.itemId, joined: false };
   });
-
-  return { listId };
 });
 
 /**
- * 招待を取り消す（仕様書 13.3）。
+ * 共有リンクを取り消す（仕様書 3.3 / 13.3）。
  *
- * 誤って発行した URL を無効にできるようにする。
+ * **期限が無いぶん、ここが唯一の止める手段になる。**
+ * 取り消すと、そのリンクからは参加も閲覧もできなくなる。
+ * すでに参加した人・閲覧中の人はそのまま残る（外すのはメンバー管理から）。
  */
-export const revokeInvite = onCall({ region: REGION }, async (request) => {
-  const inviteId = requireString(request.data, 'inviteId', { maxLength: 200 });
+export const revokeShareLink = onCall({ region: REGION }, async (request) => {
+  const linkId = requireString(request.data, 'linkId', { maxLength: 200 });
 
   const db = getFirestore();
-  const snapshot = await db.doc(paths.invite(inviteId)).get();
+  const snapshot = await db.doc(paths.shareLink(linkId)).get();
   if (!snapshot.exists) {
-    throw fail('not-found', 'inviteNotFound');
+    throw fail('not-found', 'shareLinkNotFound');
   }
 
   const listId = String(snapshot.data()?.listId ?? '');
   await requireListAdmin(request, listId);
 
-  await db.doc(paths.invite(inviteId)).update({ status: 'revoked' });
+  await db.doc(paths.shareLink(linkId)).update({
+    revoked: true,
+    revokedAt: FieldValue.serverTimestamp(),
+  });
   return { ok: true };
 });

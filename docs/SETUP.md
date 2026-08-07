@@ -259,7 +259,7 @@ REGION=asia-northeast1
 
 for f in submitListRequest approveListRequest rejectListRequest \
          submitJoinRequest approveJoinRequest rejectJoinRequest \
-         createInvite acceptInvite revokeInvite \
+         createShareLink acceptShareLink revokeShareLink \
          grantSiteAdmin revokeSiteAdmin withdrawAccount \
          listSiteUsers setListQuota assignListAdmin; do
   gcloud functions add-invoker-policy-binding "$f" \
@@ -276,7 +276,7 @@ done
 ```sh
 firebase functions:delete submitListRequest approveListRequest rejectListRequest \
   submitJoinRequest approveJoinRequest rejectJoinRequest \
-  createInvite acceptInvite revokeInvite \
+  createShareLink acceptShareLink revokeShareLink \
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin \
   --region asia-northeast1 --project music-storage-d79b2 --force

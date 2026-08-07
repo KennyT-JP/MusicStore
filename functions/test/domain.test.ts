@@ -31,7 +31,7 @@ import {
   shouldDeleteOrphan,
 } from '../src/domain/paths';
 import { ERROR_CODES, fail } from '../src/errors';
-import { evaluateInvite } from '../src/domain/invite';
+import { evaluateShareLink } from '../src/domain/share_link';
 
 const readOnly: ListAccess = { isSiteAdmin: false, role: 'readOnly' };
 const superUser: ListAccess = { isSiteAdmin: false, role: 'superUser' };
@@ -469,114 +469,61 @@ describe('孤児ファイルの削除判断（7.5）', () => {
 });
 
 /**
- * 招待の受諾可否（仕様書 3.3 / 監査 S11・第2回）
+ * 共有リンクの受け入れ可否（仕様書 3.3）
  *
  * **本番で動いている側をテストする。**
- * 以前は同じ規則が Flutter 側にもあり、そちらだけが 13 件のテストで
- * 守られていた。しかし本番コードからは一度も呼ばれておらず、実際に
- * 動いていたのは membership.ts のインライン実装で、無テストだった。
+ * 以前の招待 URL は「一度きり・24 時間」だった。2026-08-07 に
+ * **無期限・何度でも・複数人**へ変更したため、判断から
+ * 「期限切れ」と「使用済み」が消えている。
  */
-describe('招待の受諾可否（3.3）', () => {
-  const now = 1_000_000;
-  const active = {
-    exists: true,
-    status: 'active',
-    expiresAtMs: now + 1000,
-    listId: 'L1',
-  };
+describe('共有リンクの受け入れ可否（3.3）', () => {
+  const active = { exists: true, revoked: false, listId: 'L1' };
 
-  test('有効な招待は受け入れる', () => {
-    expect(
-      evaluateInvite({ invite: active, isAlreadyMember: false, nowMs: now })
-    ).toEqual({ listId: 'L1' });
+  test('有効なリンクは受け入れる', () => {
+    expect(evaluateShareLink({ link: active })).toEqual({ listId: 'L1' });
   });
 
-  test('存在しない招待', () => {
+  test('曲を指すリンクは、曲まで返す', () => {
     expect(
-      evaluateInvite({
-        invite: { exists: false },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteNotFound' });
+      evaluateShareLink({ link: { ...active, itemId: 'I1' } })
+    ).toEqual({ listId: 'L1', itemId: 'I1' });
   });
 
-  test('使用済みはワンタイム性で弾く', () => {
-    expect(
-      evaluateInvite({
-        invite: { ...active, status: 'used' },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteAlreadyUsed' });
+  test('存在しないリンク', () => {
+    expect(evaluateShareLink({ link: { exists: false } })).toEqual({
+      rejection: 'shareLinkNotFound',
+    });
   });
 
   test('取り消し済み', () => {
     expect(
-      evaluateInvite({
-        invite: { ...active, status: 'revoked' },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteRevoked' });
+      evaluateShareLink({ link: { ...active, revoked: true } })
+    ).toEqual({ rejection: 'shareLinkRevoked' });
   });
 
-  test('期限切れ（ちょうどの時刻は切れている扱い）', () => {
-    expect(
-      evaluateInvite({
-        invite: { ...active, expiresAtMs: now },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteExpired' });
+  test('リスト ID が無いものは「見つからない」扱い', () => {
+    expect(evaluateShareLink({ link: { ...active, listId: '' } })).toEqual({
+      rejection: 'shareLinkNotFound',
+    });
   });
 
-  test('期限が読めないものは通さない', () => {
-    for (const expiresAtMs of [undefined, NaN]) {
-      expect(
-        evaluateInvite({
-          invite: { ...active, expiresAtMs },
-          isAlreadyMember: false,
-          nowMs: now,
-        })
-      ).toEqual({ rejection: 'inviteExpired' });
-    }
+  // **期限は無い。** 以前は 24 時間で切れていた。
+  test('古いリンクでも切れない（無期限）', () => {
+    // 判断に時刻が入らないことを、引数の形で示す。
+    expect(evaluateShareLink({ link: active })).toEqual({ listId: 'L1' });
   });
 
-  test('リスト ID が無い招待は「見つからない」扱い', () => {
-    expect(
-      evaluateInvite({
-        invite: { ...active, listId: '' },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteNotFound' });
+  // **何度でも使える。** 以前は一度使うと「使用済み」で弾いていた。
+  test('同じリンクを何度評価しても、同じ結果になる', () => {
+    const first = evaluateShareLink({ link: active });
+    const second = evaluateShareLink({ link: active });
+    expect(second).toEqual(first);
   });
 
-  test('すでにメンバーなら受け入れない', () => {
-    expect(
-      evaluateInvite({ invite: active, isAlreadyMember: true, nowMs: now })
-    ).toEqual({ rejection: 'alreadyMember' });
-  });
-
-  // **判定の順番にも意味がある。**
-  test('取り消し済みなら、期限が切れていても「取り消し」と伝える', () => {
-    expect(
-      evaluateInvite({
-        invite: { ...active, status: 'revoked', expiresAtMs: now - 1 },
-        isAlreadyMember: false,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteRevoked' });
-  });
-
-  test('期限切れなら、すでにメンバーでも「期限切れ」と伝える', () => {
-    expect(
-      evaluateInvite({
-        invite: { ...active, expiresAtMs: now - 1 },
-        isAlreadyMember: true,
-        nowMs: now,
-      })
-    ).toEqual({ rejection: 'inviteExpired' });
+  test('取り消しは、存在しないことと区別する', () => {
+    // 「リンクが違う」のと「もう使えない」のとでは、
+    // 受け取った人が次に取る行動が違う。
+    expect(evaluateShareLink({ link: { ...active, revoked: true } }).rejection)
+      .not.toBe(evaluateShareLink({ link: { exists: false } }).rejection);
   });
 });

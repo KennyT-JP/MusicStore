@@ -65,7 +65,24 @@ export const paths = {
 
   listName: (nameLower: string) => `listNames/${nameLower}`,
   listRequest: (requestId: string) => `listRequests/${requestId}`,
-  invite: (inviteId: string) => `invites/${inviteId}`,
+  /**
+   * 共有リンク（仕様書 3.3）。
+   *
+   * 以前の `invites/` は「一度きり・24 時間」のものだった。
+   * 無期限・何度でも・複数人に変えたので、意味が変わったことが
+   * 分かるように名前も変えている。
+   */
+  shareLink: (linkId: string) => `shareLinks/${linkId}`,
+
+  /**
+   * 参加せずに見るだけの人（仕様書 3.3）。
+   *
+   * **メンバーとは別に持つ。** メンバー一覧にも人数にも通知の宛先にも
+   * 入れないため。ここに居る人は、そのリストを読むことだけができる。
+   */
+  listViewers: (listId: string) => `lists/${listId}/viewers`,
+  listViewer: (listId: string, uid: string) =>
+    `lists/${listId}/viewers/${uid}`,
   siteConfig: 'siteConfig/global',
 
   /// **サーバーだけが読み書きする値の置き場（監査 第2回）。**
@@ -76,7 +93,6 @@ export const paths = {
 
 /** サイト設定の既定値（仕様書 13.3）。 */
 export interface SiteConfig {
-  inviteExpiryHours: number;
   defaultQuotaBytes: number;
   itemPurgeGraceDays: number;
   orphanFileGraceHours: number;
@@ -84,7 +100,6 @@ export interface SiteConfig {
 }
 
 export const defaultSiteConfig: SiteConfig = {
-  inviteExpiryHours: 24,
   defaultQuotaBytes: 1073741824, // 1GB
   itemPurgeGraceDays: 30,
   orphanFileGraceHours: 24,
@@ -100,8 +115,6 @@ export async function readSiteConfig(): Promise<SiteConfig> {
   const snapshot = await getFirestore().doc(paths.siteConfig).get();
   const data = snapshot.data() ?? {};
   return {
-    inviteExpiryHours:
-      asNumber(data.inviteExpiryHours) ?? defaultSiteConfig.inviteExpiryHours,
     defaultQuotaBytes:
       asNumber(data.defaultQuotaBytes) ?? defaultSiteConfig.defaultQuotaBytes,
     itemPurgeGraceDays:
