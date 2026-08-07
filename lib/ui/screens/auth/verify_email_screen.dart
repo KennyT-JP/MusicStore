@@ -41,10 +41,29 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   /// 数秒で進めば、待たされている感じはしない。
   static const _pollInterval = Duration(seconds: 3);
 
+  /// 自動で確かめるのをやめるまでの回数（3 秒 × 200 = 10 分）。
+  ///
+  /// **止めどきを決めておく（監査 第3回）。** 以前は画面を開いている間
+  /// ずっと 3 秒ごとに問い合わせ続けていた。この画面は「メールを見に
+  /// 行っている間」開きっぱなしになりやすく、そのまま忘れられることも
+  /// ある。1 時間で 1,200 回になり、**Auth の回数制限に当たって
+  /// `too-many-requests` で確認そのものができなくなる**恐れがあった。
+  ///
+  /// 止まったあとも、画面の「確認」を押せばいつでも確かめられる。
+  static const _pollLimit = 200;
+
+  int _polls = 0;
+
   @override
   void initState() {
     super.initState();
-    _poll = Timer.periodic(_pollInterval, (_) => _checkQuietly());
+    _poll = Timer.periodic(_pollInterval, (timer) {
+      if (_polls++ >= _pollLimit) {
+        timer.cancel();
+        return;
+      }
+      _checkQuietly();
+    });
   }
 
   @override

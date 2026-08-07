@@ -107,6 +107,29 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('いつまでも問い合わせ続けない（監査 第3回）', (tester) async {
+    // **この画面は開きっぱなしになりやすい。** メールを見に行っている
+    // 間に忘れられることもある。止めどきが無いと 1 時間で 1,200 回に
+    // なり、Auth の回数制限に当たって確認そのものができなくなる。
+    final auth = _RecordingAuth();
+
+    await tester.pumpWidget(
+      _app(const VerifyEmailScreen(), locale: const Locale('ja'), auth: auth),
+    );
+    await tester.pump();
+
+    // 10 分ぶん（3 秒 × 200）進めてから、さらに進めても増えない。
+    await tester.pump(const Duration(minutes: 10));
+    final countAtLimit = auth.reloadCount;
+    expect(countAtLimit, lessThanOrEqualTo(200));
+    expect(countAtLimit, greaterThan(0), reason: '一度も確かめないのは行き過ぎ');
+
+    await tester.pump(const Duration(minutes: 10));
+    expect(auth.reloadCount, countAtLimit, reason: '上限を過ぎたら止まること');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('自動で進むことを画面に書いてある', (tester) async {
     await tester.pumpWidget(
       _app(
