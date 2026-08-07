@@ -17,9 +17,14 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
-const SRC = new URL('../src', import.meta.url).pathname;
+/// **`new URL(...).pathname` を使わない。**
+/// Windows では `/C:/Users/...` のように先頭にスラッシュが付いた形になり、
+/// `join` で繋ぐと `C:\C:\Users\...` になって開けない。
+/// `fileURLToPath` はその変換まで面倒を見てくれる。
+const SRC = fileURLToPath(new URL('../src', import.meta.url));
 
 function sourceFiles(dir: string): string[] {
   const found: string[] = [];
