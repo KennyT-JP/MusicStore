@@ -131,7 +131,7 @@ class FunctionsRepository {
   }) async {
     final result = await _call('createShareLink', {
       'listId': listId,
-      if (itemId != null) 'itemId': itemId,
+      'itemId': ?itemId,
     });
     return result['linkId'] as String;
   }

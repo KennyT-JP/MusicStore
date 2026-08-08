@@ -2,11 +2,9 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(node scripts/test-all.mjs)",
-      "Bash(scripts/test-all.cmd)",
+      "Bash(node scripts/check.mjs)",
+      "Bash(scripts/check.cmd)",
       "Bash(node scripts/deploy.mjs)",
-      "Bash(node scripts/deploy.mjs prod)",
-      "Bash(node scripts/deploy.mjs prod --yes)",
       "Bash(node scripts/deploy.mjs:*)",
       "Bash(dart analyze:*)",
       "Bash(flutter test:*)",
@@ -20,6 +18,7 @@
       "Bash(firebase projects:list)",
       "Bash(firebase apps:list:*)",
       "Bash(firebase login:list)",
+      "Bash(gcloud run services get-iam-policy:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -28,6 +27,7 @@
       "Bash(git switch:*)",
       "Bash(git merge:*)",
       "Bash(git branch:*)",
+      "Bash(git tag:*)",
       "Bash(git push origin dev)",
       "Bash(git push origin main)",
       "Bash(git rev-parse:*)"

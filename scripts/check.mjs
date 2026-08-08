@@ -1,0 +1,168 @@
+#!/usr/bin/env node
+/**
+ * 配信前の検証を、全部まとめて並列に実行する
+ *
+ *   scripts\check.cmd        Windows
+ *   ./scripts/check.sh       macOS / Linux
+ *
+ * 4 本を同時に走らせる。互いに独立なので待ち合わせる理由が無い。
+ *
+ *   ├─ dart analyze --fatal-infos   （info も失敗。基準は「指摘 0 件」）
+ *   ├─ flutter test                 （278 件）
+ *   ├─ functions の単体テスト       （75 件）
+ *   └─ エミュレータ系（この 1 本だけ内部で直列）
+ *        ├─ functions の統合テスト  （61 件。起動〜後片付けまで自動）
+ *        └─ セキュリティルール      （124 件。同上）
+ *
+ * 直列だと 7〜8 分かかっていたものが、いちばん遅い 1 本ぶん（約 4 分）で
+ * 終わる。出力は本ごとに貯めて、終わった順に結果だけを出す。
+ * 失敗した本だけ、最後にログの末尾を並べる。
+ *
+ * **全部緑なら、そのコミットの ID を `.last-check.json` に書く。**
+ * `scripts/deploy.mjs` はこれを見て「このコミットは検証済みか」を判断する。
+ * 検証と配信を別々の約束にせず、機械的に繋ぐため。
+ */
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const isWindows = process.platform === 'win32';
+
+// ---------------------------------------------------------------------------
+// Java（エミュレータは JVM の上で動く）
+//
+// **21 以上でなければならない**（firebase-tools 15 以降の要件）。
+// 「入っているか」だけを見ると、17 と 21 が並んでいる環境で古いほうを
+// 掴む（2026-08-08 に実際に起きた）。版まで見て、いちばん新しいものを選ぶ。
+// ---------------------------------------------------------------------------
+
+const JAVA_MIN = 21;
+
+function javaVersionOf(javaPath, env) {
+  return new Promise((resolve) => {
+    const child = spawn(`"${javaPath}" -version`, { shell: true, env });
+    let out = '';
+    child.stdout?.on('data', (d) => (out += d));
+    child.stderr?.on('data', (d) => (out += d));
+    child.on('error', () => resolve(null));
+    child.on('close', () => resolve(out.match(/version "(\d+)/)?.[1] * 1 || null));
+  });
+}
+
+async function withJava(env) {
+  const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+  const onPath = await javaVersionOf('java', env);
+  if (onPath !== null && onPath >= JAVA_MIN) return env;
+
+  let best = null;
+  const bases = isWindows
+    ? ['C:\\Program Files\\Microsoft', 'C:\\Program Files\\Java', 'C:\\Program Files\\Eclipse Adoptium']
+    : [];
+  for (const base of bases) {
+    if (!existsSync(base)) continue;
+    for (const entry of readdirSync(base)) {
+      const exe = join(base, entry, 'bin', 'java.exe');
+      if (!existsSync(exe)) continue;
+      const version = await javaVersionOf(exe, env);
+      if (version !== null && version >= JAVA_MIN && (best === null || version > best.version)) {
+        best = { version, bin: join(base, entry, 'bin') };
+      }
+    }
+  }
+  if (best === null) {
+    console.error(`\nJava ${JAVA_MIN} 以上が見つかりません（firebase-tools 15 以降の要件）。`);
+    console.error(`  winget install --id Microsoft.OpenJDK.${JAVA_MIN}\n`);
+    process.exit(1);
+  }
+  env[pathKey] = [best.bin, env[pathKey]].filter(Boolean).join(isWindows ? ';' : ':');
+  return env;
+}
+
+// ---------------------------------------------------------------------------
+// 実行の部品
+// ---------------------------------------------------------------------------
+
+const env = await withJava({ ...process.env });
+
+/** 出力を貯めて実行する。並列で走らせても画面が混ざらないように。 */
+function runQuiet(command, args, cwd) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    // Windows では 1 本の文字列で渡す（配列 + shell は引用符が壊れる）。
+    const child = isWindows
+      ? spawn([command, ...args].join(' '), { shell: true, cwd, env })
+      : spawn(command, args, { cwd, env });
+    let output = '';
+    child.stdout?.on('data', (d) => (output += d));
+    child.stderr?.on('data', (d) => (output += d));
+    child.on('error', (e) => resolve({ ok: false, ms: Date.now() - started, output: String(e) }));
+    child.on('close', (code) => resolve({ ok: code === 0, ms: Date.now() - started, output }));
+  });
+}
+
+const seconds = (ms) => `${Math.round(ms / 1000)}s`;
+
+/** 1 本ぶんの検証。終わった時点で 1 行だけ結果を出す。 */
+async function step(name, summaryPattern, command, args, cwd) {
+  const result = await runQuiet(command, args, cwd);
+  if (!result.ok) {
+    console.log(`  ✗ ${name}（${seconds(result.ms)}）`);
+    return { name, ok: false, ms: result.ms, output: result.output };
+  }
+  const summary = result.output.match(summaryPattern)?.[0] ?? '';
+  console.log(`  ✓ ${name}（${seconds(result.ms)}）${summary ? `  ${summary}` : ''}`);
+  return { name, ok: true, ms: result.ms, output: result.output };
+}
+
+// ---------------------------------------------------------------------------
+// 実行
+// ---------------------------------------------------------------------------
+
+console.log('==> 検証を並列で開始（4 本）');
+const startedAll = Date.now();
+
+const results = (await Promise.all([
+  step('dart analyze', /No issues found!/, 'dart', ['analyze', '--fatal-infos'], root),
+  step('flutter test', /\+\d+: All tests passed!/, 'flutter', ['test'], root),
+  step('functions 単体', /Tests\s+\d+ passed/, 'npm', ['test'], join(root, 'functions')),
+  // エミュレータを使う 2 本は、ポートを取り合うので内部で直列。
+  // 統合テストを先にするのは、残留プロセスの片付けがそちらに入っているため。
+  (async () => {
+    const integration = await step(
+      'functions 統合', /=== \d+ \/ \d+ 成功 ===/,
+      'node', ['run-integration.mjs'], join(root, 'functions'),
+    );
+    if (!integration.ok) return [integration];
+    const rules = await step(
+      'セキュリティルール', /Tests\s+\d+ passed/,
+      'npm', ['test'], join(root, 'rules-test'),
+    );
+    return [integration, rules];
+  })(),
+])).flat();
+
+const failed = results.filter((r) => !r.ok);
+
+console.log('');
+if (failed.length > 0) {
+  for (const f of failed) {
+    console.error(`----- ${f.name} の出力（末尾） -----`);
+    console.error(f.output.split('\n').slice(-40).join('\n'));
+  }
+  console.error(`\n[失敗] ${failed.map((f) => f.name).join('、')}`);
+  console.error('  1 件でも赤い状態で配信してはいけません（CLAUDE.md）。');
+  process.exit(1);
+}
+
+// 全部緑。このコミットが検証済みであることを配信スクリプトへ伝える。
+const commit = (await runQuiet('git', ['rev-parse', 'HEAD'], root)).output.trim();
+writeFileSync(join(root, '.last-check.json'), JSON.stringify({
+  commit,
+  when: new Date().toISOString(),
+  steps: results.map((r) => ({ name: r.name, ms: r.ms })),
+}, null, 2));
+
+console.log(`==> すべて成功（${seconds(Date.now() - startedAll)}）`);
+console.log('    配信する: ' + (isWindows ? 'scripts\\deploy.cmd' : './scripts/deploy.sh'));
