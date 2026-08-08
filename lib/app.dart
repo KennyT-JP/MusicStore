@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/app_providers.dart';
 import 'ui/app_router.dart';
+import 'ui/routes.dart';
 
 /// アプリ全体で使うフォント。pubspec.yaml の `fonts:` と揃えること。
 const String kAppFontFamily = 'NotoSansJP';
