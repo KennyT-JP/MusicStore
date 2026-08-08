@@ -239,25 +239,40 @@ if (!listId) {
   const linkId = r.body?.result?.linkId;
   check('リスト管理者は共有リンクを発行できる', !!linkId, `len=${linkId?.length ?? 0}`);
 
-  // **役割は指定できない（3.3）。** リンクは 1 種類だけで、渡しても
-  // 無視される。発行側が相手の役割を決める仕組みそのものを無くした。
+  // **リンクは役割を持たない（3.3）。** 発行したドキュメントに
+  // role を書いていないことを、実物を見て確かめる。
+  // ここに役割があると、URL を渡すこと自体が権限を配ることになる。
+  const linkDoc = await doc(`shareLinks/${linkId}`);
+  // **先に「読めている」ことを確かめる。** 読めていないときも
+  // role は undefined になり、何も確かめずに緑になってしまう。
+  check('発行したリンクを読める（次の確認の土台）', sv(linkDoc, 'listId') === listId,
+        String(sv(linkDoc, 'listId')));
+  check('発行したリンクは役割を持たない', sv(linkDoc, 'role') === undefined,
+        String(sv(linkDoc, 'role')));
+
+  // 役割を渡しても、リンクには載らない。
   r = await call('createShareLink', { listId, role: 'listAdmin' }, applicantFresh.idToken);
+  const ignored = r.body?.result?.linkId;
   check('役割を渡しても発行は通る（無視される）', r.status === 200, r.body?.error?.status);
+  const ignoredDoc = await doc(`shareLinks/${ignored}`);
+  check('渡した役割はリンクに載らない',
+        sv(ignoredDoc, 'listId') === listId && sv(ignoredDoc, 'role') === undefined,
+        String(sv(ignoredDoc, 'role')));
 
   r = await call('acceptShareLink', { linkId, mode: 'join' }, invitee.idToken);
   check('リンクから参加できる', r.body?.result?.listId === listId, JSON.stringify(r.body).slice(0, 120));
 
   const im = await doc(`lists/${listId}/members/${invitee.localId}`);
-  check('参加すると Super User になる（JOIN_ROLE）', sv(im, 'role') === 'superUser', sv(im, 'role'));
+  check('参加すると Read Only で入る（INITIAL_JOIN_ROLE）', sv(im, 'role') === 'readOnly',
+        sv(im, 'role'));
 
-  // 渡した役割が効いていないことを、上のリンクとは別に確かめる。
+  // 役割を渡して作ったリンクでも、結果は変わらない。
   // ここで listAdmin が付いていたら、リンクからリスト管理者を作れてしまう。
-  const ignored = r.body?.result?.linkId;
   const ignoredUser = await signUp('ign');
   r = await call('acceptShareLink', { linkId: ignored, mode: 'join' }, ignoredUser.idToken);
   check('渡した役割は効かない', r.status === 200, r.body?.error?.status);
   const ignoredMember = await doc(`lists/${listId}/members/${ignoredUser.localId}`);
-  check('リンクからリスト管理者にはならない', sv(ignoredMember, 'role') === 'superUser',
+  check('リンクからは Read Only より上にならない', sv(ignoredMember, 'role') === 'readOnly',
         sv(ignoredMember, 'role'));
 
   // --- 何度でも・複数人（3.3） ---
@@ -269,7 +284,7 @@ if (!listId) {
         r.body?.error?.message ?? r.body?.error?.status);
 
   const im2 = await doc(`lists/${listId}/members/${second.localId}`);
-  check('2 人目にも役割が付く', sv(im2, 'role') === 'superUser', sv(im2, 'role'));
+  check('2 人目も Read Only で入る', sv(im2, 'role') === 'readOnly', sv(im2, 'role'));
 
   // 同じ人が二度開いても弾かれない。
   r = await call('acceptShareLink', { linkId, mode: 'join' }, second.idToken);
@@ -483,7 +498,8 @@ if (!listId) {
     (await list(`users/${uid}/notifications`))
       .some((n) => sv(n, 'type') === 'itemAdded' && sv(n, 'itemId') === itemId);
 
-  // invitee は superUser、joiner はこの時点で listAdmin。
+  // invitee はリンクから入った Read Only、joiner はこの時点で listAdmin。
+  // **通知は役割で絞らない（10.2）。** メンバーなら届く。
   check('参加しているだけの人にも届く（10.2）', await itemAdded(invitee.localId));
   check('リスト管理者にも届く（10.2）', await itemAdded(joiner.localId));
   check('追加した本人には届かない', !(await itemAdded(applicant.localId)));

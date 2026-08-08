@@ -36,9 +36,11 @@ export interface ShareLinkSnapshot {
   listId?: unknown;
   /** 曲を指すリンクなら、その項目 ID。 */
   itemId?: unknown;
-  /** 参加を選んだときに与える役割。 */
-  role?: unknown;
 }
+
+// **役割はここに無い。** 共有リンクは役割を持たない（仕様書 3.3）。
+// URL に役割を載せると、渡すこと自体が権限を配ることになる。
+// 参加した人の初期役割は domain/roles.ts の INITIAL_JOIN_ROLE。
 
 export interface ShareLinkDecision {
   listId?: string;

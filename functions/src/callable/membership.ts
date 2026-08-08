@@ -7,7 +7,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
-import { JOIN_ROLE, isAssignableRole } from '../domain/roles';
+import { INITIAL_JOIN_ROLE, isAssignableRole } from '../domain/roles';
 import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
 import { fail } from '../errors';
@@ -192,15 +192,10 @@ export const createShareLink = onCall({ region: REGION }, async (request) => {
     .set({
       listId,
       ...(itemId ? { itemId } : {}),
-      // **発行する側は役割を選ばない（仕様書 3.3）。**
-      // 選ばせると、渡す前に「この人は書ける／書けない」を決めることに
-      // なり、リンク 1 本で済ませられなくなる。
-      //
-      // 「参加する」を選んだ人は Super User になる。Read Only 相当は
-      // 「参加せずに見る」が受け持つので、ここを Read Only にすると
-      // 2 つの選択肢がほとんど同じものになってしまう。
-      // 参加後の役割変更はメンバー管理から行う（5.4）。
-      role: JOIN_ROLE,
+      // **役割は持たせない（仕様書 3.3）。**
+      // リンクに役割を書くと、その URL を渡すこと自体が
+      // 書き込み権限を配ることになる。ここに持たせるのは
+      // 「どのリストか」「どの曲か」だけ。
       createdBy: adminUid,
       createdAt: FieldValue.serverTimestamp(),
       revoked: false,
@@ -214,7 +209,8 @@ export const createShareLink = onCall({ region: REGION }, async (request) => {
  *
  * 受け取った人は 2 つから選ぶ。
  *
- * - `join`：そのリストの**メンバーになる**。発行時に決めた役割が付く
+ * - `join`：そのリストの**メンバーになる**。役割は一番低いところから始まる
+ *   （`INITIAL_JOIN_ROLE`。リンクは役割を持たない）
  * - `view`：**メンバーにはならず**、中身を見るだけ
  *
  * `view` を選んだ人は `lists/{listId}/viewers/{uid}` に入る。
@@ -247,7 +243,6 @@ export const acceptShareLink = onCall({ region: REGION }, async (request) => {
         revoked: data.revoked,
         listId: data.listId,
         itemId: data.itemId,
-        role: data.role,
       },
     });
 
@@ -273,8 +268,11 @@ export const acceptShareLink = onCall({ region: REGION }, async (request) => {
     if (mode === 'join') {
       tx.set(memberRef, {
         uid,
-        role: data.role,
-        via: 'invite',
+        // **リンクからは役割を読まない（仕様書 3.3）。**
+        // リンクは役割を持たない。一番低いところから始めて、
+        // 上げるかどうかはリスト管理者が決める（5.4）。
+        role: INITIAL_JOIN_ROLE,
+        via: 'shareLink',
         joinedAt: FieldValue.serverTimestamp(),
         addedBy: data.createdBy,
       });

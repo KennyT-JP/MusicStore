@@ -163,7 +163,7 @@ docs/                    仕様書・セットアップ手順・開発ログ
 flutter test                        # 278 件
 cd rules-test && npm test           # 124 件（Firestore ルール 111 件・Storage 13 件）
 cd functions && npm test            # 75 件（サーバー側のドメインロジック・通知）
-cd functions && npm run test:integration  # 58 件（要エミュレータ）
+cd functions && npm run test:integration  # 61 件（要エミュレータ）
 ```
 
 **画面に出る文字は必ず `lib/l10n/*.arb` を通してください。** 直書きすると

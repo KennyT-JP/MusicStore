@@ -50,7 +50,7 @@
 | `flutter analyze` / `flutter test` | 278 | 不要 |
 | `cd rules-test && npm test` | 124 | スクリプトが自動で起動・終了 |
 | `cd functions && npm test` | 75 | 不要 |
-| `cd functions && npm run test:integration` | 58 | **別のウィンドウで `npm run serve` が必要** |
+| `cd functions && npm run test:integration` | 61 | **別のウィンドウで `npm run serve` が必要** |
 
 > **注意：作業用のコンテナ内では `rules-test` が緑になりません。**
 > Storage のルールランタイムから Firestore を引く通信がプロキシに遮られ、
@@ -123,13 +123,35 @@
 反していました。**いまは押すだけの操作が 1 つあるだけです。**
 
 - 発行時に指定するのは**対象リスト**（と、曲を指すならその曲）だけ
-- 「参加する」を選んだ人は **Super User**（`domain/roles.ts` の `JOIN_ROLE`）
-- Read Only にしないのは、それだと「参加せずに見る」とほとんど同じになり、
-  2 つの選択肢を出す意味が無くなるため
-- リンクからリスト管理者にはならない。参加後の役割変更はメンバー管理から（5.4）
 
-**この 2 回で学んだことは 1 つです。** 「単純に」と言われたら、
-既存の作りの中で選ばせている場所をまず疑うこと。
+**そのあと、さらに指摘を受けています。**
+
+> URLは単なるリスト、曲へのリンクでしかなく、それ以上の意味を
+> 持たせてはいけません
+
+選択肢を消した代わりに、`JOIN_ROLE = 'superUser'` をリンクの側に
+書き込んでいました。**依頼者が消したかったのは「選ぶ操作」ではなく、
+リンクが役割を持っていることでした。**
+
+URL は転送されます。リンクに役割が書いてあると、**その URL を渡すこと
+自体が書き込み権限を配ること**になり、渡した相手がさらに回せば
+そのまま広がります。期限も回数の上限も無いリンクなので、なおさらです。
+
+いまはこうなっています。
+
+| 項目 | いま |
+| --- | --- |
+| `shareLinks/{linkId}` | `listId` と（あれば）`itemId` だけ。**役割の欄を持たない** |
+| 参加したときの役割 | `domain/roles.ts` の `INITIAL_JOIN_ROLE`（**Read Only**） |
+| 書けるようにする | リスト管理者がメンバー管理から上げる（5.4） |
+
+一番低い役割で入れるのは、**リンクが与える範囲を「参加せずに見る」と
+同じに揃えるため**です。URL が広く出回っても、それだけでは誰も
+書けるようになりません。
+
+**この 3 回で学んだことは 1 つです。** 選択肢を消すときは、
+**その判断がどこへ行ったかを見ること。** 消えていないなら、
+消したことにはなりません。
 
 ---
 
@@ -295,7 +317,7 @@ flutter test                                   :: 278 件
 cd functions && npm test                       :: 75 件
 cd ..\rules-test && npm test                   :: 124 件
 （1枚目）cd ..\functions && npm run serve
-（2枚目）cd ..\functions && npm run test:integration   :: 58 件
+（2枚目）cd ..\functions && npm run test:integration   :: 61 件
 ```
 
 全件成功を確認してから配信します。
@@ -489,7 +511,7 @@ git log --oneline -1        ← 期待するコミットが出るか
 | `lib/ui/screens/list_detail_screen.dart` | `_PlaybackButtons`（一覧の左の再生操作） |
 | `lib/ui/screens/home_screen.dart` | `_ShareLinkMenu`（行末の 🔗 から共有リンクをコピー。**選択肢は無い**） |
 | `functions/src/domain/share_link.ts` | リンクの判断。落ちる理由は「見つからない」「取り消し済み」の 2 つだけ |
-| `functions/src/domain/roles.ts` | `JOIN_ROLE` — 参加を選んだ人に付く役割。**ここ 1 か所で決まる** |
+| `functions/src/domain/roles.ts` | `INITIAL_JOIN_ROLE` — 参加した人の初期役割（Read Only）。**リンクは役割を持たない** |
 | `lib/ui/screens/share_link_screen.dart` | リンクを開いた人が「参加する／参加せずに見る」を選ぶ画面 |
 | `lib/data/repositories/auth_repository.dart` | `_applyLanguage`（確認メールの言語） |
 | `lib/ui/screens/auth/verify_email_screen.dart` | 3 秒ごとの静かな確認（自動で先へ進む） |

@@ -55,15 +55,19 @@ export function hasAtLeast(access: ListAccess, required: ListRole): boolean {
 }
 
 /**
- * 共有リンクで「参加する」を選んだ人に付ける役割（仕様書 3.3）。
+ * 参加した人の初期役割（仕様書 3.3 / 5.4）。
  *
- * **発行する側は選ばない。** リンクは 1 種類だけにしてある。
+ * **共有リンクは役割を持たない。** URL は「どのリスト（どの曲）か」
+ * 以外の意味を持ってはいけない。リンクに役割を持たせると、
+ * その URL を渡すこと自体が書き込み権限を配ることになる。
  *
- * Read Only にしないのは、それだと「参加せずに見る」とほとんど同じに
- * なるため。2 つの選択肢は、書けるかどうかで分かれている必要がある。
- * 参加後の役割変更はメンバー管理から行う（5.4）。
+ * そこで、リンクから参加した人は**一番低い役割**で入る。
+ * こうするとリンクが与える範囲は「参加せずに見る」と同じになり、
+ * URL は入口以上のものにならない。
+ *
+ * **書けるようにするかどうかは、リスト管理者が後から決める**（5.4）。
  */
-export const JOIN_ROLE: ListRole = 'superUser';
+export const INITIAL_JOIN_ROLE: ListRole = 'readOnly';
 
 export function isListAdmin(access: ListAccess): boolean {
   return hasAtLeast(access, 'listAdmin');
