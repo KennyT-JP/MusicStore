@@ -778,10 +778,6 @@ class AppL10nJa extends AppL10n {
       '「リストのメンバーにならずに見る」を選んだあとでメンバーになりたくなったら、同じリンクをもう一度開いてください。';
 
   @override
-  String get shareLinkSignInNote =>
-      'どちらを選んでも、ログイン（またはアカウント登録）が必要です。選んだあとの画面で行えます。';
-
-  @override
   String get shareLinkNotFound => 'リンクが見つかりません。URL をご確認ください。';
 
   @override

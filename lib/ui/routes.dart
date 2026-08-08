@@ -61,21 +61,9 @@ class AppRoutes {
 
   /// 共有リンクの画面か。
   ///
-  /// **この画面だけは未ログインでも開ける**（3.1.1）。受け取った人に
-  /// まず「参加する／参加せずに見る」を見せ、選んだ時点でログインを求める。
+  /// 未ログインで直接開かれたとき、確認画面を挟んでも**この URL へ
+  /// 戻れるように**するための判定（3.1.1／v1.4）。
   static bool isShareLink(String location) => location.startsWith('/s/');
-
-  /// 共有リンクで選んだほうを、ログインをまたいで覚えるクエリ（3.3）。
-  ///
-  /// 未ログインの人が選ぶ → ログイン（とメール確認）→ この画面へ戻る、
-  /// の往復で**同じ選択をもう一度させない**ための持ち回り。
-  static const String choiceQueryParam = 'choice';
-  static const String choiceJoin = 'join';
-  static const String choiceView = 'view';
-
-  /// 選んだほうを添えた共有リンクのパス。ログインの戻り先に使う。
-  static String shareLinkWithChoice(String linkId, {required bool join}) =>
-      '/s/$linkId?$choiceQueryParam=${join ? choiceJoin : choiceView}';
 
   // --- サイト管理（14.2） ---
 

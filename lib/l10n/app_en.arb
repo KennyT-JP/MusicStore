@@ -338,7 +338,6 @@
   "shareLinkViewTitle": "View without becoming a member",
   "shareLinkViewBody": "You do not become a member. You can browse the tracks and listen to them. You will not appear in the member list, receive no notifications, and cannot post.",
   "shareLinkChangeLaterNote": "If you choose to view without becoming a member and later change your mind, just open the same link again.",
-  "shareLinkSignInNote": "Either choice requires signing in (or creating an account). You can do that on the next screen.",
   "shareLinkNotFound": "Link not found. Please check the URL.",
   "shareLinkRevoked": "This link has been revoked. Please ask for a new one.",
   "functionErrorShareLinkNotFound": "Link not found. Please check the URL.",

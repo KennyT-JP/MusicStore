@@ -817,10 +817,6 @@ class AppL10nEn extends AppL10n {
       'If you choose to view without becoming a member and later change your mind, just open the same link again.';
 
   @override
-  String get shareLinkSignInNote =>
-      'Either choice requires signing in (or creating an account). You can do that on the next screen.';
-
-  @override
   String get shareLinkNotFound => 'Link not found. Please check the URL.';
 
   @override

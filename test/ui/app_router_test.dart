@@ -57,32 +57,27 @@ void main() {
     });
   });
 
-  group('共有リンク /s/ は選択画面を先に出す（3.1.1 の例外／v1.3）', () {
-    test('未ログインでも開ける', () {
-      // リンクを受け取った人が最初に見るのは選択肢であって、
-      // ログインフォームではない。画面はリスト名を出さないので、
-      // 見せても漏れるものが無い。
-      expect(redirect(signedOut, '/s/abc123'), isNull);
+  group('共有リンク /s/ の扱い（3.1.1／v1.4）', () {
+    test('未ログインなら、先にログインへ送り、戻り先を持たせる', () {
+      // ログインが済んだら選択画面へ自動で戻す。
+      final result = redirect(signedOut, '/s/abc123');
+      expect(result, isNotNull);
+      expect(result, startsWith(AppRoutes.signIn));
+      final query = Uri.parse(result!).queryParameters;
+      expect(query[AppRoutes.redirectQueryParam], '/s/abc123');
     });
 
-    test('choice クエリが付いていても開ける', () {
-      expect(
-        redirectFor(signedOut, '/s/abc123', Uri.parse('/s/abc123?choice=join')),
-        isNull,
-      );
+    test('メール未確認なら、確認画面を挟んでも戻り先を失わない', () {
+      // /s/ を直接開いた場合、その URL 自体を戻り先にする。
+      final result = redirect(unverified, '/s/abc123');
+      expect(result, isNotNull);
+      expect(result, startsWith(AppRoutes.verifyEmail));
+      final query = Uri.parse(result!).queryParameters;
+      expect(query[AppRoutes.redirectQueryParam], '/s/abc123');
     });
 
-    test('メール未確認でも開ける（求められるのは選んだあと）', () {
-      expect(redirect(unverified, '/s/abc123'), isNull);
-    });
-
-    test('ログイン済みでも、もちろん開ける', () {
+    test('ログイン済み（確認済み）なら、選択画面が直接出る', () {
       expect(redirect(member, '/s/abc123'), isNull);
-    });
-
-    test('リスト・曲の URL は今までどおりログインを求める', () {
-      // 例外は /s/ だけ。/lists/ はリスト名が画面に出るため見せない。
-      expect(redirect(signedOut, '/lists/abc123'), isNotNull);
     });
   });
 
@@ -103,21 +98,21 @@ void main() {
       final result = redirectFor(
         unverified,
         AppRoutes.signIn,
-        Uri.parse('/sign-in?redirect=%2Fs%2Fabc%3Fchoice%3Djoin'),
+        Uri.parse('/sign-in?redirect=%2Fs%2Fabc'),
       );
       expect(result, isNotNull);
       expect(result, startsWith(AppRoutes.verifyEmail));
       final query = Uri.parse(result!).queryParameters;
-      expect(query[AppRoutes.redirectQueryParam], '/s/abc?choice=join');
+      expect(query[AppRoutes.redirectQueryParam], '/s/abc');
     });
 
     test('確認が済んだら、持ち回した戻り先へ送る', () {
       final result = redirectFor(
         member,
         AppRoutes.verifyEmail,
-        Uri.parse('/verify-email?redirect=%2Fs%2Fabc%3Fchoice%3Djoin'),
+        Uri.parse('/verify-email?redirect=%2Fs%2Fabc'),
       );
-      expect(result, '/s/abc?choice=join');
+      expect(result, '/s/abc');
     });
   });
 
@@ -177,17 +172,6 @@ void main() {
       expect(AppRoutes.signInWithRedirect(''), AppRoutes.signIn);
     });
 
-    test('共有リンクに選んだほうを添えられる', () {
-      expect(
-        AppRoutes.shareLinkWithChoice('abc', join: true),
-        '/s/abc?choice=join',
-      );
-      expect(
-        AppRoutes.shareLinkWithChoice('abc', join: false),
-        '/s/abc?choice=view',
-      );
-    });
-
     test('確認画面への戻り先つきパス', () {
       expect(AppRoutes.verifyEmailWithRedirect(null), AppRoutes.verifyEmail);
       expect(AppRoutes.verifyEmailWithRedirect(''), AppRoutes.verifyEmail);
@@ -196,8 +180,8 @@ void main() {
         AppRoutes.verifyEmail,
       );
       expect(
-        AppRoutes.verifyEmailWithRedirect('/s/abc?choice=join'),
-        '/verify-email?redirect=%2Fs%2Fabc%3Fchoice%3Djoin',
+        AppRoutes.verifyEmailWithRedirect('/s/abc'),
+        '/verify-email?redirect=%2Fs%2Fabc',
       );
     });
   });

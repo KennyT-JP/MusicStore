@@ -74,6 +74,28 @@ class MusicListApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // **ログイン状態の復元が終わるまで、画面遷移の判定を始めない。**
+    //
+    // Firebase は起動直後、前回のログインを復元するまでのあいだ
+    // 「未ログイン」に見える。その状態でルーターを動かすと、ログイン済みの
+    // 人が URL を開いても一度ログイン画面へ送られ、復元後に戻される
+    // （画面がちらつき、復元が遅いとログイン画面のまま止まって見える）。
+    // 最初の判定が出るまでは読み込み表示だけを出す（2026-08-08 の指摘）。
+    final authRestoring = ref.watch(firebaseUserProvider).isLoading;
+    if (authRestoring && routerOverride == null) {
+      return MaterialApp(
+        theme: ThemeData(
+          colorScheme: appColorScheme(Brightness.light),
+          fontFamily: kAppFontFamily,
+        ),
+        darkTheme: ThemeData(
+          colorScheme: appColorScheme(Brightness.dark),
+          fontFamily: kAppFontFamily,
+        ),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     final router = routerOverride ?? ref.watch(routerProvider);
 
     // 表示言語はユーザー設定に従う（仕様書 2 章）。

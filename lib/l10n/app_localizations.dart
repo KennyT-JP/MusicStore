@@ -1483,12 +1483,6 @@ abstract class AppL10n {
   /// **'「リストのメンバーにならずに見る」を選んだあとでメンバーになりたくなったら、同じリンクをもう一度開いてください。'**
   String get shareLinkChangeLaterNote;
 
-  /// No description provided for @shareLinkSignInNote.
-  ///
-  /// In ja, this message translates to:
-  /// **'どちらを選んでも、ログイン（またはアカウント登録）が必要です。選んだあとの画面で行えます。'**
-  String get shareLinkSignInNote;
-
   /// No description provided for @shareLinkNotFound.
   ///
   /// In ja, this message translates to:
