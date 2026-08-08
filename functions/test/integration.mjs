@@ -310,19 +310,32 @@ if (!listId) {
 
   // --- メンバー数の集計（13.4） ---
   //
-  // **ここまでに参加した人を数える。** 人を増やしたら、この数も直すこと。
+  // ここまでに参加したのは次の人たち。
   //
-  //   1. applicant … リストを作った人（listAdmin）
-  //   2. invitee  … リンクから参加
-  //   3. second   … 同じリンクから参加（複数人が使える／3.3）
-  //   4. viewer   … 見るだけを選んだあと、参加に切り替えた（3.3）
+  //   1. applicant    … リストを作った人（listAdmin）
+  //   2. invitee      … リンクから参加
+  //   3. ignoredUser  … 役割を渡して作ったリンクから参加（役割は効かない／3.3）
+  //   4. second       … 同じリンクから参加（複数人が使える／3.3）
+  //   5. viewer       … 見るだけを選んだあと、参加に切り替えた（3.3）
   //
   // **見るだけのままの人は数に入らない。** viewer は途中で参加へ
-  // 切り替えたので入っている。切り替えなければ 3 のままになる。
+  // 切り替えたので入っている。切り替えなければ 4 のままになる。
+  //
+  // **数を書き写さない。** 以前はここに人数を直接書き、上の一覧に
+  // 「人を増やしたらこの数も直すこと」と添えていた。増やしたときに
+  // 直されず、統合テストを実行できない環境だったため、赤いまま
+  // 本番まで配信された（2026-08-08 に判明）。
+  // 注意書きは仕組みではないので、members を実際に数えて比べる。
   await sleep(5000);
   const l2 = await doc(`lists/${listId}`);
-  check('memberCount が更新される', sv(l2, 'memberCount') === '4',
-        `memberCount=${sv(l2,'memberCount')} adminCount=${sv(l2,'adminCount')}`);
+  const memberDocs = await list(`lists/${listId}/members`);
+  // **先に「読めている」ことを確かめる。** members が読めていないと 0 件になり、
+  // memberCount も 0 なら一致してしまう（前提が崩れると自動的に通る形）。
+  check('members を読める（次の確認の土台）', memberDocs.length > 0,
+        `members=${memberDocs.length}`);
+  check('memberCount が更新される',
+        sv(l2, 'memberCount') === String(memberDocs.length),
+        `memberCount=${sv(l2,'memberCount')} members=${memberDocs.length} adminCount=${sv(l2,'adminCount')}`);
   check('adminCount は増えない（リンクでは付与できない）', sv(l2, 'adminCount') === '1',
         `adminCount=${sv(l2,'adminCount')}`);
 
