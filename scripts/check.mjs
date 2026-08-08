@@ -129,6 +129,13 @@ const results = (await Promise.all([
   step('functions 単体', /Tests\s+\d+ passed/, 'npm', ['test'], join(root, 'functions')),
   // エミュレータを使う 2 本は、ポートを取り合うので内部で直列。
   // 統合テストを先にするのは、残留プロセスの片付けがそちらに入っているため。
+  //
+  // **この本だけ、同時に走る他の本から割を食う。** エミュレータは JVM と
+  // Node の上で動くので、`flutter test` と `dart analyze` が同じ機械で
+  // 回っているあいだ、応答が目に見えて遅くなる（実測で 280 秒 → 550 秒）。
+  // **遅いだけで失敗にしない**よう、統合テスト側の待ち時間には余裕を
+  // 持たせてある（functions/test/integration.mjs の CALL_TIMEOUT_MS）。
+  // 並列をやめれば競合は消えるが、全体は逆に遅くなるので、こうしている。
   (async () => {
     const integration = await step(
       'functions 統合', /=== \d+ \/ \d+ 成功 ===/,
