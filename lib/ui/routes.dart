@@ -59,6 +59,24 @@ class AppRoutes {
   /// 共有リンク（仕様書 3.3）。無期限・何度でも・複数人が使える。
   static String shareLink(String linkId) => '/s/$linkId';
 
+  /// 共有リンクの画面か。
+  ///
+  /// **この画面だけは未ログインでも開ける**（3.1.1）。受け取った人に
+  /// まず「参加する／参加せずに見る」を見せ、選んだ時点でログインを求める。
+  static bool isShareLink(String location) => location.startsWith('/s/');
+
+  /// 共有リンクで選んだほうを、ログインをまたいで覚えるクエリ（3.3）。
+  ///
+  /// 未ログインの人が選ぶ → ログイン（とメール確認）→ この画面へ戻る、
+  /// の往復で**同じ選択をもう一度させない**ための持ち回り。
+  static const String choiceQueryParam = 'choice';
+  static const String choiceJoin = 'join';
+  static const String choiceView = 'view';
+
+  /// 選んだほうを添えた共有リンクのパス。ログインの戻り先に使う。
+  static String shareLinkWithChoice(String linkId, {required bool join}) =>
+      '/s/$linkId?$choiceQueryParam=${join ? choiceJoin : choiceView}';
+
   // --- サイト管理（14.2） ---
 
   static const String siteAdmin = '/admin';
@@ -89,6 +107,19 @@ class AppRoutes {
     if (destination.isEmpty || destination == home) return signIn;
     final encoded = Uri.encodeQueryComponent(destination);
     return '$signIn?$redirectQueryParam=$encoded';
+  }
+
+  /// メール確認画面へ、戻り先つきで遷移するパスを組み立てる（3.1）。
+  ///
+  /// **戻り先を捨てないためにある。** 以前は確認画面へ送るときにクエリを
+  /// 落としており、共有リンクから登録した人が、確認を終えるとホームに
+  /// 置き去りになっていた（2026-08-08）。
+  static String verifyEmailWithRedirect(String? destination) {
+    if (destination == null || destination.isEmpty || destination == home) {
+      return verifyEmail;
+    }
+    final encoded = Uri.encodeQueryComponent(destination);
+    return '$verifyEmail?$redirectQueryParam=$encoded';
   }
 
   /// ログイン後に戻るべきパスを取り出す。

@@ -100,7 +100,7 @@ abstract class AppL10n {
   /// アプリ名。ブラウザのタブと上部バーに表示する
   ///
   /// In ja, this message translates to:
-  /// **'音楽リスト'**
+  /// **'音源創庫'**
   String get appTitle;
 
   /// No description provided for @navHome.
@@ -1482,6 +1482,12 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。'**
   String get shareLinkChangeLaterNote;
+
+  /// No description provided for @shareLinkSignInNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'どちらを選んでも、ログイン（またはアカウント登録）が必要です。選んだあとの画面で行えます。'**
+  String get shareLinkSignInNote;
 
   /// No description provided for @shareLinkNotFound.
   ///

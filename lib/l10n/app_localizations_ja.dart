@@ -9,7 +9,7 @@ class AppL10nJa extends AppL10n {
   AppL10nJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get appTitle => '音楽リスト';
+  String get appTitle => '音源創庫';
 
   @override
   String get navHome => 'ホーム';
@@ -776,6 +776,10 @@ class AppL10nJa extends AppL10n {
   @override
   String get shareLinkChangeLaterNote =>
       '「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。';
+
+  @override
+  String get shareLinkSignInNote =>
+      'どちらを選んでも、ログイン（またはアカウント登録）が必要です。選んだあとの画面で行えます。';
 
   @override
   String get shareLinkNotFound => 'リンクが見つかりません。URL をご確認ください。';

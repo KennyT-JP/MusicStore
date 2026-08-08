@@ -33,7 +33,7 @@ scripts\check.cmd        （Windows）
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 278 |
+| `flutter test` | 294 |
 | `functions` の単体テスト | 75 |
 | エミュレータ系（統合 → ルールの順に直列） | 61 + 124 |
 

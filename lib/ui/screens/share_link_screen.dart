@@ -10,6 +10,11 @@
 /// **どちらを選んでも、その説明を画面に出す。** 押したあとで
 /// 「そういうことだったのか」となる作りにしない。
 ///
+/// **この画面は未ログインでも開ける**（3.1.1 の例外）。リンクを受け取った
+/// 人が最初に見るのは選択肢であって、ログインフォームではない。
+/// ログインが要るのは**選んだあと**で、選んだほうを `choice` クエリに
+/// 持たせてログインへ送り、戻ってきたら続きを自動で実行する。
+///
 /// リンクは無期限で、何度でも、複数人が使える。
 library;
 
@@ -25,9 +30,15 @@ import '../routes.dart';
 import '../widgets/error_message.dart';
 
 class ShareLinkScreen extends ConsumerStatefulWidget {
-  const ShareLinkScreen({super.key, required this.linkId});
+  const ShareLinkScreen({super.key, required this.linkId, this.initialChoice});
 
   final String linkId;
+
+  /// ログイン前に選んだほう（`join` / `view`）。それ以外の値は無視する。
+  ///
+  /// ログインから戻ってきたときに、同じ選択をもう一度させないための
+  /// 持ち回り（URL の `choice` クエリ）。
+  final String? initialChoice;
 
   @override
   ConsumerState<ShareLinkScreen> createState() => _ShareLinkScreenState();
@@ -36,6 +47,24 @@ class ShareLinkScreen extends ConsumerStatefulWidget {
 class _ShareLinkScreenState extends ConsumerState<ShareLinkScreen> {
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // ログインを終えて戻ってきた人の「続き」。選んだほうが URL に残って
+    // いて、いま実行できる状態なら、もう一度選ばせずにそのまま進める。
+    final choice = switch (widget.initialChoice) {
+      AppRoutes.choiceJoin => true,
+      AppRoutes.choiceView => false,
+      _ => null,
+    };
+    if (choice != null && ref.read(authStateProvider).canUseApp) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _accept(join: choice);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +136,19 @@ class _ShareLinkScreenState extends ConsumerState<ShareLinkScreen> {
                     textAlign: TextAlign.center,
                   ),
 
+                  // ログインが済んでいない人には、選んだあとに何が要るかを
+                  // 先に伝える。押してからログイン画面が出て驚かせない。
+                  if (!ref.watch(authStateProvider).canUseApp) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.shareLinkSignInNote,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _busy ? null : () => context.go(AppRoutes.home),
@@ -122,6 +164,19 @@ class _ShareLinkScreenState extends ConsumerState<ShareLinkScreen> {
   }
 
   Future<void> _accept({required bool join}) async {
+    // まだログイン（またはメール確認）が済んでいない人は、ここで初めて
+    // 認証へ送る。選んだほうを choice クエリで持たせておき、済んだら
+    // この画面へ戻って続きが自動で実行される（initState）。
+    // メール未確認の人は、ルーターが確認画面を挟んだうえで同じ場所へ戻す。
+    if (!ref.read(authStateProvider).canUseApp) {
+      context.go(
+        AppRoutes.signInWithRedirect(
+          AppRoutes.shareLinkWithChoice(widget.linkId, join: join),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _busy = true;
       _error = null;
