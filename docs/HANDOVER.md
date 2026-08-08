@@ -3,8 +3,8 @@
 **この文書は、担当を交代する人が最初に読むものです。**
 いま何が終わっていて、次に何をすればよいかを、判断の理由つきで残します。
 
-- 対象ブランチ：`claude/attachment-continuation-ryb7wv`
-- **ブランチの内容は検証環境・本番環境の両方に配信済みです**（2026-08-08）
+- 対象ブランチ：**本番は `main`、検証環境は `dev`**（2026-08-08 に再編。旧 `claude/attachment-continuation-ryb7wv` は `dev` に改名）
+- **両方の枝の内容は検証環境・本番環境に配信済みです**（2026-08-08）
 - 詳しい経緯：[DEVLOG.md](DEVLOG.md) — 同じ失敗を繰り返さないための記録
 - **依頼者とのやりとりの原文**：[CONVERSATION-LOG.md](CONVERSATION-LOG.md)
   — 要約では落ちる言い回しを確かめたいときに
@@ -28,11 +28,15 @@
 
 そのほかの約束：
 
-- 変更は必ずブランチ `claude/attachment-continuation-ryb7wv` に対して行う
+- **本番へ配信してよいのは `main` からだけ。** 検証環境は `dev` から
+- **配信の前にコミットする。** 検証環境なら `dev` へ、本番なら `main` へ。
+  `scripts/deploy.mjs` が枝と未コミットの変更を見て、満たさなければ止めます
 - プルリクエストは、**依頼者が明示的に求めたときだけ**作る
 - サービスアカウントの鍵は絶対にコミットしない
 - `functions/.env*` はコミットするので、秘密の値を書かない
 - エミュレータは必ず `--project demo-musiclist` で起動する
+- **接続設定を作り直したら `firebase.json` を確かめる。**
+  `flutterfire configure` がこれを 1 行に潰します（後述）
 
 ---
 
@@ -46,22 +50,39 @@
 **未配信の差分はありません。** ブランチの内容がそのまま両方の環境に入っています。
 2026-08-08 に依頼者が本番まで配信し、「本番まで反映しました」と確認を受けています。
 
-### テストの件数（2026-08-08 時点）
+### テストの実行（2026-08-08 に 1 コマンドへまとめました）
 
-| 実行するもの | 件数 | エミュレータ |
+```
+scripts\test-all.cmd        （Windows）
+./scripts/test-all.sh       （macOS / Linux）
+```
+
+**ウィンドウは 1 つで済みます。** エミュレータの起動・後片付けは中で行います。
+
+| 実行されるもの | 件数 | エミュレータ |
 | --- | --- | --- |
-| `flutter analyze` / `flutter test` | 278 | 不要 |
-| `cd rules-test && npm test` | 124 | スクリプトが自動で起動・終了 |
+| `dart analyze` | — | 不要 |
+| `flutter test` | 278 | 不要 |
 | `cd functions && npm test` | 75 | 不要 |
-| `cd functions && npm run test:integration` | 61 | **別のウィンドウで `npm run serve` が必要** |
+| `cd rules-test && npm test` | 124 | 自動 |
+| `cd functions && npm run test:integration` | 61 | 自動 |
 
-> **注意：作業用のコンテナ内では `rules-test` が緑になりません。**
-> Storage のルールランタイムから Firestore を引く通信がプロキシに遮られ、
-> 8 件がスキップされます。**コードの問題ではありません。**
-> テスト自身がその旨を出力して止まるので、出力を読んでください。
-> 依頼者の Windows 環境では 124 件すべて通ります。
-> 統合テストも同じ理由でコンテナ内では実行できません。
-> **この 2 つは依頼者に実行を依頼してください。**
+> **以前の申し送りは「コンテナでは rules-test と統合テストが動かない」でした。**
+> それは作業環境がクラウドのコンテナだったころの話です。
+> **いまはローカルの Windows で、5 つとも全件通ります。**
+> 「動かせない」と書いてあったら、まず試すこと（AUDIT-CHECKLIST 観点 2）。
+
+**前提となる道具**（2026-08-08 に実測した要件）
+
+| 要るもの | 版 | 理由 |
+| --- | --- | --- |
+| Flutter | 3.44 以上（Dart 3.12.2 以上） | `pubspec.yaml` の指定 |
+| Node.js | 20 以上 | — |
+| **Java** | **21 以上** | `firebase-tools` 15 以降の要件。**17 では動きません** |
+
+**パスに日本語を含めないでください。** `flutter analyze` が異常終了します
+（Flutter 3.44.9 で実測）。`scripts/test-all.mjs` は `dart analyze` を
+使うので通りますが、`flutter analyze` を直に叩くと落ちます。
 
 ---
 
@@ -289,32 +310,35 @@ catch (_) { ...再生できませんでした... }   // ← 中身を捨てて�
 急いで着手すべき作業は残っていません。ここには
 「まだ確かめられていないこと」と「積み残し」を書きます。
 
-### 4.1 配信はこの環境からできません
+### 4.1 配信はこの環境からできます（2026-08-08 に変わりました）
 
-作業用コンテナには Firebase の認証情報がなく（`firebase login:list` が
-`No authorized accounts`）、**配信はできません。** 依頼者の Windows から実行します。
-曖昧にせず、そう伝えたうえで手順を渡してください。
+**以前の申し送りは「作業用コンテナからは配信できない」でした。**
+作業場所がローカルの Windows に移り、Firebase CLI と gcloud の
+どちらも認証済みです。**テストも配信も、ここから実行できます。**
 
-配信の手順そのものは 4.4 に残してあります。
+```
+firebase login:list      → Logged in as mobile.fujita@gmail.com
+firebase projects:list   → music-storage-dev / music-storage-d79b2 の両方が見える
+```
 
-### 4.2 本番でまだ確認が取れていないこと
+### 4.2 本番の確認状況
 
-依頼者から「本番まで反映しました」とだけ伺っており、
-**次の 3 点は、こちらでは確認できていません。** 次に画面を見てもらう
-機会があれば、あわせて確かめてください。
+以前ここに挙げていた 3 点のうち、**2 点は確認が取れました**（2026-08-08）。
 
-| 確かめること | なぜ |
+| 確かめること | 状況 |
 | --- | --- |
-| 共有リンクを開くと「参加する／参加せずに見る」の画面が出る | URL が `#/s/…` の形なら新しい版。`#/invite/…` なら古い版が残っている |
-| リンクから参加した人が **Read Only** で入っている | リンクが役割を持たないことの、最終的な確認（3.3） |
-| 曲の ▶ で**実際に音が鳴る** | 2026-08-07 の `MissingPluginException` の再発が無いこと |
+| 共有リンクの新しい版が本番に載っている | **確認済み。** 配信済みの `main.dart.js` に `/s/:linkId` があり、旧 `/invite/` は 0 件 |
+| `onCall` の呼び出し許可（Cloud Run の `allUsers`） | **確認済み。** onCall **15 件すべて**に `roles/run.invoker` が `allUsers` で付いている |
+| 曲の ▶ で**実際に音が鳴る** | **未確認。** 画面を操作しないと確かめられません |
 
-**とくに 1 つ目。** 新しく足した 3 本の関数
-（`createShareLink` / `acceptShareLink` / `revokeShareLink`）は、
-本番では**今回が初めての作成**でした。`onCall` の呼び出し許可
-（Cloud Run の `allUsers`）は**新規作成のときにしか設定されません**。
-過去にここが抜けて `！internal` になった実績があります（3 節）。
-リンクを 1 本作って開いてみるのが、いちばん確実な確認です。
+確かめ方（どちらもこの環境から実行できます）。
+
+```
+curl -s --compressed https://music-storage-d79b2.web.app/main.dart.js | grep -c "/s/:linkId"
+gcloud run services get-iam-policy <小文字の関数名> --region=asia-northeast1 --project=music-storage-d79b2
+```
+
+**「本番でどうなっているか」は、言葉ではなく形で確かめられます**（5 節）。
 
 ### 4.3 依頼者に未確認のまま残っている点
 
@@ -333,31 +357,35 @@ catch (_) { ...再生できませんでした... }   // ← 中身を捨てて�
 **テストを飛ばして配信することはありません**（0 節）。
 順序は常に「全件実行 → 全件成功を確認 → 配信」です。
 
-```
-cd C:\Users\1206441\MusicStore
-git pull origin claude/attachment-continuation-ryb7wv
-
-flutter analyze
-flutter test                                   :: 278 件
-cd functions && npm test                       :: 75 件
-cd ..\rules-test && npm test                   :: 124 件
-（1枚目）cd ..\functions && npm run serve
-（2枚目）cd ..\functions && npm run test:integration   :: 61 件
-```
-
-全件成功を確認してから配信します。
+#### 1. `dev` で作って、検証環境で見てもらう
 
 ```
-scripts\deploy.cmd            :: 検証環境
-scripts\deploy.cmd prod       :: 本番環境（プロジェクト ID の入力を求められる）
+cd C:\Codes\MusicStore
+git switch dev
+
+（変更してコミット）
+
+scripts\test-all.cmd          :: 5 つとも全件成功を確認
+scripts\deploy.cmd            :: 検証環境（music-storage-dev）
+```
+
+#### 2. 確認が取れたら `main` へ入れて、本番へ出す
+
+```
+git switch main
+git merge --no-ff dev
+
+scripts\deploy.cmd prod       :: 本番環境（music-storage-d79b2）
 ```
 
 - **`prod` を付け忘れると検証環境へ流れます。**
 - **`--no-build` を付けないでください。** 検証環境向けに作った `build/web`
   がそのまま本番へ載り、**本番の URL で検証環境につながる**状態になります。
   `deploy.cmd prod` は本番向けに作り直すので、そのまま実行してください
-- 検証環境と本番のあいだで `git pull` からやり直す必要はありません。
-  同じコミットを両方へ配信します
+- **枝と未コミットの変更は、スクリプトが見ています。**
+  `dev` 以外から検証環境へ、`main` 以外から本番へ出そうとすると止まります。
+  コミットしていない変更があるときも止まります
+  （接続設定の 2 ファイルは除きます。あれは変更されているのが正常です）
 
 #### 配信の出力で見るところ
 
@@ -395,27 +423,27 @@ scripts\deploy.cmd prod       :: 本番環境（プロジェクト ID の入力�
 次の担当が同じところで止まらないよう、実際に起きたものだけを挙げます。
 詳細は [DEVLOG.md](DEVLOG.md) にあります。
 
-### コンテナがリポジトリを巻き戻すことがある
+### コンテナがリポジトリを巻き戻すことがある（**いまは起きません**）
 
-このセッション中に **5 回**、作業ディレクトリが古いコミットへ
+> **これはクラウドのコンテナで作業していたころの話です。**
+> 2026-08-08 にローカルの Windows へ移ったので、**もう起きません。**
+> 教訓だけ残します。
+
+当時は 1 セッション中に **5 回**、作業ディレクトリが古いコミットへ
 戻っていました。ファイルが消え、`git log` も巻き戻ります。
+**push した直後でも起きました。** 画面のファイルが存在しないのに
+`flutter analyze` は緑、という状態になり、「作ったはずの画面が無い」を
+実装漏れと読み違えました。
 
-**push した直後でも起きます。** 2026-08-08 には、push を終えた次の
-やりとりで `7917450`（2 日前）まで戻っており、**画面のファイルが
-存在しないのに `flutter analyze` は緑**という状態になりました。
-そのときは「作ったはずの画面が無い」と読んで実装漏れを疑いましたが、
-実際には巻き戻りでした。**まず `git log --oneline -1` を見てください。**
-
-**気づき方：** 直前に書いたはずのファイルが `No such file or directory` になる。
-**戻し方：**
+**教訓：作業ツリーの状態は、記憶ではなく `git log --oneline -1` で確かめる。**
+戻し方は次のとおりでした。
 
 ```sh
-git fetch origin claude/attachment-continuation-ryb7wv
-git checkout -B claude/attachment-continuation-ryb7wv origin/claude/attachment-continuation-ryb7wv
+git fetch origin dev
+git checkout -B dev origin/dev
 ```
 
 **push さえしてあれば失われません。** こまめに push してください。
-戻したあとは、目印になる記号を `grep` して本当に戻ったか確かめること。
 
 ### 画面の見え方を、スクリーンショットの目測で診断しない
 

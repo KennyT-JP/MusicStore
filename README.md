@@ -160,12 +160,35 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | リダイレクト判定（`ui/app_router.dart`） | 未ログインで内容が漏れないこと |
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
-```sh
-flutter test                        # 278 件
-cd rules-test && npm test           # 124 件（Firestore ルール 111 件・Storage 13 件）
-cd functions && npm test            # 75 件（サーバー側のドメインロジック・通知）
-cd functions && npm run test:integration  # 61 件（要エミュレータ）
+**実行するのは 1 つのコマンドです。** ウィンドウは 1 つで済みます。
+
+```bat
+scripts\test-all.cmd        :: Windows
 ```
+
+```sh
+./scripts/test-all.sh       # macOS / Linux
+```
+
+中で次の 5 つを順に実行し、**1 つでも赤ければそこで止まります**。
+エミュレータの起動と後片付けは中で行います。
+
+| 実行されるもの | 件数 |
+| --- | --- |
+| `dart analyze` | — |
+| `flutter test` | 278 |
+| `cd functions && npm test` | 75（サーバー側のドメインロジック・通知） |
+| `cd rules-test && npm test` | 124（Firestore ルール 111 件・Storage 13 件） |
+| `cd functions && npm run test:integration` | 61（Cloud Functions の通し確認） |
+
+個別に実行することもできます。**統合テストも 1 つのコマンドで完結します**
+（別のウィンドウでエミュレータを立てる必要はありません）。
+
+> **`flutter analyze` ではなく `dart analyze` を使っています。**
+> `flutter analyze` は**パスに日本語が含まれると異常終了します**（Flutter 3.44.9 で実測）。
+> 同じ解析器なので、指摘の内容は変わりません。
+
+> **Java は 21 以上が要ります**（`firebase-tools` 15 以降の要件）。17 では動きません。
 
 **画面に出る文字は必ず `lib/l10n/*.arb` を通してください。** 直書きすると
 英語表示に切り替えたときだけ日本語が出ます。2026-08-06 の監査では
@@ -191,8 +214,22 @@ cd functions && npm run test:integration  # 61 件（要エミュレータ）
 | 検証 | <https://music-storage-dev.web.app> | 配信済み（2026-08-08 の版） |
 | 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-08 の版） |
 
-**ブランチの内容は本番まで反映されています。** 未配信の差分はありません。
-次に何をすればよいかは [docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
+**未配信の差分はありません。** 次に何をすればよいかは
+[docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
+
+### 枝の使い分け
+
+```
+main   ← **本番はここからのみ配信する**
+  ▲
+  │ 確認が取れたらマージ（git merge --no-ff dev）
+  │
+dev    ← **検証環境専用。** 作業はここで行う
+```
+
+**配信の前にコミットします。** 検証環境へ出すなら `dev` へ、本番へ出すなら
+`main` へ。`scripts/deploy.mjs` が枝と未コミットの変更を見ていて、
+条件を満たさなければ配信しません。
 
 > **配信するときの注意（2026-08-07 に実際に起きたもの）**
 >

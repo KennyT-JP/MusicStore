@@ -49,6 +49,11 @@ const _launchers = <({String path, bool needsFunctions, String why})>[
     why: '統合テスト用に functions を立ち上げる',
   ),
   (
+    path: 'functions/run-integration.mjs',
+    needsFunctions: true,
+    why: '統合テストのために functions ごと起動する',
+  ),
+  (
     path: 'rules-test/run.mjs',
     needsFunctions: false,
     why: 'firestore と storage しか起動しない',

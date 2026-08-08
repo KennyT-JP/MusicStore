@@ -212,8 +212,66 @@ console.log('\n==> 接続設定を確認');
   console.log(`    lib/env/${target.optionsFile} は設定済み`);
 }
 
-// 3. 本番は取り違えると戻せないので、明示的に確認する。
-if (wantsProd && !skipConfirm) {
+// 3. どの枝から、何を配信しようとしているか。
+//
+// **本番は `main` からだけ。検証環境は `dev` から。**（2026-08-08 の指示）
+//
+// 配信されるのは「いま作業ツリーにある内容」であって、コミットの
+// 有無は関係ない。**枝と作業ツリーを先に確かめないと、確認が済んで
+// いないものが本番へ出る。** 以前は本番のプロジェクト ID を手で
+// 入力させて取り違えを防いでいたが、防げるのは「宛先の取り違え」だけで、
+// 「中身が確認済みかどうか」は何も見ていなかった。
+//
+// **手で入力させる確認は、自動で回せないという副作用もあった。**
+// 枝と作業ツリーで確かめるほうが、防げる範囲が広く、人手も要らない。
+console.log('\n==> 枝と作業ツリーを確認');
+{
+  const branch = (await capture('git', ['rev-parse', '--abbrev-ref', 'HEAD']))?.trim();
+  if (!branch) fail('git の枝を読めません。', 'このリポジトリは git 管理下にある必要があります');
+
+  /** その環境へ配信してよい枝。 */
+  const allowed = wantsProd ? ['main'] : ['dev', 'main'];
+  if (!allowed.includes(branch)) {
+    fail(
+      `${target.label}へは ${allowed.map((b) => `\`${b}\``).join(' か ')} からのみ配信します（いまは \`${branch}\`）。`,
+      wantsProd
+        ? '確認が取れた内容を main へ入れてから配信してください: git switch main && git merge --no-ff dev'
+        : 'git switch dev で切り替えてください',
+    );
+  }
+  console.log(`    枝: ${branch}`);
+
+  // **接続設定の 2 ファイルは、変更されているのが正常。**
+  // リポジトリ側は REPLACE_ME のまま置き、手元だけ実際の値にする作り
+  // （docs/SETUP.md 4 章）。ここを未コミット扱いにすると、常に止まる。
+  const generated = [
+    'lib/env/firebase_options_staging.dart',
+    'lib/env/firebase_options_prod.dart',
+  ];
+  const status = (await capture('git', ['status', '--porcelain'])) ?? '';
+  const dirty = status
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^\S+\s+/, ''))
+    .filter((path) => !generated.includes(path));
+
+  if (dirty.length > 0) {
+    fail(
+      `コミットしていない変更があります（${dirty.length} 件）。`,
+      '配信するのは作業ツリーの中身です。先にコミットしてください:\n' +
+        `           ${dirty.slice(0, 5).map((p) => `  ${p}`).join('\n           ')}` +
+        (dirty.length > 5 ? `\n             ほか ${dirty.length - 5} 件` : ''),
+    );
+  }
+  console.log('    未コミットの変更はありません（接続設定の 2 ファイルを除く）');
+}
+
+// 4. 本番は取り違えると戻せないので、対話で動かすときは確認する。
+//
+// **`--yes` を付けるか、`main` にいることが確かめられていれば省く。**
+// 枝の確認（3）が宛先の取り違えを実質的に防いでいる。
+if (wantsProd && !skipConfirm && process.stdin.isTTY) {
   console.log('');
   console.log('  ┌────────────────────────────────────────────┐');
   console.log('  │  これは本番環境へのデプロイです。          │');

@@ -91,6 +91,26 @@ const sv = (d, k) => d?.fields?.[k]?.stringValue ?? d?.fields?.[k]?.integerValue
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * 条件が満たされるまで待つ。満たされたら true、時間切れなら false。
+ *
+ * **固定の待ち時間を書かない。** 以前は「6 秒待ってから確かめる」と
+ * 書いていた。トリガーの初回起動はそれより遅いことがあり、
+ * **エミュレータを起動した直後の 1 回目だけ落ちる**という出方をした。
+ * 2 回目は通るので、原因を掴むまで環境のせいに見える。
+ *
+ * 待つのは「起きるはずのこと」だけにする。「起きないはずのこと」を
+ * これで待つと、毎回かならず時間切れまで待たされる。
+ */
+async function waitUntil(predicate, { timeoutMs = 60000, intervalMs = 500 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await predicate()) return true;
+    if (Date.now() >= deadline) return false;
+    await sleep(intervalMs);
+  }
+}
+
+/**
  * 始める前に、相手が「このテストの想定どおりのエミュレータ」か確かめる。
  *
  * **噛み合っていないまま走らせると、意味の無い PASS が混ざる。**
@@ -108,9 +128,12 @@ async function preflight() {
     console.error('');
     for (const line of lines) console.error(line);
     console.error('');
-    console.error('  別のウィンドウで、次を実行したままにしてください:');
+    console.error('  エミュレータごと実行する（ウィンドウは 1 つで済みます）:');
     console.error('    cd functions');
-    console.error('    npm run serve');
+    console.error('    npm run test:integration');
+    console.error('');
+    console.error('  すでに動いているエミュレータへ繋ぐ場合は、そちらの窓で');
+    console.error('  npm run serve が動いたままか確かめてください。');
     console.error('');
     process.exit(1);
   };
@@ -118,13 +141,31 @@ async function preflight() {
   // 1. 関数エミュレータが、このプロジェクト ID で関数を配っているか。
   //    トークンを付けずに呼ぶので、正しければ「未認証」が返る。
   //    404 は「そんな関数は無い」。原因は 2 通りある。
-  let res;
-  try {
-    res = await call('submitListRequest', {});
-  } catch (error) {
-    stop(`関数エミュレータへ接続できません（${FN}）。`, `  ${error.message}`);
+  //
+  //    **すぐには諦めない。** エミュレータは「All emulators ready!」を
+  //    出したあとで関数を 1 つずつ組み立てる。自分で起動して続けて
+  //    実行する形（npm run test:integration）では、まだ配られていない
+  //    時点でここへ来る。**用意できるまで待ってから判断する。**
+  //    それでも来なければ、下の 2 つの原因を案内する。
+  const READY_TIMEOUT_MS = 120000;
+  let res = null;
+  let lastError = null;
+  const appeared = await waitUntil(async () => {
+    try {
+      res = await call('submitListRequest', {});
+      lastError = null;
+    } catch (error) {
+      res = null;
+      lastError = error;
+      return false;
+    }
+    return res.status !== 404;
+  }, { timeoutMs: READY_TIMEOUT_MS, intervalMs: 1000 });
+
+  if (!appeared && lastError) {
+    stop(`関数エミュレータへ接続できません（${FN}）。`, `  ${lastError.message}`);
   }
-  if (res.status === 404) {
+  if (!appeared) {
     // **原因を 1 つに決めつけない（2026-08-07）。**
     // 以前はここで「プロジェクト ID が違います」とだけ出していた。
     // 実際の原因は「関数が 1 つも読み込まれていない」ほうで、
@@ -326,9 +367,11 @@ if (!listId) {
   // 直されず、統合テストを実行できない環境だったため、赤いまま
   // 本番まで配信された（2026-08-08 に判明）。
   // 注意書きは仕組みではないので、members を実際に数えて比べる。
-  await sleep(5000);
-  const l2 = await doc(`lists/${listId}`);
+  // memberCount は onMemberWritten が後から更新する。追いつくまで待つ。
   const memberDocs = await list(`lists/${listId}/members`);
+  await waitUntil(async () =>
+    sv(await doc(`lists/${listId}`), 'memberCount') === String(memberDocs.length));
+  const l2 = await doc(`lists/${listId}`);
   // **先に「読めている」ことを確かめる。** members が読めていないと 0 件になり、
   // memberCount も 0 なら一致してしまう（前提が崩れると自動的に通る形）。
   check('members を読める（次の確認の土台）', memberDocs.length > 0,
@@ -506,10 +549,19 @@ if (!listId) {
   });
   check('曲を追加できる（通知の検証用）', wrote);
 
-  await sleep(6000);
   const itemAdded = async (uid) =>
     (await list(`users/${uid}/notifications`))
       .some((n) => sv(n, 'type') === 'itemAdded' && sv(n, 'itemId') === itemId);
+
+  // **届くはずの人に届くまで待つ。** onItemCreated は非同期で、初回は
+  // トリガーの起動に時間がかかる。ここで待たずに固定秒数で進むと、
+  // エミュレータ起動直後の 1 回目だけ落ちる（下の waitUntil の説明を参照）。
+  //
+  // **「届かない」側はここでは待たない。** 待っても何も起きないので
+  // 時間切れまで無駄に待つだけになる。届く側が揃った時点で、
+  // 同じ配信は済んでいるとみなして全員分を一度に確かめる。
+  await waitUntil(async () =>
+    (await itemAdded(invitee.localId)) && (await itemAdded(joiner.localId)));
 
   // invitee はリンクから入った Read Only、joiner はこの時点で listAdmin。
   // **通知は役割で絞らない（10.2）。** メンバーなら届く。
