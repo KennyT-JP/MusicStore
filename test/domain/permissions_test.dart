@@ -51,6 +51,36 @@ void main() {
       expect(Permissions.canViewList(outsider), isFalse);
     });
 
+    test('閲覧者は中身を見られる（3.3）', () {
+      // 共有リンクで「メンバーにならずに見る」を選んだ人。
+      // **ここを落とすと、見る権利があるのに参加申請の画面へ送られる**
+      // （2026-08-08 の指摘）。
+      const viewer = ListAccess(
+        isSiteAdmin: false,
+        role: null,
+        isViewer: true,
+      );
+      expect(Permissions.canViewList(viewer), isTrue);
+    });
+
+    test('閲覧者は、見られるだけで何も書けない（3.3）', () {
+      // **見られることと書けることは別。** 役割を持たせて済ませると、
+      // 書ける判定まで通ってしまう。
+      const viewer = ListAccess(
+        isSiteAdmin: false,
+        role: null,
+        isViewer: true,
+      );
+      expect(Permissions.canAddItem(viewer), isFalse);
+      expect(Permissions.canPostComment(viewer), isFalse);
+      expect(Permissions.canManageMembers(viewer), isFalse);
+      expect(Permissions.canCreateShareLink(viewer), isFalse);
+      expect(Permissions.canAccessSiteAdmin(viewer), isFalse);
+      // メンバーではないので「離脱」もしない。
+      expect(Permissions.canLeaveList(viewer), isFalse);
+      expect(viewer.effectiveRole, isNull);
+    });
+
     test('サイト管理者はメンバー登録がなくても閲覧できる', () {
       expect(Permissions.canViewList(siteAdmin), isTrue);
     });

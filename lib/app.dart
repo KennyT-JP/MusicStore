@@ -11,10 +11,9 @@ import 'package:go_router/go_router.dart';
 
 import 'l10n/app_localizations.dart';
 import 'providers/app_providers.dart';
+import 'providers/font_provider.dart';
 import 'ui/app_router.dart';
-
-/// アプリ全体で使うフォント。pubspec.yaml の `fonts:` と揃えること。
-const String kAppFontFamily = 'NotoSansJP';
+import 'ui/routes.dart';
 
 /// 配色の基準色（仕様書 12.5）。**寒色系で統一する。**
 const Color kSeedColor = Color(0xFF1B5E9E);
@@ -48,6 +47,15 @@ ColorScheme appColorScheme(Brightness brightness) {
   );
 }
 
+/// アプリを開いたときの URL（main.dart が起動直後に控える）。
+///
+/// **ルーターより先に読み込み画面を出すと、開いた URL が失われる**ため。
+/// ログイン状態の復元を待つあいだに最初の描画が挟まると、そのあとで
+/// 作ったルーターには元の URL（例：共有リンク /s/…）が渡らず、
+/// ホーム扱いで始まってしまう。起動時に控えておき、ルーターの
+/// 開始地点として渡す（2026-08-08。検証環境の実機で発覚）。
+final launchLocationProvider = Provider<String>((_) => AppRoutes.home);
+
 /// ルーターを 1 度だけ組み立てて保持する。
 ///
 /// 画面を作り直すたびにルーターを作ると履歴が失われるため、
@@ -62,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return buildAppRouter(
     readAuthState: () => ref.read(authStateProvider),
     authListenable: refresh,
+    initialLocation: ref.read(launchLocationProvider),
   );
 });
 
@@ -74,6 +83,35 @@ class MusicListApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // **ログイン状態の復元が終わるまで、画面遷移の判定を始めない。**
+    //
+    // Firebase は起動直後、前回のログインを復元するまでのあいだ
+    // 「未ログイン」に見える。その状態でルーターを動かすと、ログイン済みの
+    // 人が URL を開いても一度ログイン画面へ送られ、復元後に戻される
+    // （画面がちらつき、復元が遅いとログイン画面のまま止まって見える）。
+    // 最初の判定が出るまでは読み込み表示だけを出す（2026-08-08 の指摘）。
+    // **日本語フォントは画面を止めずに読み込む**（providers/font_provider.dart）。
+    // 読み終わるまでは端末のフォントで描き、終わったらここが作り直されて
+    // 差し替わる。`fontFamily` に未登録の名前を渡すと字が出ないので、
+    // 読み終わるまでは既定（null）にしておく。
+    final fontReady = ref.watch(japaneseFontProvider).value ?? false;
+    final fontFamily = fontReady ? kAppFontFamily : null;
+
+    final authRestoring = ref.watch(firebaseUserProvider).isLoading;
+    if (authRestoring && routerOverride == null) {
+      return MaterialApp(
+        theme: ThemeData(
+          colorScheme: appColorScheme(Brightness.light),
+          fontFamily: fontFamily,
+        ),
+        darkTheme: ThemeData(
+          colorScheme: appColorScheme(Brightness.dark),
+          fontFamily: fontFamily,
+        ),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     final router = routerOverride ?? ref.watch(routerProvider);
 
     // 表示言語はユーザー設定に従う（仕様書 2 章）。
@@ -95,16 +133,16 @@ class MusicListApp extends ConsumerWidget {
       supportedLocales: AppL10n.supportedLocales,
 
       // Material 標準のテーマ（仕様書 12.5）。
-      // フォントだけは同梱の Noto Sans JP を指定する。既定のままだと
+      // フォントだけは同梱の Noto Sans JP を使う。既定のままだと
       // 日本語のグリフを実行時に Google Fonts から取りに行くため、
       // それが遮断された環境で文字が出なくなる（pubspec.yaml 参照）。
       theme: ThemeData(
         colorScheme: appColorScheme(Brightness.light),
-        fontFamily: kAppFontFamily,
+        fontFamily: fontFamily,
       ),
       darkTheme: ThemeData(
         colorScheme: appColorScheme(Brightness.dark),
-        fontFamily: kAppFontFamily,
+        fontFamily: fontFamily,
       ),
     );
   }

@@ -42,12 +42,32 @@
     初めて必要なファイルが分かる作りになっている。**先に分かっている分は
     先に取りに行かせる。**
 
-    - main.dart.js（圧縮後およそ 1.1MB）はどの画面でも必ず要る
-    - 描画部（CanvasKit、圧縮後およそ 2.1MB）は Google の配信網から取る。
+    - main.dart.js（圧縮後およそ 0.85MB）はどの画面でも必ず要る
+    - 描画部（CanvasKit、圧縮後およそ 2.2MB）は Google の配信網から取る。
       接続の確立だけでも往復が要るので、先に済ませておく
+
+    **Firebase の JS SDK も、最初の描画の前に必ず要る（2026-08-08）。**
+
+    lib/main.dart は `await Firebase.initializeApp()` を終えてから
+    `runApp` する。firebase_core は初期化のときに、使っている機能ぶんの
+    SDK を <script> で読み込む。**つまり、この 5 本が揃うまで
+    アプリは 1 フレームも描かない。**
+
+    ところがこの読み込みは、main.dart.js を実行して初めて始まる。
+    実測すると、エンジンとフォントを読み終えたあとに 2 波（app.js →
+    残り 4 本）が直列でぶら下がっていた。**先に取りに行かせて、
+    エンジンの読み込みと並べる。**
+
+    版を上げると URL が変わる。`test/domain/web_startup_test.dart` が
+    firebase_core_web の持っている版と突き合わせるので、ずれたら落ちる。
   -->
   <link rel="preload" href="main.dart.js" as="script">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js" as="script" crossorigin>
+  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js" as="script" crossorigin>
+  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore-pipelines.js" as="script" crossorigin>
+  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js" as="script" crossorigin>
+  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js" as="script" crossorigin>
 
   <style>
     /*

@@ -3,12 +3,9 @@
 /// go_router を使い、Web の URL がそのまま画面を表すようにする。
 /// 共有 URL・共有リンクはここで定義したパスがそのまま外部に渡る。
 ///
-/// 未ログインでリスト・曲の URL を開いた場合は、内容を一切表示せずに
-/// ログイン画面へ送り、完了後に元の URL へ戻す（3.1.1）。
-///
-/// **共有リンク（/s/…）だけは例外**（3.1.1）。受け取った人にまず
-/// 「参加する／参加せずに見る」の画面を見せ、**選んだ時点で**ログインを
-/// 求める。リンク自体はリスト名を出さないので、見せても漏れるものが無い。
+/// 未ログインで共有 URL・共有リンクを開いた場合は、内容を一切表示せずに
+/// ログイン画面へ送り、完了後に元の URL へ自動で戻す（3.1.1／v1.4）。
+/// ログイン済みの人は、開いた URL の画面が直接出る（復元待ちは lib/app.dart）。
 library;
 
 import 'package:flutter/material.dart';
@@ -181,13 +178,8 @@ GoRouter buildAppRouter({
           // --- 共有リンクの受け取り ---
           GoRoute(
             path: AppRoutes.shareLinkPattern,
-            builder: (context, state) => ShareLinkScreen(
-              linkId: state.pathParameters['linkId']!,
-              // ログイン前に選んだほう（join / view）。ログインを終えて
-              // ここへ戻ったとき、同じ選択をもう一度させないため（3.3）。
-              initialChoice:
-                  state.uri.queryParameters[AppRoutes.choiceQueryParam],
-            ),
+            builder: (context, state) =>
+                ShareLinkScreen(linkId: state.pathParameters['linkId']!),
           ),
 
           // --- サイト管理 ---
@@ -229,11 +221,8 @@ String? redirectFor(AuthState auth, String location, Uri uri) =>
 String? _redirect(AuthState auth, String location, Uri uri) {
   final isPublic = _publicRoutes.contains(location);
 
-  // 共有リンク（/s/…）は誰でも開ける（3.1.1 の例外）。
-  // 画面はリスト名を出さず、選んだ時点でログインを求める（3.3）。
-  if (AppRoutes.isShareLink(location)) return null;
-
   // 未ログイン：内容を一切見せず、戻り先を持たせてログインへ送る（3.1.1）。
+  // 共有リンク（/s/…）も同じ。ログインが済んだら選択画面へ自動で戻す（v1.4）。
   if (!auth.isSignedIn) {
     if (isPublic) return null;
     return AppRoutes.signInWithRedirect(uri.toString());
@@ -244,10 +233,12 @@ String? _redirect(AuthState auth, String location, Uri uri) {
   // **戻り先（redirect クエリ）は持ったまま送る。** 以前はここで捨てて
   // おり、共有リンクから登録した人が、確認を終えるとホームに置き去りに
   // なっていた。確認画面は完了時に redirect クエリの先へ戻す。
+  // 共有リンクを直接開いた場合は、その URL 自体を戻り先にする。
   if (!auth.isEmailVerified) {
     if (location == AppRoutes.verifyEmail) return null;
     return AppRoutes.verifyEmailWithRedirect(
-      uri.queryParameters[AppRoutes.redirectQueryParam],
+      uri.queryParameters[AppRoutes.redirectQueryParam] ??
+          (AppRoutes.isShareLink(location) ? uri.toString() : null),
     );
   }
 

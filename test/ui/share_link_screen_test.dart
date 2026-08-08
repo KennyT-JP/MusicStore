@@ -14,7 +14,6 @@ import 'package:music_list_app/data/repositories/functions_repository.dart';
 import 'package:music_list_app/domain/share_link.dart';
 import 'package:music_list_app/l10n/app_localizations.dart';
 import 'package:music_list_app/providers/app_providers.dart';
-import 'package:music_list_app/ui/app_router.dart';
 import 'package:music_list_app/ui/screens/share_link_screen.dart';
 
 /// 何を頼まれたかだけを覚える、呼び出し口の差し替え。
@@ -39,18 +38,13 @@ class _RecordingFunctions implements FunctionsRepository {
       throw UnimplementedError('${invocation.memberName}');
 }
 
-const _member = AuthState(
-  isSignedIn: true,
-  isEmailVerified: true,
-  isSiteAdmin: false,
-);
-
 /// 画面の遷移先を確かめるため、行き先を記録する小さなルーターで包む。
+///
+/// この画面が出るのはログイン済みの人だけ（未ログインはルーターが先に
+/// ログインへ送る。その判定は test/ui/app_router_test.dart が受け持つ）。
 Widget _app(
   _RecordingFunctions functions, {
   Locale locale = const Locale('ja'),
-  AuthState auth = _member,
-  String? initialChoice,
   List<String>? visited,
 }) {
   final router = GoRouter(
@@ -58,8 +52,7 @@ Widget _app(
     routes: [
       GoRoute(
         path: '/screen',
-        builder: (context, state) =>
-            ShareLinkScreen(linkId: 'abc', initialChoice: initialChoice),
+        builder: (context, state) => const ShareLinkScreen(linkId: 'abc'),
       ),
       // 画面が遷移しうる先。開いた場所だけを記録する。
       GoRoute(
@@ -74,7 +67,6 @@ Widget _app(
   return ProviderScope(
     overrides: [
       functionsRepositoryProvider.overrideWithValue(functions),
-      authStateProvider.overrideWithValue(auth),
     ],
     child: MaterialApp.router(
       localizationsDelegates: const [
@@ -95,8 +87,8 @@ void main() {
     await tester.pumpWidget(_app(_RecordingFunctions()));
     await tester.pumpAndSettle();
 
-    expect(find.text('参加する'), findsOneWidget);
-    expect(find.text('参加せずに見る'), findsOneWidget);
+    expect(find.text('リストのメンバーになる'), findsOneWidget);
+    expect(find.text('リストのメンバーにならずに見る'), findsOneWidget);
   });
 
   testWidgets('押す前に、それぞれ何が起きるかを書いてある', (tester) async {
@@ -117,7 +109,7 @@ void main() {
     await tester.pumpWidget(_app(functions));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('参加する'));
+    await tester.tap(find.text('リストのメンバーになる'));
     await tester.pumpAndSettle();
 
     expect(functions.calls, [(linkId: 'abc', join: true)]);
@@ -128,7 +120,7 @@ void main() {
     await tester.pumpWidget(_app(functions));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('参加せずに見る'));
+    await tester.tap(find.text('リストのメンバーにならずに見る'));
     await tester.pumpAndSettle();
 
     // **join を false で送ること。** ここを取り違えると、
@@ -152,7 +144,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('参加する'));
+    await tester.tap(find.text('リストのメンバーになる'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('取り消されています'), findsOneWidget);
@@ -164,7 +156,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('参加する'));
+    await tester.tap(find.text('リストのメンバーになる'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('URL'), findsOneWidget);
@@ -176,106 +168,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Join'), findsOneWidget);
-    expect(find.text('View without joining'), findsOneWidget);
+    expect(find.text('Become a list member'), findsOneWidget);
+    expect(find.text('View without becoming a member'), findsOneWidget);
     // 日本語が混ざらないこと。
     expect(find.textContaining(RegExp(r'[ぁ-んァ-ヶ一-龠]')), findsNothing);
   });
 
-  group('未ログインで開いたとき（3.1.1 の例外／v1.3）', () {
-    const signedOut = AuthState.signedOut();
-
-    testWidgets('選択肢が先に見える（ログイン画面ではない）', (tester) async {
-      await tester.pumpWidget(
-        _app(_RecordingFunctions(), auth: signedOut),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('参加する'), findsOneWidget);
-      expect(find.text('参加せずに見る'), findsOneWidget);
-    });
-
-    testWidgets('ログインが要ることを、選ぶ前から書いてある', (tester) async {
-      // 押してからログイン画面が出て驚かせない。
-      await tester.pumpWidget(
-        _app(_RecordingFunctions(), auth: signedOut),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('ログイン'), findsWidgets);
-    });
-
-    testWidgets('選ぶと、選んだほうを持たせてログインへ送る', (tester) async {
-      final functions = _RecordingFunctions();
-      final visited = <String>[];
-      await tester.pumpWidget(
-        _app(functions, auth: signedOut, visited: visited),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('参加する'));
-      await tester.pumpAndSettle();
-
-      // サーバーは呼ばない（未ログインでは呼べない）。
-      expect(functions.calls, isEmpty);
-      // 戻り先に choice=join が入っている。ログイン後に二度選ばせない。
-      expect(visited, hasLength(1));
-      final uri = Uri.parse(visited.single);
-      expect(uri.path, '/sign-in');
-      expect(
-        uri.queryParameters['redirect'],
-        '/s/abc?choice=join',
-      );
-    });
-  });
-
-  group('ログインから戻ってきたとき（choice の持ち回り）', () {
-    testWidgets('選んであったほうを、もう一度選ばせずに実行する', (tester) async {
-      final functions = _RecordingFunctions();
-      await tester.pumpWidget(
-        _app(functions, initialChoice: 'join'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(functions.calls, [(linkId: 'abc', join: true)]);
-    });
-
-    testWidgets('view も同じように続きから', (tester) async {
-      final functions = _RecordingFunctions();
-      await tester.pumpWidget(
-        _app(functions, initialChoice: 'view'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(functions.calls, [(linkId: 'abc', join: false)]);
-    });
-
-    testWidgets('知らない値は無視して、普通に選ばせる', (tester) async {
-      final functions = _RecordingFunctions();
-      await tester.pumpWidget(
-        _app(functions, initialChoice: 'admin'),
-      );
-      await tester.pumpAndSettle();
-
-      expect(functions.calls, isEmpty);
-      expect(find.text('参加する'), findsOneWidget);
-    });
-
-    testWidgets('未ログインのままなら自動実行しない', (tester) async {
-      // choice 付き URL を未ログインの人が直接開いた場合。
-      // 勝手にログインへ飛ばさず、まず選択肢を見せる。
-      final functions = _RecordingFunctions();
-      await tester.pumpWidget(
-        _app(
-          functions,
-          auth: const AuthState.signedOut(),
-          initialChoice: 'join',
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(functions.calls, isEmpty);
-      expect(find.text('参加する'), findsOneWidget);
-    });
-  });
 }

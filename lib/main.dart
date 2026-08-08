@@ -37,5 +37,15 @@ Future<void> main() async {
     await connectToFirebaseEmulators();
   }
 
-  runApp(const ProviderScope(child: MusicListApp()));
+  // 開いた URL を、最初の描画より前に控える（app.dart の説明を参照）。
+  // Web のパスは `#/s/xxx` のようにフラグメントに入っている。
+  final fragment = Uri.base.fragment;
+  final launchLocation = fragment.startsWith('/') ? fragment : '/';
+
+  runApp(
+    ProviderScope(
+      overrides: [launchLocationProvider.overrideWithValue(launchLocation)],
+      child: const MusicListApp(),
+    ),
+  );
 }

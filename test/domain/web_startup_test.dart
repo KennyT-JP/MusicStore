@@ -13,6 +13,7 @@
 /// ここで固定する。
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -67,6 +68,119 @@ void main() {
       // 雛形の値はブラウザのタブや共有時にそのまま出る。
       expect(html, isNot(contains('A new Flutter project')));
       expect(html, isNot(contains('<title>music_list_app</title>')));
+    });
+  });
+
+  group('Firebase の SDK を先に取りに行かせる（2026-08-08）', () {
+    /// firebase_core_web が実際に読み込む SDK の版。
+    ///
+    /// **写さずに、その場で読む**（docs/AUDIT-CHECKLIST.md 観点 4）。
+    /// 版が上がると URL が変わり、先読みが空振りするだけでなく
+    /// 「先読みしたのに使わなかった」という無駄な取得になる。
+    String sdkVersion() {
+      final config = jsonDecode(
+        File('.dart_tool/package_config.json').readAsStringSync(),
+      );
+      final package = (config['packages'] as List).firstWhere(
+        (p) => p['name'] == 'firebase_core_web',
+      );
+      // **末尾の `/` を補う。** 無いまま resolve すると最後の区切りが
+      // 置き換わり、パッケージ名ごと消えた場所を読みに行く。
+      final raw = package['rootUri'] as String;
+      final root = Uri.parse(raw.endsWith('/') ? raw : '$raw/');
+      final source = File.fromUri(
+        root.resolve('lib/src/firebase_sdk_version.dart'),
+      ).readAsStringSync();
+      final match = RegExp(
+        r"supportedFirebaseJsSdkVersion\s*=\s*'([^']+)'",
+      ).firstMatch(source);
+      expect(match, isNotNull, reason: 'firebase_core_web の版を読めません');
+      return match!.group(1)!;
+    }
+
+    /// firebase_core が初期化のときに読み込むもの。
+    ///
+    /// **firestore だけ名前が違う。** `firebase-firestore.js` ではなく
+    /// `firebase-firestore-pipelines.js` を読む（firebase_core_web の
+    /// `_initializeCore`）。取り違えると、使わないものを先読みして
+    /// 帯域を食うだけになる。
+    const services = [
+      'firebase-app',
+      'firebase-auth',
+      'firebase-firestore-pipelines',
+      'firebase-functions',
+      'firebase-storage',
+    ];
+
+    test('最初の描画に要る SDK を、すべて先読みする', () {
+      // **`await Firebase.initializeApp()` が終わるまで runApp しない。**
+      // つまりこの 5 本が揃うまで 1 フレームも描かれない（lib/main.dart）。
+      // 先読みが無いと、エンジンを読み終えたあとに直列でぶら下がる。
+      final html = _indexHtml();
+      final version = sdkVersion();
+
+      for (final service in services) {
+        final url =
+            'https://www.gstatic.com/firebasejs/$version/$service.js';
+        expect(
+          html,
+          contains('<link rel="preload" href="$url" as="script"'),
+          reason: '$service を先読みしていません（版 $version）',
+        );
+      }
+    });
+
+    test('使わないものを先読みしない', () {
+      // 先読みして使わないと、帯域を食ったうえに警告が出る。
+      final html = _indexHtml();
+      expect(
+        html,
+        isNot(contains('firebase-firestore.js')),
+        reason: '読み込まれるのは firebase-firestore-pipelines.js のほうです',
+      );
+    });
+  });
+
+  group('日本語フォントを最初の描画の邪魔にしない（2026-08-08）', () {
+    String pubspec() => File('pubspec.yaml').readAsStringSync();
+
+    test('pubspec の fonts: で宣言しない', () {
+      // **`fonts:` に書くと、エンジンが読み終えるまで最初の描画が
+      // 始まらない。** 圧縮後で 1.2MB あり、「画面が出るまで 5 秒」の
+      // 主因だった。assets: として積み、描画のあとに読み込む
+      // （lib/providers/font_provider.dart）。
+      final text = pubspec();
+      expect(
+        RegExp(r'^\s*fonts:', multiLine: true).hasMatch(text),
+        isFalse,
+        reason: 'フォントを fonts: で宣言すると、最初の描画が待たされます',
+      );
+      expect(text, contains('assets/fonts/NotoSansJP-400.ttf'));
+    });
+
+    test('太字は同梱しない', () {
+      // 約 1.2MB（圧縮後）を減らせて、失うのは見た目だけ。
+      // CanvasKit が w400 から擬似的な太字を作る。
+      expect(pubspec(), isNot(contains('NotoSansJP-700')));
+    });
+
+    test('実行時に読み込む口がある', () {
+      // 同梱をやめたわけではない。既定のままだと日本語のグリフを
+      // Google Fonts から取りに行き、遮断された環境で文字が出なくなる。
+      final source = File(
+        'lib/providers/font_provider.dart',
+      ).readAsStringSync();
+      expect(source, contains('FontLoader'));
+      expect(source, contains('assets/fonts/NotoSansJP-400.ttf'));
+    });
+
+    test('読み込めなくても画面は出す', () {
+      // フォントが載らないだけで、端末のフォントで動き続けられる。
+      // ここで落とすと、字が違うというだけで画面が出なくなる。
+      final source = File(
+        'lib/providers/font_provider.dart',
+      ).readAsStringSync();
+      expect(source, contains('catch'));
     });
   });
 }
