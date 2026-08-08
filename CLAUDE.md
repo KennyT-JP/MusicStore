@@ -48,3 +48,4 @@
 - `docs/AUDIT-CHECKLIST.md` — 監査で**見つけられなかった**欠陥の記録
 - `docs/SETUP.md` — 環境構築と実行手順
 - `docs/BACKLOG.md` — 後回しにしたこと
+- `docs/CONVERSATION-LOG.md` — 依頼者とのやりとりの原文。**要約では落ちる言い回しを確かめたいとき**に見る

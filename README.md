@@ -10,6 +10,7 @@
 - **監査の記録**：[第 1 回](docs/AUDIT-2026-08-06.md) / [第 2 回](docs/AUDIT-2026-08-06-2.md) / [第 3 回](docs/AUDIT-2026-08-07.md)
 - **監査の追加確認項目**：[docs/AUDIT-CHECKLIST.md](docs/AUDIT-CHECKLIST.md) — **見つけられなかった**欠陥から起こしたもの
 - **バックログ**：[docs/BACKLOG.md](docs/BACKLOG.md)
+- **会話の記録**：[docs/CONVERSATION-LOG.md](docs/CONVERSATION-LOG.md) — 依頼者とのやりとりの原文。要約では落ちる言い回しを確かめたいときに
 
 ## 技術スタック
 
@@ -187,11 +188,10 @@ cd functions && npm run test:integration  # 61 件（要エミュレータ）
 
 | 環境 | URL | 状態 |
 | --- | --- | --- |
-| 検証 | <https://music-storage-dev.web.app> | 配信済み |
-| 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-06 時点の版） |
+| 検証 | <https://music-storage-dev.web.app> | 配信済み（2026-08-08 の版） |
+| 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-08 の版） |
 
-**未配信の変更があります。** 一覧からの再生・ホームからの招待・確認メールの
-日本語化と、配信まわりの 3 つの修正が、ブランチにあって本番にはありません。
+**ブランチの内容は本番まで反映されています。** 未配信の差分はありません。
 次に何をすればよいかは [docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
 
 > **配信するときの注意（2026-08-07 に実際に起きたもの）**
