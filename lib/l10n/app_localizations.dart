@@ -1351,12 +1351,6 @@ abstract class AppL10n {
   /// **'すでにこのリストに参加しています。'**
   String get functionErrorAlreadyMember;
 
-  /// No description provided for @functionErrorInviteRoleNotAllowed.
-  ///
-  /// In ja, this message translates to:
-  /// **'招待でリスト管理者は付与できません。'**
-  String get functionErrorInviteRoleNotAllowed;
-
   /// No description provided for @functionErrorRoleNotAllowed.
   ///
   /// In ja, this message translates to:
@@ -1405,11 +1399,11 @@ abstract class AppL10n {
   /// **'共有リンクを作る'**
   String get createShareLink;
 
-  /// 共有リンクをコピーする操作（仕様書 3.3）
+  /// 共有リンクをコピーする操作（仕様書 3.3）。リンクは 1 種類だけで、相手の役割は選ばない
   ///
   /// In ja, this message translates to:
-  /// **'リンクをコピー（参加すると {role}）'**
-  String copyShareLinkAs(String role);
+  /// **'リンクをコピー'**
+  String get copyShareLink;
 
   /// No description provided for @shareLinkCopied.
   ///

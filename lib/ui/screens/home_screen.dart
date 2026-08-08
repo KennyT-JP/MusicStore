@@ -12,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import '../../data/repositories/functions_repository.dart';
 import '../../domain/permissions.dart';
 import '../../domain/quota.dart';
-import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
@@ -131,13 +130,9 @@ class _ListCard extends ConsumerWidget {
                     ),
                   ),
                   RoleChip(role: entry.role),
-                  // **招待の導線をここにも置く（仕様書 3.3）。**
+                  // **共有リンクの導線をここにも置く（仕様書 3.3）。**
                   // 以前はメンバー管理画面まで行かないと招待できず、
                   // 人を呼ぶたびに 3 画面ぶん移動する必要があった。
-                  //
-                  // 付与する役割は選んだ時点で決まる。あとから
-                  // 「どちらで招待したか」を思い出せるようにするため、
-                  // 役割を項目名に出す。
                   if (Permissions.canCreateShareLink(access))
                     _ShareLinkMenu(listId: entry.list.id),
                 ],
@@ -220,10 +215,11 @@ class _QuotaBar extends ConsumerWidget {
   }
 }
 
-/// 招待 URL をコピーするメニュー（仕様書 3.3）。
+/// 共有リンクをコピーするボタン（仕様書 3.3）。
 ///
-/// 発行した URL は**1 回しか使えず、既定 24 時間で切れる**。
-/// 押した時点で招待が作られるので、配る直前に押してもらう。
+/// **押すと 1 種類のリンクができる。** 受け取った人が「参加する」か
+/// 「参加せずに見る」かを選ぶので、**配る側は相手の種類を選ばない。**
+/// リンクは無期限で、何度でも、複数人が使える。
 class _ShareLinkMenu extends ConsumerStatefulWidget {
   const _ShareLinkMenu({required this.listId});
 
@@ -240,34 +236,23 @@ class _ShareLinkMenuState extends ConsumerState<_ShareLinkMenu> {
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
 
-    return PopupMenuButton<ListRole>(
-      enabled: !_busy,
+    // **選ばせない。** 以前はここで相手の役割（Super User / Read Only）を
+    // 選ぶ形にしていたが、配る側は相手が参加するかどうかも知らない。
+    // 押したらリンクが 1 本できるだけにしてある。
+    return IconButton(
+      onPressed: _busy ? null : _copyShareLink,
       icon: _busy
           ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.more_vert),
-      tooltip: l10n.createShareLink,
-      onSelected: _copyShareLink,
-      itemBuilder: (context) => [
-        // **役割は「参加する」を選んだ人に付く（仕様書 3.3）。**
-        // 参加せずに見るだけの人には関係しない。
-        // 付与できるのは Super User と Read Only だけ。
-        PopupMenuItem(
-          value: ListRole.superUser,
-          child: Text(l10n.copyShareLinkAs(l10n.roleSuperUser)),
-        ),
-        PopupMenuItem(
-          value: ListRole.readOnly,
-          child: Text(l10n.copyShareLinkAs(l10n.roleReadOnly)),
-        ),
-      ],
+          : const Icon(Icons.link),
+      tooltip: l10n.copyShareLink,
     );
   }
 
-  Future<void> _copyShareLink(ListRole role) async {
+  Future<void> _copyShareLink() async {
     final l10n = AppL10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -275,7 +260,7 @@ class _ShareLinkMenuState extends ConsumerState<_ShareLinkMenu> {
     try {
       final linkId = await ref
           .read(functionsRepositoryProvider)
-          .createShareLink(listId: widget.listId, role: role);
+          .createShareLink(listId: widget.listId);
 
       final url = buildShareUrl(AppRoutes.shareLink(linkId));
       await Clipboard.setData(ClipboardData(text: url));

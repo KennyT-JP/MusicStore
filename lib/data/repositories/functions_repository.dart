@@ -121,14 +121,16 @@ class FunctionsRepository {
   ///
   /// **無期限で、何度でも、複数人が使える。** [itemId] を渡すと、
   /// その曲を指すリンクになる。
+  ///
+  /// **役割は指定できない。** リンクは 1 種類だけで、受け取った人が
+  /// 「参加する」か「参加せずに見る」かを選ぶ。参加した人の役割は
+  /// サーバーが決める（`functions/src/domain/roles.ts` の `JOIN_ROLE`）。
   Future<String> createShareLink({
     required String listId,
-    required ListRole role,
     String? itemId,
   }) async {
     final result = await _call('createShareLink', {
       'listId': listId,
-      'role': role.wireName,
       if (itemId != null) 'itemId': itemId,
     });
     return result['linkId'] as String;

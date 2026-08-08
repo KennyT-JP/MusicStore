@@ -108,7 +108,6 @@ String describeFunctionsError(
     'shareLinkNotFound' => l10n.functionErrorShareLinkNotFound,
     'shareLinkRevoked' => l10n.functionErrorShareLinkRevoked,
     'itemNotFound' => l10n.functionErrorItemNotFound,
-    'inviteRoleNotAllowed' => l10n.functionErrorInviteRoleNotAllowed,
     'roleNotAllowed' => l10n.functionErrorRoleNotAllowed,
     'missingField' => l10n.functionErrorMissingField,
     'fieldTooLong' => l10n.functionErrorFieldTooLong,

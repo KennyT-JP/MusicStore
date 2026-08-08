@@ -54,6 +54,17 @@ export function hasAtLeast(access: ListAccess, required: ListRole): boolean {
   return RANK[effective] >= RANK[required];
 }
 
+/**
+ * 共有リンクで「参加する」を選んだ人に付ける役割（仕様書 3.3）。
+ *
+ * **発行する側は選ばない。** リンクは 1 種類だけにしてある。
+ *
+ * Read Only にしないのは、それだと「参加せずに見る」とほとんど同じに
+ * なるため。2 つの選択肢は、書けるかどうかで分かれている必要がある。
+ * 参加後の役割変更はメンバー管理から行う（5.4）。
+ */
+export const JOIN_ROLE: ListRole = 'superUser';
+
 export function isListAdmin(access: ListAccess): boolean {
   return hasAtLeast(access, 'listAdmin');
 }

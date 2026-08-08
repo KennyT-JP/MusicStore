@@ -367,7 +367,6 @@
   "functionErrorInvalidQuota": "上限は 1 バイト以上で指定してください。",
   "functionErrorLastSiteAdmin": "あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。",
   "functionErrorAlreadyMember": "すでにこのリストに参加しています。",
-  "functionErrorInviteRoleNotAllowed": "招待でリスト管理者は付与できません。",
   "functionErrorRoleNotAllowed": "役割は Super User か Read Only を指定してください。",
   "functionErrorMissingField": "入力が足りません。",
   "functionErrorFieldTooLong": "入力が長すぎます。",
@@ -383,14 +382,9 @@
   "errorNoPermission": "この操作を行う権限がありません。",
   "notFound": "ページが見つかりません。",
   "createShareLink": "共有リンクを作る",
-  "copyShareLinkAs": "リンクをコピー（参加すると {role}）",
-  "@copyShareLinkAs": {
-    "description": "共有リンクをコピーする操作（仕様書 3.3）",
-    "placeholders": {
-      "role": {
-        "type": "String"
-      }
-    }
+  "copyShareLink": "リンクをコピー",
+  "@copyShareLink": {
+    "description": "共有リンクをコピーする操作（仕様書 3.3）。リンクは 1 種類だけで、相手の役割は選ばない"
   },
   "shareLinkCopied": "リンクをコピーしました。",
   "shareLinkReusableNote": "有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。",

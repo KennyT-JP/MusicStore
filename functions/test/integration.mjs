@@ -235,18 +235,30 @@ if (!listId) {
 
   // --- 共有リンク（3.3） ---
   const applicantFresh = await refresh(applicant);
-  r = await call('createShareLink', { listId, role: 'superUser' }, applicantFresh.idToken);
+  r = await call('createShareLink', { listId }, applicantFresh.idToken);
   const linkId = r.body?.result?.linkId;
   check('リスト管理者は共有リンクを発行できる', !!linkId, `len=${linkId?.length ?? 0}`);
 
+  // **役割は指定できない（3.3）。** リンクは 1 種類だけで、渡しても
+  // 無視される。発行側が相手の役割を決める仕組みそのものを無くした。
   r = await call('createShareLink', { listId, role: 'listAdmin' }, applicantFresh.idToken);
-  check('リンクでリスト管理者は付与できない', r.body?.error?.status === 'INVALID_ARGUMENT', r.body?.error?.status);
+  check('役割を渡しても発行は通る（無視される）', r.status === 200, r.body?.error?.status);
 
   r = await call('acceptShareLink', { linkId, mode: 'join' }, invitee.idToken);
   check('リンクから参加できる', r.body?.result?.listId === listId, JSON.stringify(r.body).slice(0, 120));
 
   const im = await doc(`lists/${listId}/members/${invitee.localId}`);
-  check('参加で指定の役割が付く', sv(im, 'role') === 'superUser', sv(im, 'role'));
+  check('参加すると Super User になる（JOIN_ROLE）', sv(im, 'role') === 'superUser', sv(im, 'role'));
+
+  // 渡した役割が効いていないことを、上のリンクとは別に確かめる。
+  // ここで listAdmin が付いていたら、リンクからリスト管理者を作れてしまう。
+  const ignored = r.body?.result?.linkId;
+  const ignoredUser = await signUp('ign');
+  r = await call('acceptShareLink', { linkId: ignored, mode: 'join' }, ignoredUser.idToken);
+  check('渡した役割は効かない', r.status === 200, r.body?.error?.status);
+  const ignoredMember = await doc(`lists/${listId}/members/${ignoredUser.localId}`);
+  check('リンクからリスト管理者にはならない', sv(ignoredMember, 'role') === 'superUser',
+        sv(ignoredMember, 'role'));
 
   // --- 何度でも・複数人（3.3） ---
   // **ここが以前と逆になっている。** 以前は「二度目は使えない」ことを
@@ -379,7 +391,7 @@ if (!listId) {
 
   // --- リンクの取消（3.3） ---
   // **期限が無いので、これが唯一の止める手段。**
-  r = await call('createShareLink', { listId, role: 'readOnly' }, applicantFresh.idToken);
+  r = await call('createShareLink', { listId }, applicantFresh.idToken);
   const revokeToken = r.body?.result?.linkId;
   check('取消用のリンクを発行できる', !!revokeToken);
 

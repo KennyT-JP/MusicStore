@@ -1,11 +1,11 @@
-/// ホームからの招待（仕様書 3.3 / 14.2）
+/// ホームからの共有リンク（仕様書 3.3 / 14.2）
 ///
-/// **回帰テスト。** 以前は招待 URL を出すのにメンバー管理画面まで
+/// **回帰テスト。** 以前は共有 URL を出すのにメンバー管理画面まで
 /// 行く必要があり、人を呼ぶたびに 3 画面ぶん移動していた。
 /// ホームのリスト行から直接コピーできるようにした。
 ///
-/// 権限のない人にメニューを出さないこと（仕様書 14.5）と、
-/// 招待で付与できる役割が 2 つに限られること（3.3）を固定する。
+/// 権限のない人に導線を出さないこと（仕様書 14.5）と、
+/// **配る側に相手の種類を選ばせないこと**（3.3）を固定する。
 library;
 
 import 'package:flutter/material.dart';
@@ -53,57 +53,46 @@ Widget _app({required ListRole role, bool siteAdmin = false}) => ProviderScope(
 );
 
 void main() {
-  testWidgets('リスト管理者には招待のメニューを出す', (tester) async {
+  testWidgets('リスト管理者には共有リンクの導線を出す', (tester) async {
     await tester.pumpWidget(_app(role: ListRole.listAdmin));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    expect(find.byIcon(Icons.link), findsOneWidget);
   });
 
-  testWidgets('Super User には出さない（招待はリスト管理者以上／3.3）', (tester) async {
+  testWidgets('Super User には出さない（発行はリスト管理者以上／3.3）', (tester) async {
     await tester.pumpWidget(_app(role: ListRole.superUser));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.more_vert), findsNothing);
+    expect(find.byIcon(Icons.link), findsNothing);
   });
 
   testWidgets('Read Only にも出さない', (tester) async {
     await tester.pumpWidget(_app(role: ListRole.readOnly));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.more_vert), findsNothing);
+    expect(find.byIcon(Icons.link), findsNothing);
   });
 
   testWidgets('サイト管理者には出す（全リストでリスト管理者と同等／4.2）', (tester) async {
-    await tester.pumpWidget(
-      _app(role: ListRole.readOnly, siteAdmin: true),
-    );
+    await tester.pumpWidget(_app(role: ListRole.readOnly, siteAdmin: true));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    expect(find.byIcon(Icons.link), findsOneWidget);
   });
 
-  testWidgets('付与できる役割は Super User と Read Only だけ（3.3）', (tester) async {
-    // **リスト管理者を招待で付与できてはいけない。**
-    // サーバー側も弾くが、選べてしまうと押してからエラーになる。
+  testWidgets('リンクは 1 つだけ。相手の種類は選ばせない（3.3）', (tester) async {
+    // **回帰テスト。** 以前はここで「Super User として招待」
+    // 「Read Only として招待」を選ばせていた。配る側は相手が参加するか
+    // どうかも知らないので、選ばせること自体をやめた。
     await tester.pumpWidget(_app(role: ListRole.listAdmin));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.more_vert));
-    await tester.pumpAndSettle();
-
     final l10n = await AppL10n.delegate.load(const Locale('ja'));
-    expect(
-      find.text(l10n.copyShareLinkAs(l10n.roleSuperUser)),
-      findsOneWidget,
-    );
-    expect(
-      find.text(l10n.copyShareLinkAs(l10n.roleReadOnly)),
-      findsOneWidget,
-    );
-    expect(
-      find.text(l10n.copyShareLinkAs(l10n.roleListAdmin)),
-      findsNothing,
-    );
+
+    // 選択肢を持つ形（メニュー）ではなく、押すだけのボタンであること。
+    expect(find.byType(PopupMenuButton<ListRole>), findsNothing);
+    expect(find.byTooltip(l10n.copyShareLink), findsOneWidget);
+    expect(find.byIcon(Icons.link), findsOneWidget);
   });
 }

@@ -306,7 +306,6 @@
   "functionErrorInvalidQuota": "The limit must be at least 1 byte.",
   "functionErrorLastSiteAdmin": "You are currently the only site admin. Please appoint another site admin first.",
   "functionErrorAlreadyMember": "You have already joined this list.",
-  "functionErrorInviteRoleNotAllowed": "Invites cannot grant the list admin role.",
   "functionErrorRoleNotAllowed": "Please choose Super User or Read Only.",
   "functionErrorMissingField": "Something required is missing.",
   "functionErrorFieldTooLong": "That value is too long.",
@@ -322,14 +321,9 @@
   "errorNoPermission": "You do not have permission to do this.",
   "notFound": "Page not found.",
   "createShareLink": "Create a share link",
-  "copyShareLinkAs": "Copy link (join as {role})",
-  "@copyShareLinkAs": {
-    "description": "共有リンクをコピーする操作（仕様書 3.3）",
-    "placeholders": {
-      "role": {
-        "type": "String"
-      }
-    }
+  "copyShareLink": "Copy link",
+  "@copyShareLink": {
+    "description": "共有リンクをコピーする操作（仕様書 3.3）。リンクは 1 種類だけで、相手の役割は選ばない"
   },
   "shareLinkCopied": "Link copied.",
   "shareLinkReusableNote": "It never expires and can be used by any number of people, any number of times. Revoke it to stop it.",

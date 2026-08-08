@@ -743,10 +743,6 @@ class AppL10nEn extends AppL10n {
   String get functionErrorAlreadyMember => 'You have already joined this list.';
 
   @override
-  String get functionErrorInviteRoleNotAllowed =>
-      'Invites cannot grant the list admin role.';
-
-  @override
   String get functionErrorRoleNotAllowed =>
       'Please choose Super User or Read Only.';
 
@@ -774,9 +770,7 @@ class AppL10nEn extends AppL10n {
   String get createShareLink => 'Create a share link';
 
   @override
-  String copyShareLinkAs(String role) {
-    return 'Copy link (join as $role)';
-  }
+  String get copyShareLink => 'Copy link';
 
   @override
   String get shareLinkCopied => 'Link copied.';

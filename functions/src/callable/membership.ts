@@ -7,7 +7,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
-import { isAssignableRole } from '../domain/roles';
+import { JOIN_ROLE, isAssignableRole } from '../domain/roles';
 import { listAdminUids, notifySafely } from '../notifications';
 import { requireListAdmin, requireString, requireUid } from './access';
 import { fail } from '../errors';
@@ -162,17 +162,15 @@ export const rejectJoinRequest = onCall({ region: REGION }, async (request) => {
  * だったが、渡した相手が期限内に開けないと配り直しになっていた。
  *
  * `itemId` を渡すと、その曲を指すリンクになる（開くとその曲が出る）。
+ *
+ * **役割は指定できない。** 発行する側は「誰に渡すか」だけを考えればよく、
+ * 受け取った人が参加するか見るだけかを選ぶ（3.3）。
  */
 export const createShareLink = onCall({ region: REGION }, async (request) => {
   const listId = requireString(request.data, 'listId', { maxLength: 200 });
   const adminUid = await requireListAdmin(request, listId);
 
   const data = (request.data ?? {}) as Record<string, unknown>;
-
-  const role = data.role;
-  if (!isAssignableRole(role)) {
-    throw fail('invalid-argument', 'inviteRoleNotAllowed');
-  }
 
   // 曲を指すリンクなら、その曲が本当にこのリストにあることを確かめる。
   // 確かめずに受け取ると、開いた人が「無い曲」へ案内される。
@@ -194,7 +192,15 @@ export const createShareLink = onCall({ region: REGION }, async (request) => {
     .set({
       listId,
       ...(itemId ? { itemId } : {}),
-      role,
+      // **発行する側は役割を選ばない（仕様書 3.3）。**
+      // 選ばせると、渡す前に「この人は書ける／書けない」を決めることに
+      // なり、リンク 1 本で済ませられなくなる。
+      //
+      // 「参加する」を選んだ人は Super User になる。Read Only 相当は
+      // 「参加せずに見る」が受け持つので、ここを Read Only にすると
+      // 2 つの選択肢がほとんど同じものになってしまう。
+      // 参加後の役割変更はメンバー管理から行う（5.4）。
+      role: JOIN_ROLE,
       createdBy: adminUid,
       createdAt: FieldValue.serverTimestamp(),
       revoked: false,

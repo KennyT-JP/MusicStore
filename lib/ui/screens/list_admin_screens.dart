@@ -138,7 +138,6 @@ class _ShareLinkSection extends ConsumerStatefulWidget {
 }
 
 class _ShareLinkSectionState extends ConsumerState<_ShareLinkSection> {
-  ListRole _role = ListRole.superUser;
   bool _busy = false;
   String? _error;
   String? _inviteUrl;
@@ -160,31 +159,15 @@ class _ShareLinkSectionState extends ConsumerState<_ShareLinkSection> {
           ErrorMessage(_error!),
           const SizedBox(height: 8),
         ],
-        Row(
-          children: [
-            // **「参加する」を選んだ人に付く役割**をあらかじめ決める（3.3）。
-            // 参加せずに見るだけの人には関係しない。
-            // リスト管理者はリンクでは付与できない。
-            SegmentedButton<ListRole>(
-              segments: [
-                ButtonSegment(
-                  value: ListRole.superUser,
-                  label: Text(l10n.roleSuperUser),
-                ),
-                ButtonSegment(
-                  value: ListRole.readOnly,
-                  label: Text(l10n.roleReadOnly),
-                ),
-              ],
-              selected: {_role},
-              onSelectionChanged: (s) => setState(() => _role = s.first),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: _busy ? null : _create,
-              child: Text(l10n.createShareLink),
-            ),
-          ],
+        // **リンクは 1 種類だけ（仕様書 3.3）。**
+        // 以前はここで「参加する人に付く役割」を選ばせていたが、
+        // 配る側は相手が参加するかどうかも知らない。選ばせない。
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(
+            onPressed: _busy ? null : _create,
+            child: Text(l10n.createShareLink),
+          ),
         ),
         if (_inviteUrl != null) ...[
           const SizedBox(height: 12),
@@ -269,7 +252,7 @@ class _ShareLinkSectionState extends ConsumerState<_ShareLinkSection> {
     try {
       final result = await ref
           .read(functionsRepositoryProvider)
-          .createShareLink(listId: widget.listId, role: _role);
+          .createShareLink(listId: widget.listId);
 
       if (mounted) {
         setState(() {

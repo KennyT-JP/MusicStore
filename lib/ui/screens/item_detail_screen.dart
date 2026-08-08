@@ -15,7 +15,6 @@ import '../../domain/comment_tree.dart';
 import '../../domain/display_name.dart';
 import '../../data/repositories/functions_repository.dart';
 import '../../domain/permissions.dart';
-import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../format.dart';
@@ -757,15 +756,11 @@ class _ItemShareLinkButtonState extends ConsumerState<_ItemShareLinkButton> {
 
     setState(() => _busy = true);
     try {
-      // **役割は「参加する」を選んだ人に付く。** 曲を配る相手には
-      // 書き込みまで許す理由が薄いので、閲覧のみを既定にする。
+      // **リストから配るリンクと同じもの。** 曲を指すだけの違い。
+      // 受け取った人が「参加する」か「参加せずに見る」かを選ぶ（3.3）。
       final linkId = await ref
           .read(functionsRepositoryProvider)
-          .createShareLink(
-            listId: widget.listId,
-            role: ListRole.readOnly,
-            itemId: widget.itemId,
-          );
+          .createShareLink(listId: widget.listId, itemId: widget.itemId);
 
       await Clipboard.setData(
         ClipboardData(text: buildShareUrl(AppRoutes.shareLink(linkId))),

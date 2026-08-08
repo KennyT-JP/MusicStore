@@ -705,9 +705,6 @@ class AppL10nJa extends AppL10n {
   String get functionErrorAlreadyMember => 'すでにこのリストに参加しています。';
 
   @override
-  String get functionErrorInviteRoleNotAllowed => '招待でリスト管理者は付与できません。';
-
-  @override
   String get functionErrorRoleNotAllowed =>
       '役割は Super User か Read Only を指定してください。';
 
@@ -735,9 +732,7 @@ class AppL10nJa extends AppL10n {
   String get createShareLink => '共有リンクを作る';
 
   @override
-  String copyShareLinkAs(String role) {
-    return 'リンクをコピー（参加すると $role）';
-  }
+  String get copyShareLink => 'リンクをコピー';
 
   @override
   String get shareLinkCopied => 'リンクをコピーしました。';
