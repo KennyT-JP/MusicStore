@@ -118,8 +118,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  *
  * 待つのは「起きるはずのこと」だけにする。「起きないはずのこと」を
  * これで待つと、毎回かならず時間切れまで待たされる。
+ *
+ * **待ち時間の既定値は長めに取る。** ここを短くすると、機械が混んで
+ * いるときに「時間切れ」ではなく**確かめたい条件が満たされなかった**
+ * 形で落ちる。時間切れなら理由が分かるが、こちらは本物の後退と
+ * 見分けがつかない。歯止めとしての役目は果たしつつ、混んでいるだけの
+ * ときに落ちないところまで伸ばす（2026-08-08）。
  */
-async function waitUntil(predicate, { timeoutMs = 60000, intervalMs = 500 } = {}) {
+async function waitUntil(predicate, { timeoutMs = 180000, intervalMs = 500 } = {}) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     if (await predicate()) return true;
