@@ -65,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// 音楽リスト共有アプリ。
+/// 音源創庫 — 音楽リスト共有アプリ。
 class MusicListApp extends ConsumerWidget {
   const MusicListApp({super.key, this.routerOverride});
 

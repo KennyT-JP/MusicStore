@@ -1,10 +1,14 @@
 /// 画面遷移（仕様書 14.3）
 ///
 /// go_router を使い、Web の URL がそのまま画面を表すようにする。
-/// 共有 URL・招待 URL はここで定義したパスがそのまま外部に渡る。
+/// 共有 URL・共有リンクはここで定義したパスがそのまま外部に渡る。
 ///
-/// 未ログインで共有 URL・招待 URL を開いた場合は、内容を一切表示せずに
+/// 未ログインでリスト・曲の URL を開いた場合は、内容を一切表示せずに
 /// ログイン画面へ送り、完了後に元の URL へ戻す（3.1.1）。
+///
+/// **共有リンク（/s/…）だけは例外**（3.1.1）。受け取った人にまず
+/// 「参加する／参加せずに見る」の画面を見せ、**選んだ時点で**ログインを
+/// 求める。リンク自体はリスト名を出さないので、見せても漏れるものが無い。
 library;
 
 import 'package:flutter/material.dart';
@@ -174,11 +178,16 @@ GoRouter buildAppRouter({
                 ListSettingsScreen(listId: state.pathParameters['listId']!),
           ),
 
-          // --- 招待の受諾 ---
+          // --- 共有リンクの受け取り ---
           GoRoute(
             path: AppRoutes.shareLinkPattern,
-            builder: (context, state) =>
-                ShareLinkScreen(linkId: state.pathParameters['linkId']!),
+            builder: (context, state) => ShareLinkScreen(
+              linkId: state.pathParameters['linkId']!,
+              // ログイン前に選んだほう（join / view）。ログインを終えて
+              // ここへ戻ったとき、同じ選択をもう一度させないため（3.3）。
+              initialChoice:
+                  state.uri.queryParameters[AppRoutes.choiceQueryParam],
+            ),
           ),
 
           // --- サイト管理 ---
@@ -220,6 +229,10 @@ String? redirectFor(AuthState auth, String location, Uri uri) =>
 String? _redirect(AuthState auth, String location, Uri uri) {
   final isPublic = _publicRoutes.contains(location);
 
+  // 共有リンク（/s/…）は誰でも開ける（3.1.1 の例外）。
+  // 画面はリスト名を出さず、選んだ時点でログインを求める（3.3）。
+  if (AppRoutes.isShareLink(location)) return null;
+
   // 未ログイン：内容を一切見せず、戻り先を持たせてログインへ送る（3.1.1）。
   if (!auth.isSignedIn) {
     if (isPublic) return null;
@@ -227,8 +240,15 @@ String? _redirect(AuthState auth, String location, Uri uri) {
   }
 
   // ログイン済みだがメール未確認：確認画面から出さない（3.1）。
+  //
+  // **戻り先（redirect クエリ）は持ったまま送る。** 以前はここで捨てて
+  // おり、共有リンクから登録した人が、確認を終えるとホームに置き去りに
+  // なっていた。確認画面は完了時に redirect クエリの先へ戻す。
   if (!auth.isEmailVerified) {
-    return location == AppRoutes.verifyEmail ? null : AppRoutes.verifyEmail;
+    if (location == AppRoutes.verifyEmail) return null;
+    return AppRoutes.verifyEmailWithRedirect(
+      uri.queryParameters[AppRoutes.redirectQueryParam],
+    );
   }
 
   // 確認済みの人が認証画面に留まる理由はないので、戻り先へ送る。

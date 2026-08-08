@@ -9,7 +9,7 @@ class AppL10nEn extends AppL10n {
   AppL10nEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Music Lists';
+  String get appTitle => 'Track Cabinet';
 
   @override
   String get navHome => 'Home';
@@ -815,6 +815,10 @@ class AppL10nEn extends AppL10n {
   @override
   String get shareLinkChangeLaterNote =>
       'If you choose to view only and later want to join, just open the same link again.';
+
+  @override
+  String get shareLinkSignInNote =>
+      'Either choice requires signing in (or creating an account). You can do that on the next screen.';
 
   @override
   String get shareLinkNotFound => 'Link not found. Please check the URL.';

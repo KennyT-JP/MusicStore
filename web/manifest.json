@@ -1,6 +1,6 @@
 {
-    "name": "音楽リスト",
-    "short_name": "音楽リスト",
+    "name": "音源創庫",
+    "short_name": "音源創庫",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F8F9FF",
