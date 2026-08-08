@@ -39,22 +39,24 @@ flutter:
   uses-material-design: true
   generate: true
 
-  # 日本語フォントを同梱する。
+  # 日本語フォントを同梱する。**ただし `fonts:` では宣言しない。**
   #
   # Flutter Web（CanvasKit）は、既定では日本語のグリフを実行時に
   # Google Fonts から取得する。社内ネットワークなどで fonts.gstatic.com が
   # 遮断されていると日本語が表示されないため、アプリに含めている。
   #
-  # Noto Sans JP の日本語サブセット（各 2.25MB）。
-  # 初回のみダウンロードされ、以降は端末側にキャッシュされる
-  # （firebase.json の Cache-Control と Service Worker による。docs/SETUP.md 参照）。
+  # **`fonts:` に書くと、エンジンが起動時に読み終えるまで最初の描画が
+  # 始まらない。** 2026-08-08 の実測で、初回に取りに行く量のうち
+  # 半分近くがこのフォントだった（w400 と w700 で約 2.5MB／圧縮後）。
+  # 画面が出るまで 5 秒ほどかかる、という指摘の主因。
   #
-  # 太字を減らして初回の読み込みを軽くしたい場合は、w700 の行を消せば
-  # CanvasKit が w400 から擬似的な太字を作る（見た目は少し劣る）。
-  fonts:
-    - family: NotoSansJP
-      fonts:
-        - asset: assets/fonts/NotoSansJP-400.ttf
-          weight: 400
-        - asset: assets/fonts/NotoSansJP-700.ttf
-          weight: 700
+  # そこで **`assets:` として積み、最初の描画のあとに読み込む**
+  # （lib/providers/font_provider.dart）。読み終わるまでは端末の
+  # 日本語フォントで描かれ、読み終わると差し替わる。
+  # **文字が出ないことはない**（字を絞る手とは違い、全グリフを持つ）。
+  #
+  # **太字（w700）は同梱しない。** 約 1.2MB（圧縮後）を減らせて、
+  # 失うのは見た目だけ。CanvasKit が w400 から擬似的な太字を作る。
+  # 日本語では線が太るだけで、字形は保たれる。
+  assets:
+    - assets/fonts/NotoSansJP-400.ttf

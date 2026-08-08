@@ -73,6 +73,17 @@ class ListRepository {
       .snapshots()
       .map((s) => s.docs.map((d) => d.id).toList());
 
+  /// 自分がこのリストの閲覧者かどうか（仕様書 3.3）。
+  ///
+  /// **一覧（watchViewers）はリスト管理者しか読めない。** 閲覧者本人は
+  /// 自分の 1 件だけ読める（firestore.rules）ので、別の経路にしてある。
+  /// これが無いと、閲覧者が中身を見られるのに「未参加」と判定され、
+  /// 参加申請の画面へ振り替えられる（2026-08-08 の指摘）。
+  Stream<bool> watchIsViewer(String listId, String uid) => _db
+      .doc(FirestorePaths.listViewer(listId, uid))
+      .snapshots()
+      .map((doc) => doc.exists);
+
   // 自分のメンバー情報だけを 1 件見る経路は用意していない。
   // 役割は watchMyMemberships（横断）から取っており、リストごとに
   // もう 1 本購読を張ると読み取りが二重になる。

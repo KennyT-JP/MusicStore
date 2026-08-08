@@ -206,7 +206,20 @@ final listViewersProvider =
   (ref, listId) => ref.watch(listRepositoryProvider).watchViewers(listId),
 );
 
-/// このリストに対する自分の権限（仕様書 4.2）。
+/// 自分がこのリストの閲覧者か（仕様書 3.3）。
+///
+/// **一覧（listViewersProvider）とは別の経路。** あちらはリスト管理者しか
+/// 読めないので、閲覧者本人の判定には使えない。
+final amIViewerProvider = StreamProvider.autoDispose.family<bool, String>((
+  ref,
+  listId,
+) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(false);
+  return ref.watch(listRepositoryProvider).watchIsViewer(listId, user.uid);
+});
+
+/// このリストに対する自分の権限（仕様書 4.2 / 3.3）。
 final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
   final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
   final memberships = ref.watch(myMembershipsProvider).value;
@@ -214,7 +227,11 @@ final listAccessProvider = Provider.family<ListAccess, String>((ref, listId) {
       ?.where((m) => m.listId == listId)
       .map((m) => m.member.role)
       .firstOrNull;
-  return ListAccess(isSiteAdmin: isSiteAdmin, role: role);
+  return ListAccess(
+    isSiteAdmin: isSiteAdmin,
+    role: role,
+    isViewer: ref.watch(amIViewerProvider(listId)).value ?? false,
+  );
 });
 
 // ---------------------------------------------------------------------------

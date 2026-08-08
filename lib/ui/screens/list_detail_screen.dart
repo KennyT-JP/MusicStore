@@ -100,7 +100,14 @@ class ListDetailScreen extends ConsumerWidget {
         ),
       );
     }
-    if (memberships.hasValue && !Permissions.canViewList(access)) {
+    // **閲覧者かどうかの判定も待つ（3.3）。** メンバー情報だけを見て
+    // 振り替えると、共有リンクで「メンバーにならずに見る」を選んだ人が、
+    // 中身を見る権利を持っているのに参加申請の画面へ送られる。
+    // 読み込み中に決めつけないのは、メンバーのときと同じ理由。
+    final amIViewer = ref.watch(amIViewerProvider(listId));
+    if (memberships.hasValue &&
+        amIViewer.hasValue &&
+        !Permissions.canViewList(access)) {
       return JoinRequestScreen(listId: listId);
     }
 

@@ -69,6 +69,10 @@ class FirestorePaths {
   /// 入れないため。書き込むのは Cloud Functions だけ。
   static String listViewers(String listId) => '${list(listId)}/viewers';
 
+  /// 閲覧者 1 人分。**本人だけは自分の 1 件を読める**（firestore.rules）。
+  static String listViewer(String listId, String uid) =>
+      '${listViewers(listId)}/$uid';
+
   static String listMember(String listId, String uid) =>
       '${listMembers(listId)}/$uid';
 

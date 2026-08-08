@@ -69,4 +69,47 @@ void main() {
       expect(html, isNot(contains('<title>music_list_app</title>')));
     });
   });
+
+  group('日本語フォントを最初の描画の邪魔にしない（2026-08-08）', () {
+    String pubspec() => File('pubspec.yaml').readAsStringSync();
+
+    test('pubspec の fonts: で宣言しない', () {
+      // **`fonts:` に書くと、エンジンが読み終えるまで最初の描画が
+      // 始まらない。** 圧縮後で 1.2MB あり、「画面が出るまで 5 秒」の
+      // 主因だった。assets: として積み、描画のあとに読み込む
+      // （lib/providers/font_provider.dart）。
+      final text = pubspec();
+      expect(
+        RegExp(r'^\s*fonts:', multiLine: true).hasMatch(text),
+        isFalse,
+        reason: 'フォントを fonts: で宣言すると、最初の描画が待たされます',
+      );
+      expect(text, contains('assets/fonts/NotoSansJP-400.ttf'));
+    });
+
+    test('太字は同梱しない', () {
+      // 約 1.2MB（圧縮後）を減らせて、失うのは見た目だけ。
+      // CanvasKit が w400 から擬似的な太字を作る。
+      expect(pubspec(), isNot(contains('NotoSansJP-700')));
+    });
+
+    test('実行時に読み込む口がある', () {
+      // 同梱をやめたわけではない。既定のままだと日本語のグリフを
+      // Google Fonts から取りに行き、遮断された環境で文字が出なくなる。
+      final source = File(
+        'lib/providers/font_provider.dart',
+      ).readAsStringSync();
+      expect(source, contains('FontLoader'));
+      expect(source, contains('assets/fonts/NotoSansJP-400.ttf'));
+    });
+
+    test('読み込めなくても画面は出す', () {
+      // フォントが載らないだけで、端末のフォントで動き続けられる。
+      // ここで落とすと、字が違うというだけで画面が出なくなる。
+      final source = File(
+        'lib/providers/font_provider.dart',
+      ).readAsStringSync();
+      expect(source, contains('catch'));
+    });
+  });
 }

@@ -11,11 +11,9 @@ import 'package:go_router/go_router.dart';
 
 import 'l10n/app_localizations.dart';
 import 'providers/app_providers.dart';
+import 'providers/font_provider.dart';
 import 'ui/app_router.dart';
 import 'ui/routes.dart';
-
-/// アプリ全体で使うフォント。pubspec.yaml の `fonts:` と揃えること。
-const String kAppFontFamily = 'NotoSansJP';
 
 /// 配色の基準色（仕様書 12.5）。**寒色系で統一する。**
 const Color kSeedColor = Color(0xFF1B5E9E);
@@ -92,16 +90,23 @@ class MusicListApp extends ConsumerWidget {
     // 人が URL を開いても一度ログイン画面へ送られ、復元後に戻される
     // （画面がちらつき、復元が遅いとログイン画面のまま止まって見える）。
     // 最初の判定が出るまでは読み込み表示だけを出す（2026-08-08 の指摘）。
+    // **日本語フォントは画面を止めずに読み込む**（providers/font_provider.dart）。
+    // 読み終わるまでは端末のフォントで描き、終わったらここが作り直されて
+    // 差し替わる。`fontFamily` に未登録の名前を渡すと字が出ないので、
+    // 読み終わるまでは既定（null）にしておく。
+    final fontReady = ref.watch(japaneseFontProvider).value ?? false;
+    final fontFamily = fontReady ? kAppFontFamily : null;
+
     final authRestoring = ref.watch(firebaseUserProvider).isLoading;
     if (authRestoring && routerOverride == null) {
       return MaterialApp(
         theme: ThemeData(
           colorScheme: appColorScheme(Brightness.light),
-          fontFamily: kAppFontFamily,
+          fontFamily: fontFamily,
         ),
         darkTheme: ThemeData(
           colorScheme: appColorScheme(Brightness.dark),
-          fontFamily: kAppFontFamily,
+          fontFamily: fontFamily,
         ),
         home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
@@ -128,16 +133,16 @@ class MusicListApp extends ConsumerWidget {
       supportedLocales: AppL10n.supportedLocales,
 
       // Material 標準のテーマ（仕様書 12.5）。
-      // フォントだけは同梱の Noto Sans JP を指定する。既定のままだと
+      // フォントだけは同梱の Noto Sans JP を使う。既定のままだと
       // 日本語のグリフを実行時に Google Fonts から取りに行くため、
       // それが遮断された環境で文字が出なくなる（pubspec.yaml 参照）。
       theme: ThemeData(
         colorScheme: appColorScheme(Brightness.light),
-        fontFamily: kAppFontFamily,
+        fontFamily: fontFamily,
       ),
       darkTheme: ThemeData(
         colorScheme: appColorScheme(Brightness.dark),
-        fontFamily: kAppFontFamily,
+        fontFamily: fontFamily,
       ),
     );
   }

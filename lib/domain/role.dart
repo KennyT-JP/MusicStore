@@ -49,13 +49,23 @@ enum ListRole {
 ///
 /// サイト管理者は全リストでリスト管理者と同等に扱う（4.2）。
 class ListAccess {
-  const ListAccess({required this.isSiteAdmin, required this.role});
+  const ListAccess({
+    required this.isSiteAdmin,
+    required this.role,
+    this.isViewer = false,
+  });
 
   /// メンバーではない（かつサイト管理者でもない）状態。
-  const ListAccess.none() : isSiteAdmin = false, role = null;
+  const ListAccess.none()
+    : isSiteAdmin = false,
+      role = null,
+      isViewer = false;
 
   /// サイト管理者としてのアクセス。
-  const ListAccess.siteAdmin() : isSiteAdmin = true, role = null;
+  const ListAccess.siteAdmin()
+    : isSiteAdmin = true,
+      role = null,
+      isViewer = false;
 
   /// Auth のカスタムクレーム由来（13.5）。
   final bool isSiteAdmin;
@@ -63,14 +73,28 @@ class ListAccess {
   /// `lists/{listId}/members/{uid}` 由来。メンバーでなければ null。
   final ListRole? role;
 
+  /// `lists/{listId}/viewers/{uid}` 由来（3.3）。
+  ///
+  /// 共有リンクで「メンバーにならずに見る」を選んだ人。
+  /// **中身は見られるが、役割は持たない。** メンバー一覧にも人数にも
+  /// 通知の宛先にも入らず、何も書けない。
+  final bool isViewer;
+
   /// 実効的な役割。サイト管理者は常にリスト管理者以上として扱う。
+  ///
+  /// **閲覧者はここに含めない。** 役割を持たせると、書ける判定
+  /// （[hasAtLeast]）まで通ってしまう。見られることと書けることは別。
   ListRole? get effectiveRole {
     if (isSiteAdmin) return ListRole.listAdmin;
     return role;
   }
 
-  /// このリストの中身を見られるか（5.3）。
-  bool get canView => effectiveRole != null;
+  /// このリストの中身を見られるか（5.3 / 3.3）。
+  ///
+  /// メンバーか、サイト管理者か、**閲覧者**。閲覧者を入れ忘れると、
+  /// 共有リンクから「メンバーにならずに見る」を選んだ人が、
+  /// 中身を見る権利を持っているのに参加申請の画面へ送られる。
+  bool get canView => effectiveRole != null || isViewer;
 
   /// 実効的な役割が [required] 以上か。
   bool hasAtLeast(ListRole required) {
