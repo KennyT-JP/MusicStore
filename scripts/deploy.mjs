@@ -171,28 +171,7 @@ if (dirty.length > 0) {
 }
 console.log(`    枝: ${branch} ／ 作業ツリーはコミット済み`);
 
-// 3. このコミットは検証済みか。
-//    check.mjs が全部緑だったコミットの ID と HEAD を突き合わせる。
-//    違えば、その場で検証を回してから進む（テストしてから配信）。
-const head = (await capture('git', ['rev-parse', 'HEAD']))?.trim();
-{
-  let checked = null;
-  try {
-    checked = JSON.parse(readFileSync(join(root, '.last-check.json'), 'utf8'));
-  } catch { /* 未実行 */ }
-
-  if (checked?.commit === head) {
-    console.log(`    検証済み: ${head.slice(0, 7)}（${checked.when}）`);
-  } else if (skipTests) {
-    console.log('    **検証を飛ばします（--skip-tests）。依頼者の指示があるときだけ。**');
-  } else {
-    console.log('\n==> このコミットはまだ検証されていません。検証を実行します');
-    const code = await run('node', [join('scripts', 'check.mjs')]);
-    if (code !== 0) fail('検証が失敗しました。配信しません。');
-  }
-}
-
-// 4. どの層が変わったか。
+// 3. どの層が変わったか。
 //    前回配信したコミット（deploy/<環境> タグ）からの差分で決める。
 //    タグが無い＝このスクリプトでの初回。全層を出す。
 function layersFromDiff(files) {
@@ -247,6 +226,32 @@ if (onlyOverride) {
     } else {
       console.log(`\n==> 前回（${deployTag}）からの差分で配信する層: ${layers.join(', ')}`);
     }
+  }
+}
+
+// 4. このコミットは検証済みか。
+//    check.mjs が全部緑だったときの記録と突き合わせ、違えばその場で
+//    検証を回してから進む（テストしてから配信）。
+//    **層の判定より後に置く。** 配信するものが無いときに 4 分の検証を
+//    回しても、誰の役にも立たない。
+const head = (await capture('git', ['rev-parse', 'HEAD']))?.trim();
+const headTree = (await capture('git', ['rev-parse', 'HEAD^{tree}']))?.trim();
+{
+  let checked = null;
+  try {
+    checked = JSON.parse(readFileSync(join(root, '.last-check.json'), 'utf8'));
+  } catch { /* 未実行 */ }
+
+  // コミット ID が違っても、ツリー（内容）が同じなら検証済みと見なす。
+  // dev で検証 → main へ --no-ff マージ、の並びで内容は変わらないため。
+  if (checked?.commit === head || (checked?.tree && checked.tree === headTree)) {
+    console.log(`    検証済み: ${head.slice(0, 7)}（${checked.when}）`);
+  } else if (skipTests) {
+    console.log('    **検証を飛ばします（--skip-tests）。依頼者の指示があるときだけ。**');
+  } else {
+    console.log('\n==> このコミットはまだ検証されていません。検証を実行します');
+    const code = await run('node', [join('scripts', 'check.mjs')]);
+    if (code !== 0) fail('検証が失敗しました。配信しません。');
   }
 }
 
