@@ -234,8 +234,10 @@ if (onlyOverride) {
 //    検証を回してから進む（テストしてから配信）。
 //    **層の判定より後に置く。** 配信するものが無いときに 4 分の検証を
 //    回しても、誰の役にも立たない。
+// ツリーは `HEAD^{tree}` ではなく `--format=%T` で取る。cmd.exe が
+// `^` をエスケープ文字として食べるため（scripts/check.mjs と同じ理由）。
 const head = (await capture('git', ['rev-parse', 'HEAD']))?.trim();
-const headTree = (await capture('git', ['rev-parse', 'HEAD^{tree}']))?.trim();
+const headTree = (await capture('git', ['show', '-s', '--format=%T', 'HEAD']))?.trim();
 {
   let checked = null;
   try {

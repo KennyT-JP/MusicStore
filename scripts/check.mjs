@@ -181,8 +181,11 @@ if (dirty.length > 0) {
 // dev で検証したあと main へ --no-ff でマージすると、コミット ID は
 // 変わるが内容は同一になる。内容が同じなら検証し直す理由は無いので、
 // 配信側はツリーで突き合わせる。
+// ツリーは `HEAD^{tree}` ではなく `--format=%T` で取る。
+// Windows では shell（cmd.exe）越しに起動しており、cmd は `^` を
+// エスケープ文字として食べてしまう（`HEAD^{tree}` → `HEAD{tree}`）。
 const commit = (await runQuiet('git', ['rev-parse', 'HEAD'], root)).output.trim();
-const tree = (await runQuiet('git', ['rev-parse', 'HEAD^{tree}'], root)).output.trim();
+const tree = (await runQuiet('git', ['show', '-s', '--format=%T', 'HEAD'], root)).output.trim();
 writeFileSync(join(root, '.last-check.json'), JSON.stringify({
   commit,
   tree,
