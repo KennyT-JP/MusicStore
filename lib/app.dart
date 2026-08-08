@@ -48,6 +48,15 @@ ColorScheme appColorScheme(Brightness brightness) {
   );
 }
 
+/// アプリを開いたときの URL（main.dart が起動直後に控える）。
+///
+/// **ルーターより先に読み込み画面を出すと、開いた URL が失われる**ため。
+/// ログイン状態の復元を待つあいだに最初の描画が挟まると、そのあとで
+/// 作ったルーターには元の URL（例：共有リンク /s/…）が渡らず、
+/// ホーム扱いで始まってしまう。起動時に控えておき、ルーターの
+/// 開始地点として渡す（2026-08-08。検証環境の実機で発覚）。
+final launchLocationProvider = Provider<String>((_) => AppRoutes.home);
+
 /// ルーターを 1 度だけ組み立てて保持する。
 ///
 /// 画面を作り直すたびにルーターを作ると履歴が失われるため、
@@ -62,6 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return buildAppRouter(
     readAuthState: () => ref.read(authStateProvider),
     authListenable: refresh,
+    initialLocation: ref.read(launchLocationProvider),
   );
 });
 
