@@ -355,20 +355,33 @@ if (layers.includes('functions')) {
 
   // B. callable 全件に実際へ HTTP を送り、403（許可欠落）と 404 を見つける。
   //    401/400 は「Cloud Run は通った。関数が未認証を弾いた」＝正常。
+  //
+  //    **1 件ずつ送る。** 最初は 15 件を同時に送っていたが、Windows で
+  //    9 件が fetch failed になった（HTTP の異常ではなく接続層の失敗。
+  //    実体は curl で 401/400 を返す正常な状態だった）。同時接続を
+  //    やめ、接続層の失敗だけ少し待って引き直す。
   console.log(`\n==> callable の疎通を確認（${callables.length} 件）`);
   const bad = [];
-  await Promise.all(callables.map(async (name) => {
-    try {
-      const res = await fetch(`https://${REGION}-${projectId}.cloudfunctions.net/${name}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: '{"data":{}}',
-      });
-      if (res.status === 403 || res.status === 404) bad.push(`${name}（${res.status}）`);
-    } catch (e) {
-      bad.push(`${name}（${e.message}）`);
+  const probe = (name) =>
+    fetch(`https://${REGION}-${projectId}.cloudfunctions.net/${name}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"data":{}}',
+    });
+  for (const name of callables) {
+    let status = null;
+    let lastError = null;
+    for (let attempt = 0; attempt < 3 && status === null; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 2000));
+      try {
+        status = (await probe(name)).status;
+      } catch (e) {
+        lastError = e; // 接続層の失敗。引き直す
+      }
     }
-  }));
+    if (status === null) bad.push(`${name}（${lastError?.message ?? '接続できない'}）`);
+    else if (status === 403 || status === 404) bad.push(`${name}（${status}）`);
+  }
   if (bad.length > 0) {
     verifyFailed = true;
     console.error(`  異常: ${bad.join(', ')}`);
