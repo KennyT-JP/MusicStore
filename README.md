@@ -160,29 +160,31 @@ docs/                    仕様書・セットアップ手順・開発ログ
 | リダイレクト判定（`ui/app_router.dart`） | 未ログインで内容が漏れないこと |
 | Firestore セキュリティルール | クライアントを信用しない最後の防波堤 |
 
-**実行するのは 1 つのコマンドです。** ウィンドウは 1 つで済みます。
+**実行するのは 1 つのコマンドです**（約 4 分・並列・別窓なし）。
 
 ```bat
-scripts\test-all.cmd        :: Windows
+scripts\check.cmd        :: Windows
 ```
 
 ```sh
-./scripts/test-all.sh       # macOS / Linux
+./scripts/check.sh       # macOS / Linux
 ```
 
-中で次の 5 つを順に実行し、**1 つでも赤ければそこで止まります**。
-エミュレータの起動と後片付けは中で行います。
+4 本を同時に走らせ、失敗があれば最後にまとめて出ます。
 
-| 実行されるもの | 件数 |
+| 並列で実行されるもの | 件数 |
 | --- | --- |
-| `dart analyze` | — |
+| `dart analyze --fatal-infos` | **指摘 0 件が基準** |
 | `flutter test` | 278 |
-| `cd functions && npm test` | 75（サーバー側のドメインロジック・通知） |
-| `cd rules-test && npm test` | 124（Firestore ルール 111 件・Storage 13 件） |
-| `cd functions && npm run test:integration` | 61（Cloud Functions の通し確認） |
+| `functions` の単体テスト | 75（サーバー側のドメインロジック・通知） |
+| エミュレータ系（統合 → ルールの順に直列） | 61（通し確認）＋ 124（Firestore ルール 111・Storage 13） |
 
-個別に実行することもできます。**統合テストも 1 つのコマンドで完結します**
-（別のウィンドウでエミュレータを立てる必要はありません）。
+個別に実行することもできます（`flutter test`、`cd functions && npm test`、
+`cd rules-test && npm test`、`cd functions && npm run test:integration`）。
+**統合テストも 1 コマンドで完結します**（別窓のエミュレータは不要）。
+
+全部緑になると、そのコミットが「検証済み」として記録され、
+`scripts/deploy.cmd` はそれを確かめてから配信します（未検証なら自動で検証を回します）。
 
 > **`flutter analyze` ではなく `dart analyze` を使っています。**
 > `flutter analyze` は**パスに日本語が含まれると異常終了します**（Flutter 3.44.9 で実測）。

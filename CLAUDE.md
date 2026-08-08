@@ -16,23 +16,26 @@
 失敗したまま進めてよいかどうかを決めるのは依頼者です。こちらから
 「影響が無いので進められます」と促さないこと。
 
-**実行するのは 1 つのコマンドです。**
+**この順序は仕組みになっています。** `scripts/check.mjs` が全部緑だった
+コミットの ID を `.last-check.json` に残し、`scripts/deploy.mjs` は
+HEAD と一致しなければ**その場で検証を実行してから**配信します。
+つまり **`deploy` だけ実行すれば、順序は自動的に守られます。**
+
+検証だけを回すときは 1 コマンドです（約 4 分・並列・別窓なし）。
 
 ```
-scripts\test-all.cmd        （Windows）
-./scripts/test-all.sh       （macOS / Linux）
+scripts\check.cmd        （Windows）
+./scripts/check.sh       （macOS / Linux）
 ```
 
-中で次の 5 つを順に実行し、**1 つでも赤ければそこで止まります**。
-エミュレータの起動と後片付けは中で行うので、**ウィンドウは 1 つで済みます。**
+4 本を同時に走らせ、失敗があれば最後にまとめて出ます。
 
-| 実行されるもの | 件数 | エミュレータ |
-| --- | --- | --- |
-| `dart analyze` | — | 不要 |
-| `flutter test` | 278 | 不要 |
-| `cd functions && npm test` | 75 | 不要 |
-| `cd rules-test && npm test` | 124 | 自動で起動・終了 |
-| `cd functions && npm run test:integration` | 61 | 自動で起動・終了 |
+| 並列で実行されるもの | 件数 |
+| --- | --- |
+| `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
+| `flutter test` | 278 |
+| `functions` の単体テスト | 75 |
+| エミュレータ系（統合 → ルールの順に直列） | 61 + 124 |
 
 （件数は 2026-08-08 時点）
 
@@ -42,6 +45,7 @@ scripts\test-all.cmd        （Windows）
 
 > **Java は 21 以上が要ります。** `firebase-tools` 15 以降の要件です。
 > 17 では `Please install a JDK at version 21 or above` で止まります。
+> 17 と 21 が両方入っていても、`check.mjs` が版を見て 21 以上を選びます。
 
 ## 開発の進め方
 
@@ -59,6 +63,15 @@ dev    ← **検証環境（staging）専用。** 検証環境への配信はこ
 | --- | --- | --- |
 | 検証（staging） | `dev` | `scripts\deploy.cmd` |
 | **本番** | **`main` のみ** | `scripts\deploy.cmd prod` |
+
+`deploy` は配信の前後で次を自動で行います（詳細は `scripts/deploy.mjs` の冒頭）。
+
+- **変更のあった層だけ配信する。** 前回配信したコミット（git タグ
+  `deploy/staging` / `deploy/prod`）からの差分で、ルール・索引・関数・
+  Hosting のどれを出すか決める。関数だけの変更なら 5 分の Web ビルドを飛ばす
+- **検証済みのコミットしか配信しない**（上の節）
+- **新規 callable の呼び出し許可を自動で付け、配信後に全 callable と
+  Hosting の疎通を実際に確かめる**（`internal` と Site Not Found を配信の中で捕まえる）
 
 - **配信の前にコミットする。** 検証環境へ出すなら `dev` へ、本番へ出すなら
   `main` へコミットしてから配信します。**`scripts/deploy.mjs` が枝と

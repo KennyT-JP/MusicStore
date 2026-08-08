@@ -31,7 +31,7 @@ Windows・macOS・Linux のいずれでも動きます。Windows のコマンド
 > winget install --id Microsoft.OpenJDK.21
 > ```
 >
-> **17 と 21 が両方入っていても構いません。** `scripts/test-all.mjs` は
+> **17 と 21 が両方入っていても構いません。** `scripts/check.mjs` は
 > 版を見て 21 以上のものを選びます。
 
 > **リポジトリの置き場所に、日本語を含めないでください。**
@@ -43,7 +43,7 @@ Windows・macOS・Linux のいずれでも動きます。Windows のコマンド
 > ```
 >
 > `C:\Codes\MusicStore` のような場所に置いてください。
-> `dart analyze` は日本語パスでも動くので、`scripts/test-all.mjs` は
+> `dart analyze` は日本語パスでも動くので、`scripts/check.mjs` は
 > そちらを使っています。
 
 ```sh
@@ -567,30 +567,40 @@ Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 | 検証（staging） | `dev`（`main` からも可） |
 | **本番** | **`main` のみ** |
 
-このスクリプトは順に次を行います。
+このスクリプトは順に次を行います（2026-08-08 に作り直しました）。
 
 1. `.firebaserc` からデプロイ先のプロジェクト ID を読む
 2. `firebase login` 済みか確認する
-3. **接続設定が生成済みか確認する**（`REPLACE_ME` が残っていれば、そこで止める）
-4. **枝と作業ツリーを確認する**（上の表のとおりか。未コミットの変更が無いか）
-5. 本番かつ対話実行のときは、プロジェクト ID の入力を求める
-6. `flutter build web --release`（本番は `--dart-define=APP_ENV=prod` 付き）
-7. `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting`
+3. **枝と作業ツリーを確認する**（上の表のとおりか。未コミットの変更が無いか）
+4. **このコミットが検証済みか確認する。** `scripts/check.mjs` が全部緑だった
+   コミットの ID（`.last-check.json`）と HEAD を突き合わせ、
+   違えば**その場で検証を実行**してから進む
+5. **変更のあった層だけを選ぶ。** 前回配信したコミット（git タグ
+   `deploy/staging` / `deploy/prod`）からの差分で、ルール・索引・関数・
+   Hosting のどれを出すか決める。**関数だけの変更なら Web ビルド（約 5 分）は
+   走りません。** 変更が無ければ何もせず終わります
+6. Hosting を出すときだけ `flutter build web --release`
+   （本番は `--dart-define=APP_ENV=prod` 付き。接続設定が `REPLACE_ME` のままなら
+   ここで止まります）
+7. `firebase deploy --only <選んだ層>`
+8. **配信後の確認。** 新規 callable への呼び出し許可の自動付与、
+   callable 全件と Hosting への実際の疎通確認。異常があれば失敗として止まる
 
-3 の確認を入れているのは、**設定を忘れたまま配信すると、起動と同時に
-`FirebaseNotConfiguredError` で止まるアプリが公開されてしまう**ためです。
-
-4 の確認を入れているのは、**配信されるのは「いまの作業ツリーの中身」で、
-コミットの有無とは関係ない**ためです。確認が済んでいないものが本番へ
-出るのを、枝と作業ツリーの状態で防ぎます。
+| 引数 | 意味 |
+| --- | --- |
+| `prod` | 本番へ。付けなければ検証環境 |
+| `--all` | 差分に関係なく全層を配信 |
+| `--only=functions` など | 層を手で指定（配信済みの記録は動かしません） |
+| `--no-build` | ビルドを飛ばす。失敗直後のやり直し専用 |
+| `--skip-tests` | 検証を飛ばす。**依頼者が明示したときだけ** |
 
 > **接続設定の 2 ファイル**（`lib/env/firebase_options_staging.dart` と
 > `_prod.dart`）は、**変更されているのが正常**なので未コミット扱いにしません
 > （4 章）。それ以外に未コミットの変更があると止まります。
 
-> **`--yes` を付けると、本番の入力確認を省きます。** 枝の確認（4）が
-> 宛先の取り違えを防いでいるため、自動で回すときに使えます。
-> 対話で実行しているときは、付けなければ従来どおり確認を求めます。
+> **「どこまで配信済みか」は git タグ（ローカル）で覚えています。**
+> 別のマシンから初めて配信するときはタグが無いので、全層が配信されます。
+> 危険側ではなく安全側（出しすぎる側）に倒れる作りです。
 
 完了すると `https://<プロジェクト ID>.web.app` で開けます。
 
