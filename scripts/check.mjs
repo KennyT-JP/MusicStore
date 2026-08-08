@@ -177,9 +177,15 @@ if (dirty.length > 0) {
   process.exit(0);
 }
 
+// コミット ID に加えて**ツリー（内容そのもの）の ID** も残す。
+// dev で検証したあと main へ --no-ff でマージすると、コミット ID は
+// 変わるが内容は同一になる。内容が同じなら検証し直す理由は無いので、
+// 配信側はツリーで突き合わせる。
 const commit = (await runQuiet('git', ['rev-parse', 'HEAD'], root)).output.trim();
+const tree = (await runQuiet('git', ['rev-parse', 'HEAD^{tree}'], root)).output.trim();
 writeFileSync(join(root, '.last-check.json'), JSON.stringify({
   commit,
+  tree,
   when: new Date().toISOString(),
   steps: results.map((r) => ({ name: r.name, ms: r.ms })),
 }, null, 2));
