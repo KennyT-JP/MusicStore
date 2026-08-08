@@ -157,6 +157,26 @@ if (failed.length > 0) {
 }
 
 // 全部緑。このコミットが検証済みであることを配信スクリプトへ伝える。
+//
+// **未コミットの変更があるときは印を書かない。** 印は「このコミット ID の
+// 中身を検証した」という意味であって、作業ツリーが違えば嘘になる。
+// （接続設定の 2 ファイルは、手元だけ実際の値なのが正常なので除く）
+const generated = new Set([
+  'lib/env/firebase_options_staging.dart',
+  'lib/env/firebase_options_prod.dart',
+]);
+const dirty = (await runQuiet('git', ['status', '--porcelain'], root)).output
+  .split('\n').map((l) => l.trim()).filter(Boolean)
+  .map((l) => l.replace(/^\S+\s+/, ''))
+  .filter((p) => !generated.has(p));
+
+if (dirty.length > 0) {
+  console.log('==> すべて成功。ただし未コミットの変更があるため、検証済みの印は残しません');
+  console.log(`    （${dirty.length} 件: ${dirty.slice(0, 5).join(', ')}）`);
+  console.log('    コミットしてから配信すると、配信側がもう一度検証を回します。');
+  process.exit(0);
+}
+
 const commit = (await runQuiet('git', ['rev-parse', 'HEAD'], root)).output.trim();
 writeFileSync(join(root, '.last-check.json'), JSON.stringify({
   commit,
