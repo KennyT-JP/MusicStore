@@ -60,11 +60,29 @@ async function refresh(user) {
   });
   return r.json();
 }
+/**
+ * 1 回の呼び出しを諦めるまでの時間。
+ *
+ * **これは速さの基準ではなく、止まったまま戻らない事故の歯止め。**
+ *
+ * 以前は 45 秒だった。`scripts/check.mjs` が検証を並列に走らせるように
+ * してから、**配信が 2 回、ここで止まった**（2026-08-08）。
+ * エミュレータは JVM と Node の上で動き、同じ機械で `flutter test` と
+ * `dart analyze` が同時に走ると割り当てが減る。実際、統合テストだけで
+ * 280 秒だったものが 550 秒かかっていた。**関数は正しく動いていて、
+ * ただ遅かっただけ**である。
+ *
+ * 遅いだけの実行を失敗にすると、「赤いのは環境のせい」に慣れてしまい、
+ * 本物の後退を見逃す側に倒れる（docs/AUDIT-CHECKLIST.md 観点 2）。
+ * **歯止めとしての役目は残したまま、余裕を持たせる。**
+ */
+const CALL_TIMEOUT_MS = 180000;
+
 async function call(name, data, token) {
   const r = await fetch(`${FN}/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ data }), signal: AbortSignal.timeout(45000),
+    body: JSON.stringify({ data }), signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
   });
   return { status: r.status, body: await r.json().catch(() => ({})) };
 }
