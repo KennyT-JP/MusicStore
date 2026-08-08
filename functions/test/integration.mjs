@@ -528,6 +528,82 @@ if (!listId) {
   r = await call('revokeSiteAdmin', { uid: second.localId }, siteAdmin.idToken);
   check('2 人いれば降格できる（4.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
 
+  // --- ユーザーの追加・無効化・削除（11.1） ---
+  //
+  // **消す・止める操作は、通しで一度は動かす。** 判断そのものは
+  // functions/test/user_admin.test.ts が確かめているが、Auth と
+  // Firestore を実際に書き換えるところは、ここでしか確かめられない。
+  r = await call('createSiteUser', {
+    email: `made-${stamp}@example.com`,
+    password: 'password',
+    displayName: `作られた人${stamp}`,
+  }, siteAdmin.idToken);
+  const madeUid = r.body?.result?.uid;
+  check('サイト管理者はユーザーを追加できる（11.1）', r.status === 200 && !!madeUid,
+        JSON.stringify(r.body).slice(0, 100));
+
+  const madeUser = await doc(`users/${madeUid}`);
+  check('追加したユーザーの表示名が入る', sv(madeUser, 'displayName') === `作られた人${stamp}`,
+        sv(madeUser, 'displayName'));
+
+  r = await call('createSiteUser', {
+    email: `made-${stamp}@example.com`,
+    password: 'password',
+    displayName: '重複',
+  }, siteAdmin.idToken);
+  check('同じメールアドレスでは追加できない', r.body?.error?.status === 'ALREADY_EXISTS',
+        r.body?.error?.status);
+
+  r = await call('createSiteUser', {
+    email: `short-${stamp}@example.com`, password: '12345', displayName: '短い',
+  }, siteAdmin.idToken);
+  check('短いパスワードは弾く', r.body?.error?.status === 'INVALID_ARGUMENT',
+        r.body?.error?.status);
+
+  r = await call('createSiteUser', {
+    email: 'not-an-email', password: 'password', displayName: '形が違う',
+  }, siteAdmin.idToken);
+  check('メールアドレスの形が違えば弾く', r.body?.error?.status === 'INVALID_ARGUMENT',
+        r.body?.error?.status);
+
+  r = await call('disableSiteUser', { uid: madeUid }, siteAdmin.idToken);
+  check('ユーザーを無効にできる（11.1）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const disabledUser = await doc(`users/${madeUid}`);
+  check('無効にしても users は残る（データを消さない）', disabledUser !== null,
+        disabledUser === null ? '消えている' : '残っている');
+
+  r = await call('enableSiteUser', { uid: madeUid }, siteAdmin.idToken);
+  check('無効にしたユーザーを有効に戻せる', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('disableSiteUser', { uid: siteAdmin.localId }, siteAdmin.idToken);
+  check('自分自身は無効にできない', r.body?.error?.status === 'FAILED_PRECONDITION',
+        r.body?.error?.status);
+
+  r = await call('deleteSiteUser', { uid: siteAdmin.localId }, siteAdmin.idToken);
+  check('自分自身は削除できない', r.body?.error?.status === 'FAILED_PRECONDITION',
+        r.body?.error?.status);
+
+  // **ログイン済み・メール確認済みの一般利用者で試す。**
+  // このブロックの joiner はトークンを持たない形で作り直されているため、
+  // それを使うと「未ログイン」で弾かれ、確かめたい「サイト管理者では
+  // ないから弾かれる」を通り越してしまう（2026-08-09 に実際にやった）。
+  const ordinary = await signUp('ord');
+  r = await call('deleteSiteUser', { uid: madeUid }, ordinary.idToken);
+  check('サイト管理者でなければ削除できない', r.body?.error?.status === 'PERMISSION_DENIED',
+        r.body?.error?.status);
+
+  r = await call('disableSiteUser', { uid: madeUid }, ordinary.idToken);
+  check('サイト管理者でなければ無効にもできない', r.body?.error?.status === 'PERMISSION_DENIED',
+        r.body?.error?.status);
+
+  r = await call('deleteSiteUser', { uid: madeUid }, siteAdmin.idToken);
+  check('ユーザーを削除できる（11.1）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const deletedUser = await doc(`users/${madeUid}`);
+  check('削除すると users も消える', deletedUser === null || deletedUser.fields === undefined,
+        deletedUser === null ? '消えている' : '残っている');
+
   // --- 管理者不在リストへの指名（5.6） ---
   r = await call('assignListAdmin', { listId, uid: joiner.localId }, siteAdmin.idToken);
   check('サイト管理者はリスト管理者を指名できる（5.6）', r.status === 200, JSON.stringify(r.body).slice(0, 80));

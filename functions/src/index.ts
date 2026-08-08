@@ -61,6 +61,12 @@ export {
   setListQuota,
   assignListAdmin,
 } from './callable/site_management';
+export {
+  createSiteUser,
+  disableSiteUser,
+  enableSiteUser,
+  deleteSiteUser,
+} from './callable/user_admin';
 
 // --- 定期実行 ---
 export { purgeDeletedFiles } from './scheduled/purge';

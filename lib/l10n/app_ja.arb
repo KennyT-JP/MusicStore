@@ -336,20 +336,20 @@
   "notificationMaster": "すべての通知",
   "withdraw": "退会する",
   "withdrawWarning": "退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。",
-  "notifyItemAdded": "曲が追加された",
-  "notifyCommentAdded": "コメントが付いた",
-  "notifyQuotaNotice": "容量が 80% を超えた",
-  "notifyQuotaWarning": "容量が 90% を超えた",
-  "notifyListRequested": "リスト作成の申請があった",
-  "notifyJoinRequested": "参加申請があった",
-  "notifyRequestApproved": "申請が承認された",
-  "notifyItemAddedDetail": "参加しているリストに曲が追加されたとき。管理しているリストも含みます。",
-  "notifyCommentAddedDetail": "自分が管理しているリスト、または自分の投稿にコメントが付いたとき。",
-  "notifyQuotaNoticeDetail": "管理しているリストの使用容量が上限の 80% を超えたとき。",
-  "notifyQuotaWarningDetail": "管理しているリストの使用容量が上限の 90% を超えたとき。",
-  "notifyListRequestedDetail": "リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。",
-  "notifyJoinRequestedDetail": "管理しているリストに参加を申し込まれたとき。",
-  "notifyRequestApprovedDetail": "自分が出した申請が承認されたとき。",
+  "notifyItemAdded": "曲が追加されました",
+  "notifyCommentAdded": "コメントが付きました",
+  "notifyQuotaNotice": "容量が 80% を超えました",
+  "notifyQuotaWarning": "容量が 90% を超えました",
+  "notifyListRequested": "リスト作成の申請がありました",
+  "notifyJoinRequested": "参加申請がありました",
+  "notifyRequestApproved": "申請が承認されました",
+  "notifyItemAddedDetail": "参加しているリストに曲が追加されたときに届きます。管理しているリストも含みます。",
+  "notifyCommentAddedDetail": "自分が管理しているリスト、または自分の投稿にコメントが付いたときに届きます。",
+  "notifyQuotaNoticeDetail": "管理しているリストの使用容量が上限の 80% を超えたときに届きます。",
+  "notifyQuotaWarningDetail": "管理しているリストの使用容量が上限の 90% を超えたときに届きます。",
+  "notifyListRequestedDetail": "リスト作成の申請が出されたときに届きます。サイト管理者だけが受け取ります。",
+  "notifyJoinRequestedDetail": "管理しているリストに参加を申し込まれたときに届きます。",
+  "notifyRequestApprovedDetail": "自分が出した申請が承認されたときに届きます。",
   "notificationsEmpty": "通知はありません。",
   "markAllAsRead": "すべて既読にする",
   "functionErrorSignInRequired": "ログインが必要です。",
@@ -370,6 +370,46 @@
   "functionErrorRoleNotAllowed": "役割は Super User か Read Only を指定してください。",
   "functionErrorMissingField": "入力が足りません。",
   "functionErrorFieldTooLong": "入力が長すぎます。",
+  "functionErrorSelfNotAllowed": "ご自身に対しては行えません。退会される場合は設定からお願いします。",
+  "functionErrorEmailInvalid": "メールアドレスの形式が正しくありません。",
+  "functionErrorPasswordTooShort": "パスワードは 6 文字以上で入力してください。",
+  "functionErrorEmailAlreadyInUse": "このメールアドレスはすでに使われています。",
+  "addUser": "ユーザーを追加",
+  "addUserBody": "サイト管理者がパスワードを決めます。お渡ししたあとで、ご本人に変更していただいてください。",
+  "addUserSubmit": "追加する",
+  "displayNameRequired": "表示名を入力してください",
+  "userAdded": "ユーザーを追加しました。",
+  "disableUser": "無効にする",
+  "enableUser": "有効に戻す",
+  "deleteUser": "削除する",
+  "userDisabledLabel": "無効",
+  "disableUserBody": "「{name}」を無効にします。\n\nログインできなくなり、参加中のリストからも外れます。登録した曲・音源ファイル・コメントは残ります。\n\nあとから有効に戻せます。",
+  "@disableUserBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enableUserBody": "「{name}」を有効に戻します。\n\nまたログインできるようになります。参加していたリストには戻らないため、必要であれば改めてご案内ください。",
+  "@enableUserBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteUserBody": "「{name}」を削除します。\n\nアカウントと、その方が登録した曲・音源ファイルを消します。書かれたコメントは残り、表示名が「退会したユーザー」になります。\n\nバックアップは取っていないため、削除した内容は元に戻せません。無効にするだけであれば、データは残ります。",
+  "@deleteUserBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userDisabled": "無効にしました。",
+  "userEnabled": "有効に戻しました。",
+  "userDeleted": "削除しました。",
   "functionErrorListNameTaken": "「{listName}」は既に使われているか、申請中です。",
   "@functionErrorListNameTaken": {
     "placeholders": {

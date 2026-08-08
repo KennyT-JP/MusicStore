@@ -554,7 +554,155 @@ class SiteAdminUsersScreen extends ConsumerWidget {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _addUser(context, ref),
+        icon: const Icon(Icons.person_add_outlined),
+        label: Text(l10n.addUser),
+      ),
     );
+  }
+
+  Future<void> _addUser(BuildContext context, WidgetRef ref) async {
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _AddUserDialog(),
+    );
+    if (added != true) return;
+    ref.invalidate(siteUsersProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).userAdded)));
+    }
+  }
+}
+
+/// ユーザーを追加する入力欄（仕様書 11.1）。
+///
+/// **パスワードはサイト管理者が決める**（2026-08-09 の依頼者指示）。
+/// 決めた本人が知っている状態になるため、**渡したあとで本人に変えて
+/// もらう**ことを画面に書いてある。
+class _AddUserDialog extends ConsumerStatefulWidget {
+  const _AddUserDialog();
+
+  @override
+  ConsumerState<_AddUserDialog> createState() => _AddUserDialogState();
+}
+
+class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _displayName = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _displayName.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+
+    return AlertDialog(
+      title: Text(l10n.addUser),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.addUserBody,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              if (_error != null) ...[
+                ErrorMessage(_error!),
+                const SizedBox(height: 12),
+              ],
+              TextFormField(
+                controller: _email,
+                decoration: InputDecoration(labelText: l10n.emailLabel),
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? l10n.emailRequired : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _displayName,
+                decoration: InputDecoration(
+                  labelText: l10n.displayName,
+                  helperText: l10n.displayNameHelper,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? l10n.displayNameRequired
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _password,
+                decoration: InputDecoration(
+                  labelText: l10n.passwordLabel,
+                  helperText: l10n.passwordHelper,
+                ),
+                obscureText: true,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return l10n.passwordRequired;
+                  if (v.length < 6) return l10n.passwordTooShort;
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: Text(l10n.addUserSubmit),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(functionsRepositoryProvider)
+          .createSiteUser(
+            email: _email.text.trim(),
+            password: _password.text,
+            displayName: _displayName.text.trim(),
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } on FunctionsCallException catch (e) {
+      // **理由を出す。** 「追加できませんでした」だけでは、
+      // メールアドレスの重複なのか形式違いなのか分からない。
+      if (mounted) {
+        setState(() => _error = describeFunctionsError(context, e));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
@@ -578,42 +726,80 @@ class _SiteUserTile extends ConsumerWidget {
       siteAdminCount: siteAdminCount,
     );
 
+    // **無効にされた人は、退会した人とは別に見せる。**
+    // 退会は本人の意思、無効はサイト管理者の判断で、戻し方も違う。
+    final isDisabled = user.isDisabled;
+
     return ListTile(
       leading: Icon(
-        user.isWithdrawn ? Icons.person_off_outlined : Icons.person_outline,
-        color: user.isWithdrawn ? scheme.outline : null,
+        isDisabled
+            ? Icons.block
+            : (user.isWithdrawn
+                  ? Icons.person_off_outlined
+                  : Icons.person_outline),
+        color: (isDisabled || user.isWithdrawn) ? scheme.outline : null,
       ),
       title: Text(
-        user.isWithdrawn
+        (user.isWithdrawn && !isDisabled)
             ? l10n.withdrawnUser
             : (user.displayName.isEmpty ? user.email : user.displayName),
       ),
-      subtitle: user.isWithdrawn ? null : Text(user.email),
-      trailing: user.isWithdrawn
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (user.isSiteAdmin)
-                  Chip(
-                    visualDensity: VisualDensity.compact,
-                    label: Text(l10n.roleSiteAdmin),
-                    backgroundColor: scheme.primaryContainer,
-                    side: BorderSide.none,
-                  ),
-                const SizedBox(width: 8),
-                if (user.isSiteAdmin)
-                  TextButton(
+      subtitle: (user.isWithdrawn && !isDisabled) ? null : Text(user.email),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isDisabled)
+            Chip(
+              visualDensity: VisualDensity.compact,
+              label: Text(l10n.userDisabledLabel),
+              backgroundColor: scheme.surfaceContainerHighest,
+              side: BorderSide.none,
+            ),
+          if (user.isSiteAdmin && !isDisabled)
+            Chip(
+              visualDensity: VisualDensity.compact,
+              label: Text(l10n.roleSiteAdmin),
+              backgroundColor: scheme.primaryContainer,
+              side: BorderSide.none,
+            ),
+          const SizedBox(width: 8),
+          if (!user.isWithdrawn && !isDisabled)
+            (user.isSiteAdmin
+                ? TextButton(
                     onPressed: isLastAdmin ? null : () => _revoke(context, ref),
                     child: Text(l10n.removeSiteAdmin),
                   )
-                else
-                  TextButton(
+                : TextButton(
                     onPressed: () => _grant(context, ref),
                     child: Text(l10n.promoteToSiteAdmin),
-                  ),
-              ],
-            ),
+                  )),
+          // 無効化・有効化・削除（仕様書 11.1）。
+          //
+          // **消す操作は、押しやすい場所に置かない。** 役割の変更と
+          // 並べると押し間違える。メニューの中に入れ、確認も挟む。
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) => switch (value) {
+              'disable' => _confirmDisable(context, ref),
+              'enable' => _confirmEnable(context, ref),
+              _ => _confirmDelete(context, ref),
+            },
+            itemBuilder: (_) => [
+              if (isDisabled)
+                PopupMenuItem(value: 'enable', child: Text(l10n.enableUser))
+              else
+                PopupMenuItem(value: 'disable', child: Text(l10n.disableUser)),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text(
+                  l10n.deleteUser,
+                  style: TextStyle(color: scheme.error),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       // 最後の 1 人であることを、押せない理由として示す。
       isThreeLine: false,
       onTap: isLastAdmin
@@ -622,6 +808,108 @@ class _SiteUserTile extends ConsumerWidget {
             ).showSnackBar(SnackBar(content: Text(l10n.lastSiteAdminBlocked)))
           : null,
     );
+  }
+
+  /// 一覧に出している名前。確認の文に差し込む。
+  String _name(AppL10n l10n) =>
+      user.displayName.isEmpty ? user.email : user.displayName;
+
+  /// 無効にする（仕様書 11.1）。**戻せる。**
+  Future<void> _confirmDisable(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final ok = await _confirm(
+      context,
+      title: l10n.disableUser,
+      body: l10n.disableUserBody(_name(l10n)),
+      danger: false,
+    );
+    if (!ok || !context.mounted) return;
+    await _run(context, ref, () async {
+      await ref.read(functionsRepositoryProvider).disableSiteUser(user.uid);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppL10n.of(context).userDisabled)),
+        );
+      }
+    });
+  }
+
+  /// 有効に戻す（仕様書 11.1）。
+  Future<void> _confirmEnable(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final ok = await _confirm(
+      context,
+      title: l10n.enableUser,
+      body: l10n.enableUserBody(_name(l10n)),
+      danger: false,
+    );
+    if (!ok || !context.mounted) return;
+    await _run(context, ref, () async {
+      await ref.read(functionsRepositoryProvider).enableSiteUser(user.uid);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).userEnabled)));
+      }
+    });
+  }
+
+  /// 削除する（仕様書 11.1）。**戻せない。**
+  ///
+  /// 何が消えて何が残るかを、押す前に全部書く。
+  /// 「無効にするだけならデータは残る」ことも併せて示し、
+  /// **取り返しのつく道があることを、選べるようにしておく。**
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final ok = await _confirm(
+      context,
+      title: l10n.deleteUser,
+      body: l10n.deleteUserBody(_name(l10n)),
+      danger: true,
+    );
+    if (!ok || !context.mounted) return;
+    await _run(context, ref, () async {
+      await ref.read(functionsRepositoryProvider).deleteSiteUser(user.uid);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).userDeleted)));
+      }
+    });
+  }
+
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required bool danger,
+  }) async {
+    final l10n = AppL10n.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final answer = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(body)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: danger
+                ? FilledButton.styleFrom(
+                    backgroundColor: scheme.error,
+                    foregroundColor: scheme.onError,
+                  )
+                : null,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(title),
+          ),
+        ],
+      ),
+    );
+    return answer ?? false;
   }
 
   Future<void> _grant(BuildContext context, WidgetRef ref) =>

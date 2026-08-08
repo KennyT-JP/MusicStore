@@ -200,6 +200,40 @@ class FunctionsRepository {
         .toList();
   }
 
+  /// ユーザーを追加する（仕様書 11.1）。
+  ///
+  /// **パスワードはサイト管理者が決める。** 決めた本人が知っている
+  /// 状態になるので、渡したあとで本人に変えてもらう（画面に案内あり）。
+  Future<void> createSiteUser({
+    required String email,
+    required String password,
+    required String displayName,
+  }) => _call('createSiteUser', {
+    'email': email,
+    'password': password,
+    'displayName': displayName,
+  });
+
+  /// ユーザーを無効にする（仕様書 11.1）。**戻せる。**
+  ///
+  /// ログインできなくなり、参加中のリストからも外れる。
+  /// 曲・音源ファイル・コメントは残る。
+  Future<void> disableSiteUser(String uid) =>
+      _call('disableSiteUser', {'uid': uid});
+
+  /// 無効にしたユーザーを有効に戻す（仕様書 11.1）。
+  ///
+  /// **参加していたリストには戻らない。** 改めて案内する。
+  Future<void> enableSiteUser(String uid) =>
+      _call('enableSiteUser', {'uid': uid});
+
+  /// ユーザーを削除する（仕様書 11.1）。**戻せない。**
+  ///
+  /// アカウントと、その人が登録した曲・音源ファイルを消す。
+  /// **コメントは残る**（表示名が「退会したユーザー」になる）。
+  Future<void> deleteSiteUser(String uid) =>
+      _call('deleteSiteUser', {'uid': uid});
+
   /// リストの容量上限を設定する（仕様書 7.2）。
   Future<void> setListQuota({
     required String listId,

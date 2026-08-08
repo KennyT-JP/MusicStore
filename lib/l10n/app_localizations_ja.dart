@@ -610,46 +610,49 @@ class AppL10nJa extends AppL10n {
   String get withdrawWarning => '退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。';
 
   @override
-  String get notifyItemAdded => '曲が追加された';
+  String get notifyItemAdded => '曲が追加されました';
 
   @override
-  String get notifyCommentAdded => 'コメントが付いた';
+  String get notifyCommentAdded => 'コメントが付きました';
 
   @override
-  String get notifyQuotaNotice => '容量が 80% を超えた';
+  String get notifyQuotaNotice => '容量が 80% を超えました';
 
   @override
-  String get notifyQuotaWarning => '容量が 90% を超えた';
+  String get notifyQuotaWarning => '容量が 90% を超えました';
 
   @override
-  String get notifyListRequested => 'リスト作成の申請があった';
+  String get notifyListRequested => 'リスト作成の申請がありました';
 
   @override
-  String get notifyJoinRequested => '参加申請があった';
+  String get notifyJoinRequested => '参加申請がありました';
 
   @override
-  String get notifyRequestApproved => '申請が承認された';
+  String get notifyRequestApproved => '申請が承認されました';
 
   @override
-  String get notifyItemAddedDetail => '参加しているリストに曲が追加されたとき。管理しているリストも含みます。';
+  String get notifyItemAddedDetail =>
+      '参加しているリストに曲が追加されたときに届きます。管理しているリストも含みます。';
 
   @override
-  String get notifyCommentAddedDetail => '自分が管理しているリスト、または自分の投稿にコメントが付いたとき。';
+  String get notifyCommentAddedDetail =>
+      '自分が管理しているリスト、または自分の投稿にコメントが付いたときに届きます。';
 
   @override
-  String get notifyQuotaNoticeDetail => '管理しているリストの使用容量が上限の 80% を超えたとき。';
+  String get notifyQuotaNoticeDetail => '管理しているリストの使用容量が上限の 80% を超えたときに届きます。';
 
   @override
-  String get notifyQuotaWarningDetail => '管理しているリストの使用容量が上限の 90% を超えたとき。';
+  String get notifyQuotaWarningDetail => '管理しているリストの使用容量が上限の 90% を超えたときに届きます。';
 
   @override
-  String get notifyListRequestedDetail => 'リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。';
+  String get notifyListRequestedDetail =>
+      'リスト作成の申請が出されたときに届きます。サイト管理者だけが受け取ります。';
 
   @override
-  String get notifyJoinRequestedDetail => '管理しているリストに参加を申し込まれたとき。';
+  String get notifyJoinRequestedDetail => '管理しているリストに参加を申し込まれたときに届きます。';
 
   @override
-  String get notifyRequestApprovedDetail => '自分が出した申請が承認されたとき。';
+  String get notifyRequestApprovedDetail => '自分が出した申請が承認されたときに届きます。';
 
   @override
   String get notificationsEmpty => '通知はありません。';
@@ -713,6 +716,69 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get functionErrorFieldTooLong => '入力が長すぎます。';
+
+  @override
+  String get functionErrorSelfNotAllowed => 'ご自身に対しては行えません。退会される場合は設定からお願いします。';
+
+  @override
+  String get functionErrorEmailInvalid => 'メールアドレスの形式が正しくありません。';
+
+  @override
+  String get functionErrorPasswordTooShort => 'パスワードは 6 文字以上で入力してください。';
+
+  @override
+  String get functionErrorEmailAlreadyInUse => 'このメールアドレスはすでに使われています。';
+
+  @override
+  String get addUser => 'ユーザーを追加';
+
+  @override
+  String get addUserBody => 'サイト管理者がパスワードを決めます。お渡ししたあとで、ご本人に変更していただいてください。';
+
+  @override
+  String get addUserSubmit => '追加する';
+
+  @override
+  String get displayNameRequired => '表示名を入力してください';
+
+  @override
+  String get userAdded => 'ユーザーを追加しました。';
+
+  @override
+  String get disableUser => '無効にする';
+
+  @override
+  String get enableUser => '有効に戻す';
+
+  @override
+  String get deleteUser => '削除する';
+
+  @override
+  String get userDisabledLabel => '無効';
+
+  @override
+  String disableUserBody(String name) {
+    return '「$name」を無効にします。\n\nログインできなくなり、参加中のリストからも外れます。登録した曲・音源ファイル・コメントは残ります。\n\nあとから有効に戻せます。';
+  }
+
+  @override
+  String enableUserBody(String name) {
+    return '「$name」を有効に戻します。\n\nまたログインできるようになります。参加していたリストには戻らないため、必要であれば改めてご案内ください。';
+  }
+
+  @override
+  String deleteUserBody(String name) {
+    return '「$name」を削除します。\n\nアカウントと、その方が登録した曲・音源ファイルを消します。書かれたコメントは残り、表示名が「退会したユーザー」になります。\n\nバックアップは取っていないため、削除した内容は元に戻せません。無効にするだけであれば、データは残ります。';
+  }
+
+  @override
+  String get userDisabled => '無効にしました。';
+
+  @override
+  String get userEnabled => '有効に戻しました。';
+
+  @override
+  String get userDeleted => '削除しました。';
 
   @override
   String functionErrorListNameTaken(String listName) {
