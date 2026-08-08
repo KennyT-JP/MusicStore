@@ -12,21 +12,25 @@
  * **その一覧から漏れた関数は、いつまでも直らない。**
  * 関数を足したときに手順書を直し忘れないよう、ここで突き合わせる。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-/** 実装にある `onCall` の関数名を集める。 */
+/**
+ * 実装にある `onCall` の関数名を集める。
+ *
+ * **ファイルの一覧を書き写さない。** 以前はここに 4 本の道を並べて
+ * いたため、`user_admin.ts` を足したときに**新しい関数が数に入らず**、
+ * 見張りが空振りしかけた（2026-08-09）。書き写した一覧は、
+ * 増えたときに誰も直さない（docs/AUDIT-CHECKLIST.md 観点 4）。
+ * その場で読む。
+ */
 function callableFunctionNames(): string[] {
-  const sources = [
-    'src/callable/list_requests.ts',
-    'src/callable/membership.ts',
-    'src/callable/site_admin.ts',
-    'src/callable/site_management.ts',
-  ];
+  const dir = new URL('../src/callable/', import.meta.url);
 
   const names: string[] = [];
-  for (const path of sources) {
-    const text = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+  for (const file of readdirSync(dir).sort()) {
+    if (!file.endsWith('.ts')) continue;
+    const text = readFileSync(new URL(file, dir), 'utf8');
     for (const match of text.matchAll(/export const (\w+) = onCall\b/g)) {
       names.push(match[1]);
     }

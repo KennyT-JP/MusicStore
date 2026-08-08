@@ -111,6 +111,10 @@ String describeFunctionsError(
     'roleNotAllowed' => l10n.functionErrorRoleNotAllowed,
     'missingField' => l10n.functionErrorMissingField,
     'fieldTooLong' => l10n.functionErrorFieldTooLong,
+    'selfNotAllowed' => l10n.functionErrorSelfNotAllowed,
+    'emailInvalid' => l10n.functionErrorEmailInvalid,
+    'passwordTooShort' => l10n.functionErrorPasswordTooShort,
+    'emailAlreadyInUse' => l10n.functionErrorEmailAlreadyInUse,
     'listNameTaken' => l10n.functionErrorListNameTaken(
       e.params['listName'] ?? '',
     ),

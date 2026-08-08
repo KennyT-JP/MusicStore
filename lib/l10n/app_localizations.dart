@@ -1168,85 +1168,85 @@ abstract class AppL10n {
   /// No description provided for @notifyItemAdded.
   ///
   /// In ja, this message translates to:
-  /// **'曲が追加された'**
+  /// **'曲が追加されました'**
   String get notifyItemAdded;
 
   /// No description provided for @notifyCommentAdded.
   ///
   /// In ja, this message translates to:
-  /// **'コメントが付いた'**
+  /// **'コメントが付きました'**
   String get notifyCommentAdded;
 
   /// No description provided for @notifyQuotaNotice.
   ///
   /// In ja, this message translates to:
-  /// **'容量が 80% を超えた'**
+  /// **'容量が 80% を超えました'**
   String get notifyQuotaNotice;
 
   /// No description provided for @notifyQuotaWarning.
   ///
   /// In ja, this message translates to:
-  /// **'容量が 90% を超えた'**
+  /// **'容量が 90% を超えました'**
   String get notifyQuotaWarning;
 
   /// No description provided for @notifyListRequested.
   ///
   /// In ja, this message translates to:
-  /// **'リスト作成の申請があった'**
+  /// **'リスト作成の申請がありました'**
   String get notifyListRequested;
 
   /// No description provided for @notifyJoinRequested.
   ///
   /// In ja, this message translates to:
-  /// **'参加申請があった'**
+  /// **'参加申請がありました'**
   String get notifyJoinRequested;
 
   /// No description provided for @notifyRequestApproved.
   ///
   /// In ja, this message translates to:
-  /// **'申請が承認された'**
+  /// **'申請が承認されました'**
   String get notifyRequestApproved;
 
   /// No description provided for @notifyItemAddedDetail.
   ///
   /// In ja, this message translates to:
-  /// **'参加しているリストに曲が追加されたとき。管理しているリストも含みます。'**
+  /// **'参加しているリストに曲が追加されたときに届きます。管理しているリストも含みます。'**
   String get notifyItemAddedDetail;
 
   /// No description provided for @notifyCommentAddedDetail.
   ///
   /// In ja, this message translates to:
-  /// **'自分が管理しているリスト、または自分の投稿にコメントが付いたとき。'**
+  /// **'自分が管理しているリスト、または自分の投稿にコメントが付いたときに届きます。'**
   String get notifyCommentAddedDetail;
 
   /// No description provided for @notifyQuotaNoticeDetail.
   ///
   /// In ja, this message translates to:
-  /// **'管理しているリストの使用容量が上限の 80% を超えたとき。'**
+  /// **'管理しているリストの使用容量が上限の 80% を超えたときに届きます。'**
   String get notifyQuotaNoticeDetail;
 
   /// No description provided for @notifyQuotaWarningDetail.
   ///
   /// In ja, this message translates to:
-  /// **'管理しているリストの使用容量が上限の 90% を超えたとき。'**
+  /// **'管理しているリストの使用容量が上限の 90% を超えたときに届きます。'**
   String get notifyQuotaWarningDetail;
 
   /// No description provided for @notifyListRequestedDetail.
   ///
   /// In ja, this message translates to:
-  /// **'リスト作成の申請が出されたとき。サイト管理者だけが受け取ります。'**
+  /// **'リスト作成の申請が出されたときに届きます。サイト管理者だけが受け取ります。'**
   String get notifyListRequestedDetail;
 
   /// No description provided for @notifyJoinRequestedDetail.
   ///
   /// In ja, this message translates to:
-  /// **'管理しているリストに参加を申し込まれたとき。'**
+  /// **'管理しているリストに参加を申し込まれたときに届きます。'**
   String get notifyJoinRequestedDetail;
 
   /// No description provided for @notifyRequestApprovedDetail.
   ///
   /// In ja, this message translates to:
-  /// **'自分が出した申請が承認されたとき。'**
+  /// **'自分が出した申請が承認されたときに届きます。'**
   String get notifyRequestApprovedDetail;
 
   /// No description provided for @notificationsEmpty.
@@ -1368,6 +1368,120 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'入力が長すぎます。'**
   String get functionErrorFieldTooLong;
+
+  /// No description provided for @functionErrorSelfNotAllowed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ご自身に対しては行えません。退会される場合は設定からお願いします。'**
+  String get functionErrorSelfNotAllowed;
+
+  /// No description provided for @functionErrorEmailInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'メールアドレスの形式が正しくありません。'**
+  String get functionErrorEmailInvalid;
+
+  /// No description provided for @functionErrorPasswordTooShort.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードは 6 文字以上で入力してください。'**
+  String get functionErrorPasswordTooShort;
+
+  /// No description provided for @functionErrorEmailAlreadyInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'このメールアドレスはすでに使われています。'**
+  String get functionErrorEmailAlreadyInUse;
+
+  /// No description provided for @addUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーを追加'**
+  String get addUser;
+
+  /// No description provided for @addUserBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'サイト管理者がパスワードを決めます。お渡ししたあとで、ご本人に変更していただいてください。'**
+  String get addUserBody;
+
+  /// No description provided for @addUserSubmit.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加する'**
+  String get addUserSubmit;
+
+  /// No description provided for @displayNameRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示名を入力してください'**
+  String get displayNameRequired;
+
+  /// No description provided for @userAdded.
+  ///
+  /// In ja, this message translates to:
+  /// **'ユーザーを追加しました。'**
+  String get userAdded;
+
+  /// No description provided for @disableUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'無効にする'**
+  String get disableUser;
+
+  /// No description provided for @enableUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'有効に戻す'**
+  String get enableUser;
+
+  /// No description provided for @deleteUser.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除する'**
+  String get deleteUser;
+
+  /// No description provided for @userDisabledLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'無効'**
+  String get userDisabledLabel;
+
+  /// No description provided for @disableUserBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を無効にします。\n\nログインできなくなり、参加中のリストからも外れます。登録した曲・音源ファイル・コメントは残ります。\n\nあとから有効に戻せます。'**
+  String disableUserBody(String name);
+
+  /// No description provided for @enableUserBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を有効に戻します。\n\nまたログインできるようになります。参加していたリストには戻らないため、必要であれば改めてご案内ください。'**
+  String enableUserBody(String name);
+
+  /// No description provided for @deleteUserBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{name}」を削除します。\n\nアカウントと、その方が登録した曲・音源ファイルを消します。書かれたコメントは残り、表示名が「退会したユーザー」になります。\n\nバックアップは取っていないため、削除した内容は元に戻せません。無効にするだけであれば、データは残ります。'**
+  String deleteUserBody(String name);
+
+  /// No description provided for @userDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'無効にしました。'**
+  String get userDisabled;
+
+  /// No description provided for @userEnabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'有効に戻しました。'**
+  String get userEnabled;
+
+  /// No description provided for @userDeleted.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除しました。'**
+  String get userDeleted;
 
   /// No description provided for @functionErrorListNameTaken.
   ///

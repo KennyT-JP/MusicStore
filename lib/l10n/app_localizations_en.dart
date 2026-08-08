@@ -753,6 +753,73 @@ class AppL10nEn extends AppL10n {
   String get functionErrorFieldTooLong => 'That value is too long.';
 
   @override
+  String get functionErrorSelfNotAllowed =>
+      'You cannot do this to your own account. To leave, use the withdrawal option in Settings.';
+
+  @override
+  String get functionErrorEmailInvalid => 'That email address is not valid.';
+
+  @override
+  String get functionErrorPasswordTooShort =>
+      'The password must be at least 6 characters.';
+
+  @override
+  String get functionErrorEmailAlreadyInUse =>
+      'That email address is already in use.';
+
+  @override
+  String get addUser => 'Add user';
+
+  @override
+  String get addUserBody =>
+      'You choose the password. Ask them to change it once you have handed it over.';
+
+  @override
+  String get addUserSubmit => 'Add';
+
+  @override
+  String get displayNameRequired => 'Please enter a display name';
+
+  @override
+  String get userAdded => 'User added.';
+
+  @override
+  String get disableUser => 'Disable';
+
+  @override
+  String get enableUser => 'Re-enable';
+
+  @override
+  String get deleteUser => 'Delete';
+
+  @override
+  String get userDisabledLabel => 'Disabled';
+
+  @override
+  String disableUserBody(String name) {
+    return 'This will disable \"$name\".\n\nThey can no longer sign in and will be removed from the lists they belong to. Their tracks, audio files, and comments are kept.\n\nYou can re-enable them later.';
+  }
+
+  @override
+  String enableUserBody(String name) {
+    return 'This will re-enable \"$name\".\n\nThey can sign in again. They are not returned to the lists they belonged to, so invite them again if needed.';
+  }
+
+  @override
+  String deleteUserBody(String name) {
+    return 'This will delete \"$name\".\n\nTheir account and the tracks and audio files they added will be removed. Their comments stay, shown as \"Former member\".\n\nThere is no backup, so this cannot be undone. Disabling instead keeps their data.';
+  }
+
+  @override
+  String get userDisabled => 'User disabled.';
+
+  @override
+  String get userEnabled => 'User re-enabled.';
+
+  @override
+  String get userDeleted => 'User deleted.';
+
+  @override
   String functionErrorListNameTaken(String listName) {
     return '\"$listName\" is already in use or pending.';
   }

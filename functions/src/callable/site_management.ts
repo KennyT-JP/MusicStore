@@ -34,6 +34,8 @@ export const listSiteUsers = onCall({ region: REGION }, async (request) => {
     displayName: string;
     isSiteAdmin: boolean;
     isWithdrawn: boolean;
+    /** 無効にされているか（仕様書 11.1）。ログインできない状態。 */
+    isDisabled: boolean;
   }> = [];
 
   let pageToken: string | undefined;
@@ -46,6 +48,9 @@ export const listSiteUsers = onCall({ region: REGION }, async (request) => {
         displayName: user.displayName ?? '',
         isSiteAdmin: user.customClaims?.siteAdmin === true,
         isWithdrawn: false,
+        // **Auth 側の状態が正。** Firestore に控えを持たせると、
+        // 片方だけ書き換わったときにどちらが本当か分からなくなる。
+        isDisabled: user.disabled === true,
       });
     }
     pageToken = page.pageToken;

@@ -141,6 +141,7 @@ class SiteUser {
     required this.displayName,
     required this.isSiteAdmin,
     required this.isWithdrawn,
+    this.isDisabled = false,
   });
 
   final String uid;
@@ -152,11 +153,18 @@ class SiteUser {
 
   final bool isWithdrawn;
 
+  /// サイト管理者に無効にされているか（仕様書 11.1）。
+  ///
+  /// **ログインできない状態。データは残っている。**
+  /// 有効に戻せる点が、削除（戻せない）との違い。
+  final bool isDisabled;
+
   factory SiteUser.fromMap(Map<String, dynamic> map) => SiteUser(
     uid: map['uid'] as String? ?? '',
     email: map['email'] as String? ?? '',
     displayName: map['displayName'] as String? ?? '',
     isSiteAdmin: map['isSiteAdmin'] as bool? ?? false,
     isWithdrawn: map['isWithdrawn'] as bool? ?? false,
+    isDisabled: map['isDisabled'] as bool? ?? false,
   );
 }

@@ -47,6 +47,10 @@ export const ERROR_CODES = [
   'roleNotAllowed',
   'missingField',
   'fieldTooLong',
+  'selfNotAllowed',
+  'emailInvalid',
+  'passwordTooShort',
+  'emailAlreadyInUse',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -81,6 +85,11 @@ const FALLBACK: Record<ErrorCode, string> = {
   roleNotAllowed: 'その役割は付与できません。',
   missingField: '入力が足りません。',
   fieldTooLong: '入力が長すぎます。',
+  selfNotAllowed:
+    'ご自身に対しては行えません。退会される場合は設定からお願いします。',
+  emailInvalid: 'メールアドレスの形式が正しくありません。',
+  passwordTooShort: 'パスワードは 6 文字以上で入力してください。',
+  emailAlreadyInUse: 'このメールアドレスはすでに使われています。',
 };
 
 /**
