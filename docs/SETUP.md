@@ -15,8 +15,36 @@ Windows・macOS・Linux のいずれでも動きます。Windows のコマンド
 | --- | --- | --- |
 | Flutter SDK | **3.44 以上**（Dart 3.12.2 以上） | `flutter --version` |
 | Node.js | 20 以上 | `node --version` |
-| Java | **11 以上**（Firestore エミュレータが JVM 上で動く） | `java -version` |
+| Java | **21 以上**（エミュレータが JVM 上で動く） | `java -version` |
 | Firebase CLI | 最新 | `firebase --version` |
+
+> **Java は 21 以上です。17 では動きません**（2026-08-08 に実測）。
+> `firebase-tools` 15 以降がそう要求します。17 で起動すると、
+> テストが 1 件も走らないまま次のように出て止まります。
+>
+> ```
+> firebase-tools no longer supports Java version before 21.
+> Please install a JDK at version 21 or above to get a compatible runtime.
+> ```
+>
+> ```bat
+> winget install --id Microsoft.OpenJDK.21
+> ```
+>
+> **17 と 21 が両方入っていても構いません。** `scripts/test-all.mjs` は
+> 版を見て 21 以上のものを選びます。
+
+> **リポジトリの置き場所に、日本語を含めないでください。**
+> `flutter analyze` が異常終了します（Flutter 3.44.9 で実測。
+> パスに非 ASCII があると解析サーバとのやりとりが壊れる）。
+>
+> ```
+> Unhandled exception: FormatException: Unexpected end of input
+> ```
+>
+> `C:\Codes\MusicStore` のような場所に置いてください。
+> `dart analyze` は日本語パスでも動くので、`scripts/test-all.mjs` は
+> そちらを使っています。
 
 ```sh
 # Firebase CLI
@@ -532,17 +560,37 @@ Windows は `scripts\configure-firebase.cmd` / `scripts\configure-firebase.cmd p
 
 Windows は `scripts\deploy.cmd` / `scripts\deploy.cmd prod` です。
 
+**どの枝から出すかが決まっています**（2026-08-08 の指示）。
+
+| 環境 | 配信元の枝 |
+| --- | --- |
+| 検証（staging） | `dev`（`main` からも可） |
+| **本番** | **`main` のみ** |
+
 このスクリプトは順に次を行います。
 
 1. `.firebaserc` からデプロイ先のプロジェクト ID を読む
 2. `firebase login` 済みか確認する
 3. **接続設定が生成済みか確認する**（`REPLACE_ME` が残っていれば、そこで止める）
-4. 本番の場合は、プロジェクト ID の入力を求める
-5. `flutter build web --release`（本番は `--dart-define=APP_ENV=prod` 付き）
-6. `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting`
+4. **枝と作業ツリーを確認する**（上の表のとおりか。未コミットの変更が無いか）
+5. 本番かつ対話実行のときは、プロジェクト ID の入力を求める
+6. `flutter build web --release`（本番は `--dart-define=APP_ENV=prod` 付き）
+7. `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting`
 
 3 の確認を入れているのは、**設定を忘れたまま配信すると、起動と同時に
 `FirebaseNotConfiguredError` で止まるアプリが公開されてしまう**ためです。
+
+4 の確認を入れているのは、**配信されるのは「いまの作業ツリーの中身」で、
+コミットの有無とは関係ない**ためです。確認が済んでいないものが本番へ
+出るのを、枝と作業ツリーの状態で防ぎます。
+
+> **接続設定の 2 ファイル**（`lib/env/firebase_options_staging.dart` と
+> `_prod.dart`）は、**変更されているのが正常**なので未コミット扱いにしません
+> （4 章）。それ以外に未コミットの変更があると止まります。
+
+> **`--yes` を付けると、本番の入力確認を省きます。** 枝の確認（4）が
+> 宛先の取り違えを防いでいるため、自動で回すときに使えます。
+> 対話で実行しているときは、付けなければ従来どおり確認を求めます。
 
 完了すると `https://<プロジェクト ID>.web.app` で開けます。
 
@@ -997,12 +1045,21 @@ Firestore ルールは 92 件すべて検証できます。
 エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（61 件）。
 
 ```sh
-# ターミナル 1
-cd functions && npm run serve
-
-# ターミナル 2
 cd functions && npm run test:integration
 ```
+
+**ウィンドウは 1 つで済みます。** エミュレータの起動・後片付けまで
+`functions/run-integration.mjs` が行います。すでに別のウィンドウで
+エミュレータが動いていれば、そちらへ繋いでテストだけを走らせます。
+
+> **以前は「1 枚目で `npm run serve`、2 枚目でテスト」という手順でした。**
+> その形では**一度も実行されず**、期待値が古いまま赤くなっていたことに
+> 気づけず、**そのまま本番へ配信されていました**（2026-08-08 に判明）。
+> 人が窓を 2 つ並べる前提の手順は、書いてあっても実行されません。
+
+> **Pub/Sub エミュレータは起動しません。** 統合テストは定期実行の関数を
+> 呼ばないうえ、**Pub/Sub エミュレータだけが別の窓を開く**ためです
+> （Windows で実測）。手で触るときの `npm run serve` には残してあります。
 
 検証する内容：リスト作成の申請・承認・却下（名前予約の解放を含む）、
 共有リンクの発行・受け取り（参加／閲覧）・何度でも使えること・取消、

@@ -15,7 +15,10 @@
     "//serve": "実行の中身は serve.mjs にある。関数の読み取り待ち時間を延ばす必要があり、その指定の書き方が OS で違うため（理由は serve.mjs の先頭）。",
     "serve": "node serve.mjs",
     "deploy": "npm run build && firebase deploy --only functions",
-    "test:integration": "node test/integration.mjs"
+    "//test:integration": "エミュレータの起動から後片付けまで行う。ウィンドウは 1 つでよい。すでに動いていればそこへ繋ぐ。",
+    "test:integration": "node run-integration.mjs",
+    "//test:integration:attach": "起動中のエミュレータへ繋ぐだけ。run-integration.mjs が自動で選ぶので、通常は使わない。",
+    "test:integration:attach": "node test/integration.mjs"
   },
   "dependencies": {
     "@firebase/app": "^0.16.0",
