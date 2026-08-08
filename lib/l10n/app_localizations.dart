@@ -1456,7 +1456,7 @@ abstract class AppL10n {
   /// No description provided for @shareLinkJoinTitle.
   ///
   /// In ja, this message translates to:
-  /// **'参加する'**
+  /// **'リストのメンバーになる'**
   String get shareLinkJoinTitle;
 
   /// No description provided for @shareLinkJoinBody.
@@ -1468,7 +1468,7 @@ abstract class AppL10n {
   /// No description provided for @shareLinkViewTitle.
   ///
   /// In ja, this message translates to:
-  /// **'参加せずに見る'**
+  /// **'リストのメンバーにならずに見る'**
   String get shareLinkViewTitle;
 
   /// No description provided for @shareLinkViewBody.
@@ -1480,7 +1480,7 @@ abstract class AppL10n {
   /// No description provided for @shareLinkChangeLaterNote.
   ///
   /// In ja, this message translates to:
-  /// **'「参加せずに見る」を選んだあとで参加したくなったら、同じリンクをもう一度開いてください。'**
+  /// **'「リストのメンバーにならずに見る」を選んだあとでメンバーになりたくなったら、同じリンクをもう一度開いてください。'**
   String get shareLinkChangeLaterNote;
 
   /// No description provided for @shareLinkSignInNote.

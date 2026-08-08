@@ -799,14 +799,14 @@ class AppL10nEn extends AppL10n {
   String get shareLinkChooseHint => 'Choose one. You can change this later.';
 
   @override
-  String get shareLinkJoinTitle => 'Join';
+  String get shareLinkJoinTitle => 'Become a list member';
 
   @override
   String get shareLinkJoinBody =>
       'You become a member. Your name appears in the member list and you are notified when tracks are added. Depending on your role you can add tracks and comments.';
 
   @override
-  String get shareLinkViewTitle => 'View without joining';
+  String get shareLinkViewTitle => 'View without becoming a member';
 
   @override
   String get shareLinkViewBody =>
@@ -814,7 +814,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get shareLinkChangeLaterNote =>
-      'If you choose to view only and later want to join, just open the same link again.';
+      'If you choose to view without becoming a member and later change your mind, just open the same link again.';
 
   @override
   String get shareLinkSignInNote =>
