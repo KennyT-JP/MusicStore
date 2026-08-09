@@ -33,11 +33,11 @@ scripts\check.cmd        （Windows）
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 294 |
-| `functions` の単体テスト | 75 |
-| エミュレータ系（統合 → ルールの順に直列） | 61 + 124 |
+| `flutter test` | 314 |
+| `functions` の単体テスト | 85 |
+| エミュレータ系（統合 → ルールの順に直列） | 75 + 124 |
 
-（件数は 2026-08-08 時点）
+（件数は 2026-08-09 時点）
 
 > **`flutter analyze` ではなく `dart analyze` を使います。**
 > `flutter analyze` は**パスに日本語が含まれると異常終了します**
@@ -106,6 +106,24 @@ git checkout -- firebase.json    ← なっていたら捨てる。リポジト�
 
 **残すのは `lib/env/firebase_options_staging.dart` と `_prod.dart` の 2 つだけ**
 です。それ以外の変更は捨ててください。
+
+## `git reset --hard` を使わない
+
+接続設定の 2 ファイルは「リポジトリ側は `REPLACE_ME`、手元だけ実際の値」
+という作りなので、**作業ツリーを巻き戻すと巻き添えで消えます。**
+消えると配信できません（2026-08-09 に実際にやりました）。
+
+枝の位置だけを戻したいときは、**別の枝に切り替えてから** `git branch -f`
+を使ってください。作業ツリーに触れません。
+
+```
+git switch dev
+git branch -f main <戻したい位置>
+```
+
+やむを得ず巻き戻したときは、接続設定を作り直してください
+（`scripts\configure-firebase.cmd` と `… prod`。そのあと
+`firebase.json` が壊れていないか `git status` で確認）。
 
 ## 参照する文書
 
