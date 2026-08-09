@@ -230,12 +230,15 @@ void main() {
       'brand/png/favicon-32.png',
       'brand/png/apple-touch-icon.png',
       'brand/png/og-image.png',
-      // 読み込み中に出すロックアップ。**PNG を使う。**
-      // SVG は文字をテキスト要素のまま持っているので、Noto Sans JP が
-      // 入っていない環境では別のフォントで組み直された見た目になる
-      // （brand/README.md「フォントについて」）。
-      'brand/png/logo-inline-light@2x.png',
-      'brand/png/logo-inline-dark-notile@2x.png',
+      // 読み込み中に出すロゴ。**横組み 2 段**（2026-08-09 の依頼者の判断。
+      // 上部バーは横一列のロックアップだが、この画面は正面に大きく
+      // 出す場所なので 2 段のほうが収まりがよい）。
+      //
+      // **PNG を使う。** SVG は文字をテキスト要素のまま持っているので、
+      // Noto Sans JP が入っていない環境では別のフォントで組み直された
+      // 見た目になる（brand/README.md「フォントについて」）。
+      'brand/png/logo-horizontal-light@2x.png',
+      'brand/png/logo-horizontal-dark@2x.png',
     ];
 
     /// manifest.json が指しているもの（ホーム画面・インストール時）。
