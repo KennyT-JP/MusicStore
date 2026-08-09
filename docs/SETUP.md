@@ -997,7 +997,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 > ```
 >
 > 4 本を並列に走らせ、エミュレータの起動・後片付けまで行います
-> （約 4 分・別窓なし）。**配信の前にこれを通してください。**
+> （約 3 分・別窓なし）。**配信の前にこれを通してください。**
 > 以下は、個別に動かしたいときの説明です。
 
 ### 単体テスト
@@ -1023,10 +1023,10 @@ cd functions && npm test   # 85 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 124 件（Firestore 98 件・Storage 13 件。スキップなし）
+npm test          # 127 件（Firestore 111 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
 ```
 
-Firestore ルールは 92 件すべて検証できます。
+Firestore ルールは全件エミュレータで検証できます。
 
 > **かつてここには「Storage ルールの一部はエミュレータで検証できない」と書いていました。**
 > `storage.rules` がメンバー判定に使う `firestore.exists()` に Storage エミュレータが

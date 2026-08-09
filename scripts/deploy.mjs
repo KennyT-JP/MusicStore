@@ -212,7 +212,9 @@ function layersFromDiff(files) {
     else if (f.startsWith('docs/') || f.startsWith('test/') || f.startsWith('rules-test/') ||
              f.startsWith('scripts/') || f.startsWith('.claude/') || f.startsWith('android/') ||
              f.startsWith('ios/') || ['CLAUDE.md', 'README.md', '.gitignore', '.gitattributes',
-             '.metadata', '.firebaserc', 'analysis_options.yaml', '.last-check.json'].includes(f)) continue;
+             '.metadata', '.firebaserc', 'analysis_options.yaml', '.last-check.json',
+             // ルールテスト専用のエミュレータ設定。配信物には関係しない
+             'firebase.rules-test.json'].includes(f)) continue;
     else return null; // 判定できないものが混ざったら、安全側に倒して全層
   }
   return [...layers];

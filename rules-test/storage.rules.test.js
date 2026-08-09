@@ -17,7 +17,6 @@
  * 教訓：**「〜できない」と書かれた箇所こそ、まず試すこと。**
  */
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
-import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
   deleteObject,
   getDownloadURL,
@@ -29,11 +28,14 @@ import {
   ITEM_ID,
   LIST_ID,
   UID,
+  allow,
   asAnonymous,
   asSiteAdmin,
   asUser,
   createTestEnv,
-  seed,
+  deny,
+  maybeReseed,
+  mutateAsAdmin,
 } from './helpers.js';
 
 let env;
@@ -47,10 +49,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await seed(env);
-  await env.clearStorage();
+  await maybeReseed(env, { clearStorage: true });
   // 既存ファイルを 1 つ置いておく。
-  await env.withSecurityRulesDisabled(async (ctx) => {
+  // **この upload が毎回 dirty の印を付けるので、Storage 側は実質
+  // 毎回作り直しになる。** 13 件しかないので、その単純さを取る。
+  await mutateAsAdmin(env, async (ctx) => {
     await uploadBytes(
       ref(ctx.storage(), filePath('existing.mp3')),
       new Uint8Array([1, 2, 3]),
@@ -72,7 +75,7 @@ describe('Firestore を参照せずに決まるルール', () => {
   test('既存ファイルを上書きできない（差し替えは別名で保存／13.7）', async () => {
     // allow update: if false なので、メンバーかどうかに関係なく拒否される。
     const storage = asUser(env, UID.superUser).storage();
-    await assertFails(
+    await deny(
       uploadBytes(ref(storage, filePath('existing.mp3')), audio()),
     );
   });
@@ -80,25 +83,25 @@ describe('Firestore を参照せずに決まるルール', () => {
   test('クライアントからは削除できない（Functions が猶予期間後に削除／13.4）', async () => {
     // allow delete: if false。誤操作でファイルだけ先に消えると復元できない。
     const storage = asUser(env, UID.listAdmin).storage();
-    await assertFails(deleteObject(ref(storage, filePath('existing.mp3'))));
+    await deny(deleteObject(ref(storage, filePath('existing.mp3'))));
   });
 
   test('サイト管理者でも削除できない', async () => {
     const storage = asSiteAdmin(env).storage();
-    await assertFails(deleteObject(ref(storage, filePath('existing.mp3'))));
+    await deny(deleteObject(ref(storage, filePath('existing.mp3'))));
   });
 
   test('定義していないパスは読み書きとも拒否する', async () => {
     const storage = asSiteAdmin(env).storage();
-    await assertFails(
+    await deny(
       uploadBytes(ref(storage, 'somewhere/else.mp3'), audio()),
     );
-    await assertFails(getDownloadURL(ref(storage, 'somewhere/else.mp3')));
+    await deny(getDownloadURL(ref(storage, 'somewhere/else.mp3')));
   });
 
   test('未ログインでは読めない', async () => {
     const storage = asAnonymous(env).storage();
-    await assertFails(getDownloadURL(ref(storage, filePath('existing.mp3'))));
+    await deny(getDownloadURL(ref(storage, filePath('existing.mp3'))));
   });
 });
 
@@ -127,8 +130,10 @@ describe('メンバー判定を伴うルール', () => {
   // 生きていなければその場で理由を出して止める。
   beforeAll(async () => {
     const storage = asUser(env, UID.readOnly).storage();
-    await seed(env);
-    await env.withSecurityRulesDisabled(async (ctx) => {
+    // データが無ければ作る（あればそのまま使う）。直後の upload が
+    // dirty の印を付けるので、次のテストは作り直しから始まる。
+    await maybeReseed(env);
+    await mutateAsAdmin(env, async (ctx) => {
       await uploadBytes(
         ref(ctx.storage(), filePath('existing.mp3')),
         new Uint8Array([1, 2, 3]),
@@ -156,54 +161,54 @@ describe('メンバー判定を伴うルール', () => {
 
   test('Read Only も再生・ダウンロードできる（4.2）', async () => {
     const storage = asUser(env, UID.readOnly).storage();
-    await assertSucceeds(
+    await allow(
       getDownloadURL(ref(storage, filePath('existing.mp3'))),
     );
   });
 
   test('サイト管理者はメンバー登録がなくても読める', async () => {
     const storage = asSiteAdmin(env).storage();
-    await assertSucceeds(
+    await allow(
       getDownloadURL(ref(storage, filePath('existing.mp3'))),
     );
   });
 
   test('Super User はアップロードできる（4.2）', async () => {
     const storage = asUser(env, UID.superUser).storage();
-    await assertSucceeds(
+    await allow(
       uploadBytes(ref(storage, filePath('new.mp3')), audio()),
     );
   });
 
   test('リスト管理者もアップロードできる', async () => {
     const storage = asUser(env, UID.listAdmin).storage();
-    await assertSucceeds(
+    await allow(
       uploadBytes(ref(storage, filePath('admin.mp3')), audio()),
     );
   });
 
   test('Read Only はアップロードできない（4.2）', async () => {
     const storage = asUser(env, UID.readOnly).storage();
-    await assertFails(
+    await deny(
       uploadBytes(ref(storage, filePath('new.mp3')), audio()),
     );
   });
 
   test('未参加者は読めない（5.3）', async () => {
     const storage = asUser(env, UID.outsider).storage();
-    await assertFails(getDownloadURL(ref(storage, filePath('existing.mp3'))));
+    await deny(getDownloadURL(ref(storage, filePath('existing.mp3'))));
   });
 
   test('未参加者はアップロードできない', async () => {
     const storage = asUser(env, UID.outsider).storage();
-    await assertFails(
+    await deny(
       uploadBytes(ref(storage, filePath('new.mp3')), audio()),
     );
   });
 
   test('参加していないリストにはアップロードできない', async () => {
     const storage = asUser(env, UID.superUser).storage();
-    await assertFails(
+    await deny(
       uploadBytes(ref(storage, 'lists/list-2/items/x/song.mp3'), audio()),
     );
   });

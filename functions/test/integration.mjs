@@ -15,6 +15,8 @@
  * **実行するとエミュレータの Auth と Firestore を初期化する。**
  * 前回のサイト管理者が残っていると「最後の 1 人」の判定が変わるため。
  */
+import { readFileSync, readdirSync } from 'node:fs';
+
 const FN = 'http://127.0.0.1:5001/demo-musiclist/asia-northeast1';
 const AUTH = 'http://127.0.0.1:9099';
 const FS = 'http://127.0.0.1:8080/v1/projects/demo-musiclist/databases/(default)/documents';
@@ -27,6 +29,7 @@ const check = (label, ok, detail = '') => {
 };
 
 async function signUp(tag) {
+  const started = Date.now();
   const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=k`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: `${tag}-${stamp}@example.com`, password: 'password', returnSecureToken: true }),
@@ -42,7 +45,10 @@ async function signUp(tag) {
     body: JSON.stringify({ localId: user.localId, emailVerified: true }),
   });
 
-  return { ...user, ...(await refresh(user)) };
+  const result = { ...user, ...(await refresh(user)) };
+  spent.auth += Date.now() - started;
+  spent.auths += 1;
+  return result;
 }
 
 /** メール確認をしていない利用者（3.1 の検証用）。 */
@@ -78,13 +84,28 @@ async function refresh(user) {
  */
 const CALL_TIMEOUT_MS = 180000;
 
+/**
+ * どこで時間を使ったかの記録（最後にまとめて出す）。
+ *
+ * **「遅い」の調査は、まず内訳から（2026-08-09）。**
+ * 関数の実行時間（エミュレータのログの Finished in Xms）を合計しても
+ * 38 秒で、全体の 250 秒と大きく開いていた。残りがどこへ行ったかを
+ * 出せるように、呼び出しと待ちの実測を常に取っておく。
+ */
+const spent = { call: 0, calls: [], wait: 0, waits: 0, auth: 0, auths: 0 };
+
 async function call(name, data, token) {
+  const started = Date.now();
   const r = await fetch(`${FN}/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ data }), signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
   });
-  return { status: r.status, body: await r.json().catch(() => ({})) };
+  const result = { status: r.status, body: await r.json().catch(() => ({})) };
+  const ms = Date.now() - started;
+  spent.call += ms;
+  spent.calls.push({ name, ms });
+  return result;
 }
 // Firestore エミュレータの REST は Authorization ヘッダが要る。
 const FS_HEADERS = { Authorization: 'Bearer owner' };
@@ -126,11 +147,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * ときに落ちないところまで伸ばす（2026-08-08）。
  */
 async function waitUntil(predicate, { timeoutMs = 180000, intervalMs = 500 } = {}) {
-  const deadline = Date.now() + timeoutMs;
-  for (;;) {
-    if (await predicate()) return true;
-    if (Date.now() >= deadline) return false;
-    await sleep(intervalMs);
+  const started = Date.now();
+  const deadline = started + timeoutMs;
+  try {
+    for (;;) {
+      if (await predicate()) return true;
+      if (Date.now() >= deadline) return false;
+      await sleep(intervalMs);
+    }
+  } finally {
+    spent.wait += Date.now() - started;
+    spent.waits += 1;
   }
 }
 
@@ -232,11 +259,42 @@ async function preflight() {
 
 await preflight();
 
+// --- ウォームアップ：全関数のワーカーを同時に立ち上げる ---
+//
+// **各関数は、最初の 1 回だけ呼び出しに約 5 秒かかる（2026-08-09 実測）。**
+// エミュレータが関数ごとに、最初の呼び出しでワーカー（node プロセス）を
+// 立ち上げるため。呼び出し 51 回の内訳を取ると、関数の数と同じ 19 回
+// だけがきれいに 5 秒前後に固まり、残り 29 回は 0.3 秒未満だった。
+// テストの流れの中で直列に払うと、これだけで約 95 秒になる。
+//
+// そこで先に、トークン無しの呼び出しを全関数へ**同時に**投げて、
+// 立ち上げを重ねて払う。返事は「未認証」でよい（ワーカーは立ち上がる）。
+// 関数の一覧は src/callable から読む。手で並べると、増えた関数だけ
+// 5 秒のまま残って、原因に気づきにくい。
+{
+  const started = Date.now();
+  const src = new URL('../src/callable/', import.meta.url);
+  const names = readdirSync(src).flatMap((file) =>
+    [...readFileSync(new URL(file, src), 'utf8')
+      .matchAll(/^export const (\w+) = onCall/gm)].map((m) => m[1]));
+  await Promise.all(names.map((name) =>
+    fetch(`${FN}/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"data":{}}',
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    }).catch(() => null)));
+  console.log(`    ウォームアップ: ${names.length} 関数 / ${Math.round((Date.now() - started) / 1000)} 秒`);
+}
+
 // 実行のたびに初期化する。前回のサイト管理者が残っていると
 // 「最後の 1 人」の判定が変わってしまうため。
+//
+// **固定の待ち時間を置かない（waitUntil の説明を参照）。**
+// 消えたことを実際に見る。空の一覧が返れば消えている。
 await fetch(`${AUTH}/emulator/v1/projects/demo-musiclist/accounts`, { method: 'DELETE' });
 await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-musiclist/databases/(default)/documents', { method: 'DELETE' });
-await sleep(1500);
+await waitUntil(async () => (await list('users')).length === 0);
 
 // --- 準備：サイト管理者を作る ---
 let siteAdmin = await signUp('sa');
@@ -288,10 +346,14 @@ if (!listId) {
   const member = await doc(`lists/${listId}/members/${applicant.localId}`);
   check('申請者がリスト管理者になる', sv(member, 'role') === 'listAdmin');
 
-  await sleep(4000);
-  const notifs = await list(`users/${applicant.localId}/notifications`);
-  check('承認が申請者へ通知される', notifs.some((n) => sv(n, 'type') === 'requestApproved'),
-        notifs.map((n) => sv(n, 'type')).join(','));
+  // **固定の待ち時間を置かない（waitUntil の説明を参照）。**
+  // 通知は onCall の中で書かれるので普通は即座に見えるが、
+  // 混んでいる機械では遅れる。届くまで待つ。
+  const approvalNotified = async () =>
+    (await list(`users/${applicant.localId}/notifications`))
+      .some((n) => sv(n, 'type') === 'requestApproved');
+  await waitUntil(approvalNotified);
+  check('承認が申請者へ通知される', await approvalNotified());
 
   // --- 二重承認はできない ---
   r = await call('approveListRequest', { requestId }, siteAdmin.idToken);
@@ -674,6 +736,27 @@ if (!listId) {
   // 曲まで通知されると雑音になるため、役割だけを理由には送らない。
   check('サイト管理者でも参加していなければ届かない',
         !(await itemAdded(siteAdmin.localId)));
+}
+
+// どこで時間を使ったかの内訳（調べるときの手がかり。判定には使わない）。
+{
+  const sec = (ms) => `${Math.round(ms / 1000)}s`;
+  const total = Date.now() - stamp;
+  const slowest = [...spent.calls].sort((a, b) => b.ms - a.ms).slice(0, 5)
+    .map((c) => `${c.name} ${c.ms}ms`).join('、');
+  console.log('\n--- 時間の内訳 ---');
+  console.log(`  テスト全体            : ${sec(total)}`);
+  console.log(`  関数の呼び出し（往復）: ${sec(spent.call)}（${spent.calls.length} 回）`);
+  console.log(`  結果待ち（waitUntil） : ${sec(spent.wait)}（${spent.waits} 回）`);
+  console.log(`  アカウント作成        : ${sec(spent.auth)}（${spent.auths} 人）`);
+  console.log(`  遅い呼び出し上位      : ${slowest}`);
+
+  // 分布を調べたいときのために、呼び出しごとの記録も残しておく。
+  try {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(new URL('./.last-timing.json', import.meta.url),
+      JSON.stringify(spent, null, 2));
+  } catch { /* 記録できなくても本題ではない */ }
 }
 
 console.log(`\n=== ${results.filter(Boolean).length} / ${results.length} 成功 ===`);

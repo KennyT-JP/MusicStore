@@ -5,17 +5,16 @@
  *   scripts\check.cmd        Windows
  *   ./scripts/check.sh       macOS / Linux
  *
- * 4 本を同時に走らせる。互いに独立なので待ち合わせる理由が無い。
+ * 5 本を同時に走らせる。互いに独立なので待ち合わせる理由が無い。
  *
  *   ├─ dart analyze --fatal-infos   （info も失敗。基準は「指摘 0 件」）
- *   ├─ flutter test                 （278 件）
- *   ├─ functions の単体テスト       （75 件）
- *   └─ エミュレータ系（この 1 本だけ内部で直列）
- *        ├─ functions の統合テスト  （61 件。起動〜後片付けまで自動）
- *        └─ セキュリティルール      （124 件。同上）
+ *   ├─ flutter test                 （314 件）
+ *   ├─ functions の単体テスト       （85 件）
+ *   ├─ functions の統合テスト       （75 件。起動〜後片付けまで自動）
+ *   └─ セキュリティルール           （127 件。同上・専用ポートで並走）
  *
- * 直列だと 7〜8 分かかっていたものが、いちばん遅い 1 本ぶん（約 4 分）で
- * 終わる。出力は本ごとに貯めて、終わった順に結果だけを出す。
+ * 直列だと 7〜8 分かかっていたものが、いちばん遅い 1 本（統合テスト）
+ * ぶんで終わる。出力は本ごとに貯めて、終わった順に結果だけを出す。
  * 失敗した本だけ、最後にログの末尾を並べる。
  *
  * **全部緑なら、そのコミットの ID を `.last-check.json` に書く。**
@@ -120,35 +119,34 @@ async function step(name, summaryPattern, command, args, cwd) {
 // 実行
 // ---------------------------------------------------------------------------
 
-console.log('==> 検証を並列で開始（4 本）');
+console.log('==> 検証を並列で開始（5 本）');
 const startedAll = Date.now();
 
-const results = (await Promise.all([
+// **5 本とも同時に走らせる（2026-08-09）。**
+//
+// 以前はエミュレータを使う 2 本（統合・ルール）がポートを取り合うため
+// 内部で直列だった。ルールテスト専用の設定（firebase.rules-test.json）で
+// 別のポートに立てるようにしたので、いまは取り合わない。
+// 全体の長さは、いちばん遅い 1 本（統合テスト）でほぼ決まる。
+//
+// **並列と直列は実測で比べた（2026-08-09）。** 全部並列 = 189 秒。
+// 1 本ずつの単独実行の合計（= 直列の見積もり）≈ 300 秒。
+// 「統合だけ後回しで残りを並列」も試算したが約 230 秒で、全部並列に
+// 及ばない。取り合いで統合が伸びる（単独 135 秒 → 並列中 189 秒）より、
+// 重ねて隠れる時間のほうが大きい。
+//
+// **エミュレータ系は、同時に走る他の本から割を食う。** JVM と Node の
+// 上で動くので、混んでいる機械では応答が目に見えて遅くなる（実測で
+// 280 秒 → 1111 秒）。**遅いだけで失敗にしない**よう、待ち時間には
+// 余裕を持たせてある（functions/test/integration.mjs の CALL_TIMEOUT_MS、
+// rules-test/vitest.config.js の testTimeout）。
+const results = await Promise.all([
   step('dart analyze', /No issues found!/, 'dart', ['analyze', '--fatal-infos'], root),
   step('flutter test', /\+\d+: All tests passed!/, 'flutter', ['test'], root),
   step('functions 単体', /Tests\s+\d+ passed/, 'npm', ['test'], join(root, 'functions')),
-  // エミュレータを使う 2 本は、ポートを取り合うので内部で直列。
-  // 統合テストを先にするのは、残留プロセスの片付けがそちらに入っているため。
-  //
-  // **この本だけ、同時に走る他の本から割を食う。** エミュレータは JVM と
-  // Node の上で動くので、`flutter test` と `dart analyze` が同じ機械で
-  // 回っているあいだ、応答が目に見えて遅くなる（実測で 280 秒 → 550 秒）。
-  // **遅いだけで失敗にしない**よう、統合テスト側の待ち時間には余裕を
-  // 持たせてある（functions/test/integration.mjs の CALL_TIMEOUT_MS）。
-  // 並列をやめれば競合は消えるが、全体は逆に遅くなるので、こうしている。
-  (async () => {
-    const integration = await step(
-      'functions 統合', /=== \d+ \/ \d+ 成功 ===/,
-      'node', ['run-integration.mjs'], join(root, 'functions'),
-    );
-    if (!integration.ok) return [integration];
-    const rules = await step(
-      'セキュリティルール', /Tests\s+\d+ passed/,
-      'npm', ['test'], join(root, 'rules-test'),
-    );
-    return [integration, rules];
-  })(),
-])).flat();
+  step('functions 統合', /=== \d+ \/ \d+ 成功 ===/, 'node', ['run-integration.mjs'], join(root, 'functions')),
+  step('セキュリティルール', /Tests\s+\d+ passed/, 'npm', ['test'], join(root, 'rules-test')),
+]);
 
 const failed = results.filter((r) => !r.ok);
 
