@@ -157,8 +157,10 @@
     }
 
     /* 読み込み中に出すロゴ。**アプリの読み込みを待たない。**
-       画面の明暗で差し替える（明背景には -light、暗背景には -dark）。 */
-    #loading .logo { width: 200px; max-width: 60vw; height: auto; }
+       画面の明暗で差し替える（明背景には -light、暗背景にはタイルなし）。
+       高さで指定する。**28px を下回らないこと**（brand/README.md）。 */
+    #loading .logo { height: 40px; width: auto; max-width: 80vw; }
+    @media (max-width: 600px) { #loading .logo { height: 32px; } }
     #loading .logo.dark { display: none; }
 
     @media (prefers-color-scheme: dark) {
@@ -225,8 +227,17 @@
 
   <div id="flutter-host">
     <div id="loading">
-      <img class="logo light" src="brand/logo-horizontal-light.svg" alt="音源創庫" width="300" height="128">
-      <img class="logo dark" src="brand/logo-horizontal-dark.svg" alt="音源創庫" width="300" height="128">
+      <!--
+        **PNG を使う。SVG ではない。** ロックアップの SVG は文字を
+        テキスト要素のまま持っているので、Noto Sans JP が入っていない
+        環境では別のフォントで組み直された見た目になる
+        （brand/README.md「フォントについて」）。ラスタ版なら崩れない。
+
+        暗い側は **タイルなし**（`-notile`）。角丸タイルは濃紺なので、
+        暗い地色（#071426）だと背景に溶けて四角い影のように見える。
+      -->
+      <img class="logo light" src="brand/png/logo-inline-light@2x.png" alt="音源創庫 TRACK CABINET" width="724" height="78">
+      <img class="logo dark" src="brand/png/logo-inline-dark-notile@2x.png" alt="音源創庫 TRACK CABINET" width="744" height="78">
       <div class="spinner"></div>
       <div class="label">読み込んでいます…</div>
     </div>

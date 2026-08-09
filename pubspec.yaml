@@ -73,4 +73,5 @@ flutter:
     - assets/brand/logo-horizontal-dark.png
     - assets/brand/logo-vertical-light.png
     - assets/brand/logo-vertical-dark.png
-    - assets/brand/icon.png
+    - assets/brand/logo-inline-light.png
+    - assets/brand/logo-inline-dark-notile.png

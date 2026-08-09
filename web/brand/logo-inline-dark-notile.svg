@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 371.6 38.78" width="371.6" height="38.78" role="img" aria-label="音源創庫 Track Cabinet">
+  <!-- サイトトップ用 横一列ロックアップ / 濃紺ヘッダー用（アイコンの角丸タイルなし）
+       ヘッダーの地色がネイビー系だとタイルが背景に溶けるため、シンボルだけを直接置いた版。
+       ・シンボルの字面高さ = 38.78（日本語 35.25 の 110%）
+       ・タイルがないぶん横に広いので、全体幅は 371.6 -->
+  <defs>
+    <linearGradient id="lin-ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A5F3FC"/><stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="lin-core" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#67E8F9"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(-23.53 -28.43) scale(0.186802)">
+    <g fill="none" stroke="url(#lin-ring)" stroke-linecap="round" stroke-width="36">
+      <path d="M328 170.2 A112 112 0 0 1 328 341.8"/>
+      <path d="M184 170.2 A112 112 0 0 0 184 341.8"/>
+    </g>
+    <circle cx="256" cy="256" r="80" fill="url(#lin-core)"/>
+    <g fill="none" stroke="#0B2648" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M217 278 V303 H295 V278"/>
+    </g>
+    <g fill="#0B2648">
+      <path d="M256 201 L297 253 H215 Z"/>
+      <rect x="243" y="253" width="25" height="33" rx="6"/>
+    </g>
+  </g>
+
+  <g font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif">
+    <text x="60.60" y="33.86" font-size="38" font-weight="700"
+          textLength="163.4" lengthAdjust="spacing" fill="#EAF6FF">音源創庫</text>
+    <text x="237.40" y="24.04" font-size="12" font-weight="600"
+          textLength="134" lengthAdjust="spacing" fill="#5EE0F7">TRACK CABINET</text>
+  </g>
+</svg>
