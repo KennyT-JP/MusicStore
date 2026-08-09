@@ -20,16 +20,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="録音した音源や見つけた楽曲を、1 つのリストに集めて共有するアプリです。">
-  <meta name="theme-color" content="#1B5E9E">
+  <meta name="theme-color" content="#0B2044">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="音源創庫">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="brand/png/apple-touch-icon.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <!-- Favicon（brand/README.md の指定どおり）
+       **SVG を先に書く。** 対応しているブラウザはこちらを使い、
+       どの大きさでもぼやけない。対応していないものは png へ落ちる。
+       16〜64px では簡略版（favicon.svg）を使う決まりになっている。 -->
+  <link rel="icon" type="image/svg+xml" href="brand/favicon.svg"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="brand/png/favicon-32.png"/>
+  <link rel="icon" type="image/png" sizes="16x16" href="brand/png/favicon-16.png"/>
+
+  <!-- 共有したときに出る画像（OGP）。**絶対 URL で指すこと。**
+       相対のままだと、読み取る側が解決できずに画像が出ない。 -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="音源創庫 | TRACK CABINET">
+  <meta property="og:description" content="みんなで音源をアップして、共有する。">
+  <meta property="og:image" content="https://music-storage-d79b2.web.app/brand/png/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
 
   <title>音源創庫</title>
   <link rel="manifest" href="manifest.json">
@@ -58,16 +73,27 @@
     残り 4 本）が直列でぶら下がっていた。**先に取りに行かせて、
     エンジンの読み込みと並べる。**
 
+    **`modulepreload` を使う。`preload` + `as="script"` ではない。**
+    firebase_core は SDK を動的な `import()` で読み込む
+    （firebase_core_web の `injectSrcScript`）。`import()` が取りに行くのは
+    **モジュール**で、`as="script"`（クラシックスクリプト）とは種類が違う。
+    種類が合っていないと**先読みした分が使われず、同じものをもう一度
+    取りに行く。** 速くするつもりが、転送量を倍にしていた。
+
+    ブラウザは使われなかった先読みを警告で知らせる（2026-08-09、
+    依頼者の開発者ツールで 5 件。ちょうど下の 5 本ぶん）。
+    **先読みを足したら、開発者ツールで警告が出ていないか必ず見ること。**
+
     版を上げると URL が変わる。`test/domain/web_startup_test.dart` が
     firebase_core_web の持っている版と突き合わせるので、ずれたら落ちる。
   -->
   <link rel="preload" href="main.dart.js" as="script">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js" as="script" crossorigin>
-  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js" as="script" crossorigin>
-  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore-pipelines.js" as="script" crossorigin>
-  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js" as="script" crossorigin>
-  <link rel="preload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js" as="script" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore-pipelines.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js" crossorigin>
 
   <style>
     /*
@@ -89,7 +115,19 @@
     }
 
     @media (prefers-color-scheme: dark) {
-      html, body { background: #111318; }
+      /* ブランドの Deep Navy（brand/README.md）。読み込み中から
+         暗背景用のロゴと地続きに見えるようにする。 */
+      html, body { background: #071426; }
+    }
+
+    /* 読み込み中に出すロゴ。**アプリの読み込みを待たない。**
+       画面の明暗で差し替える（明背景には -light、暗背景には -dark）。 */
+    #loading .logo { width: 200px; max-width: 60vw; height: auto; }
+    #loading .logo.dark { display: none; }
+
+    @media (prefers-color-scheme: dark) {
+      #loading .logo.light { display: none; }
+      #loading .logo.dark { display: block; }
     }
 
     #loading {
@@ -137,6 +175,8 @@
 </head>
 <body>
   <div id="loading">
+    <img class="logo light" src="brand/logo-horizontal-light.svg" alt="音源創庫" width="300" height="128">
+    <img class="logo dark" src="brand/logo-horizontal-dark.svg" alt="音源創庫" width="300" height="128">
     <div class="spinner"></div>
     <div class="label">読み込んでいます…</div>
   </div>

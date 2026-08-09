@@ -61,8 +61,43 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
 
   bool get _isEditing => widget.itemId != null;
 
+  /// いま保存できる状態か（仕様書 14.4）。
+  ///
+  /// **押せるのに押すと怒られる、をやめる。** 以前はファイルを選ばずに
+  /// 保存を押せてしまい、一瞬エラーが出たあと画面が閉じていた
+  /// （2026-08-09 の指摘）。何が足りないかは、押す前に分かるようにする。
+  ///
+  /// | タブ | 要るもの |
+  /// | --- | --- |
+  /// | ファイル | 選んだファイル。**編集中は、元のファイルがあればそれでよい** |
+  /// | URL | 空でない URL |
+  ///
+  /// 曲名・アーティスト名・コメントは任意（14.4）。
+  bool get _canSave {
+    if (_tabs.index == 0) {
+      return _picked?.bytes != null || (_isEditing && _existingFile != null);
+    }
+    return _url.text.trim().isNotEmpty;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // **保存ボタンの活性を、入力に追従させる。**
+    // タブを切り替えると要るものが変わり、URL は 1 文字目で満たされる。
+    // ここを繋がないと、条件を満たしても押せないままになる。
+    _tabs.addListener(_refresh);
+    _url.addListener(_refresh);
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _tabs.removeListener(_refresh);
+    _url.removeListener(_refresh);
     _tabs.dispose();
     _url.dispose();
     _title.dispose();
@@ -209,8 +244,21 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
                 ),
                 const SizedBox(height: 16),
               ],
+              // **押せない理由を、押せない場所のそばに書く。**
+              // ボタンが灰色なだけだと、何が足りないのか分からない。
+              if (!_canSave)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _tabs.index == 0 ? l10n.fileRequired : l10n.urlRequired,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               FilledButton(
-                onPressed: _busy ? null : _save,
+                onPressed: (_busy || !_canSave) ? null : _save,
                 child: Text(l10n.save),
               ),
               const SizedBox(height: 8),
@@ -341,21 +389,24 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     });
 
     try {
-      if (_isEditing) {
-        await _saveEdit(repo, uid, isFileTab, l10n);
-      } else {
-        await _saveNew(repo, uid, isFileTab, l10n);
-      }
-      if (mounted) _close();
+      // **保存できたときだけ閉じる。**
+      // 以前は _saveNew が「入力が足りない」ときに例外ではなく普通に
+      // 戻っており、呼び出し側は成功と見分けられずに画面を閉じていた。
+      // エラーが一瞬見えてから一覧へ戻る、という出方をする
+      // （2026-08-09 の指摘）。**成否を返り値で受け取る。**
+      final saved = _isEditing
+          ? await _saveEdit(repo, uid, isFileTab, l10n)
+          : await _saveNew(repo, uid, isFileTab, l10n);
+      if (mounted && saved) _close();
     } on UploadCanceledException {
       // 中止は失敗ではないので、エラーとして見せない（仕様書 7.5）。
       if (mounted) setState(() => _error = null);
     } on QuotaExceededException {
-      if (mounted) setState(() => _error = l10n.quotaExceeded);
+      await _showError(l10n.quotaExceeded);
     } on ConcurrentEditException {
-      if (mounted) setState(() => _error = l10n.conflictBody);
+      await _showError(l10n.conflictBody);
     } catch (_) {
-      if (mounted) setState(() => _error = l10n.uploadFailed);
+      await _showError(l10n.uploadFailed);
     } finally {
       if (mounted) {
         setState(() {
@@ -367,7 +418,35 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     }
   }
 
-  Future<void> _saveNew(
+  /// 失敗を知らせる（仕様書 14.4）。
+  ///
+  /// **画面にとどまる。** 入力したものは残っているので、直して押し直せる。
+  /// 一覧へ戻してしまうと、書いた内容ごと失われる（2026-08-09 の指摘）。
+  ///
+  /// 画面の中にも同じ文言を残す。ポップアップを閉じたあと、
+  /// 何が起きたのかを見返せるようにするため。
+  Future<void> _showError(String message) async {
+    if (!mounted) return;
+    setState(() => _error = message);
+
+    final l10n = AppL10n.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.error_outline),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 保存できたら true。**足りないものがあれば false**（画面は閉じない）。
+  Future<bool> _saveNew(
     ItemRepository repo,
     String uid,
     bool isFileTab,
@@ -378,8 +457,8 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     if (isFileTab) {
       final picked = _picked;
       if (picked?.bytes == null) {
-        setState(() => _error = l10n.fileRequired);
-        return;
+        await _showError(l10n.fileRequired);
+        return false;
       }
       final stats = ref.read(listStatsProvider(widget.listId)).value;
       itemId = await repo.addFileItem(
@@ -403,8 +482,8 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
       );
     } else {
       if (_url.text.trim().isEmpty) {
-        setState(() => _error = l10n.urlRequired);
-        return;
+        await _showError(l10n.urlRequired);
+        return false;
       }
       itemId = await repo.addUrlItem(
         listId: widget.listId,
@@ -425,9 +504,11 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         body: _comment.text,
       );
     }
+    return true;
   }
 
-  Future<void> _saveEdit(
+  /// 保存できたら true。**受け付けられない指定なら false**（画面は閉じない）。
+  Future<bool> _saveEdit(
     ItemRepository repo,
     String uid,
     bool isFileTab,
@@ -437,11 +518,8 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     // 新しいファイルを別名で保存し、旧ファイルを猶予期間後に削除する必要があり
     // （仕様書 13.7 / 13.4）、Cloud Functions 側の対応と合わせて実装する。
     if (isFileTab && _picked != null) {
-      setState(
-        () => _error =
-            l10n.fileReplaceNotSupported,
-      );
-      return;
+      await _showError(l10n.fileReplaceNotSupported);
+      return false;
     }
 
     await repo.updateItem(
@@ -455,6 +533,7 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
       url: isFileTab ? null : _url.text,
       file: isFileTab ? _existingFile : null,
     );
+    return true;
   }
 
   /// 拡張子から MIME タイプを推測する。
