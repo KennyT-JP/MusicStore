@@ -124,10 +124,24 @@ void main() {
             'https://www.gstatic.com/firebasejs/$version/$service.js';
         expect(
           html,
-          contains('<link rel="preload" href="$url" as="script"'),
+          contains('<link rel="modulepreload" href="$url"'),
           reason: '$service を先読みしていません（版 $version）',
         );
       }
+    });
+
+    test('SDK は modulepreload で先読みする（種類を合わせる）', () {
+      // **firebase_core は SDK を動的な `import()` で読み込む。**
+      // 取りに行くのはモジュールなので、`as="script"`（クラシック
+      // スクリプト）で先読みしても種類が合わず、**使われないまま
+      // もう一度取りに行く**。速くするどころか転送量が倍になる。
+      // 2026-08-09 に実際にやり、開発者ツールに警告が 5 件出た。
+      final html = _indexHtml();
+      expect(
+        html,
+        isNot(contains('firebasejs/${sdkVersion()}/firebase-app.js" as="script"')),
+        reason: 'モジュールは as="script" では先読みできません',
+      );
     });
 
     test('使わないものを先読みしない', () {
@@ -137,6 +151,81 @@ void main() {
         html,
         isNot(contains('firebase-firestore.js')),
         reason: '読み込まれるのは firebase-firestore-pipelines.js のほうです',
+      );
+    });
+  });
+
+  group('ブランドの画像（2026-08-09）', () {
+    // brand/README.md が置き場所まで指定している。
+    // **書いてある場所に、実物があること。** 参照だけ直して置き忘れると、
+    // タブのアイコンやホーム画面の見た目が黙って壊れる。
+    /// index.html が指しているもの（タブのアイコン・共有画像・読み込み中のロゴ）。
+    const fromHtml = [
+      'brand/favicon.svg',
+      'brand/png/favicon-16.png',
+      'brand/png/favicon-32.png',
+      'brand/png/apple-touch-icon.png',
+      'brand/png/og-image.png',
+      'brand/logo-horizontal-light.svg',
+      'brand/logo-horizontal-dark.svg',
+    ];
+
+    /// manifest.json が指しているもの（ホーム画面・インストール時）。
+    /// **こちらは index.html には出てこない。** 一緒に確かめようとして
+    /// 落ちた（2026-08-09）。見る場所を取り違えると、テストの側が嘘になる。
+    const fromManifest = [
+      'brand/png/icon-192.png',
+      'brand/png/icon-512.png',
+      'brand/png/icon-maskable-192.png',
+      'brand/png/icon-maskable-512.png',
+    ];
+
+    test('参照している画像が実在する', () {
+      for (final href in [...fromHtml, ...fromManifest]) {
+        expect(
+          File('web/$href').existsSync(),
+          isTrue,
+          reason: 'web/$href がありません',
+        );
+      }
+    });
+
+    test('index.html から参照している', () {
+      final html = _indexHtml();
+      for (final href in fromHtml) {
+        expect(html, contains(href), reason: '$href を参照していません');
+      }
+    });
+
+    test('PWA の一覧（manifest）も同じ場所を指している', () {
+      final manifest = jsonDecode(
+        File('web/manifest.json').readAsStringSync(),
+      );
+      final icons = (manifest['icons'] as List)
+          .map((e) => (e as Map)['src'] as String)
+          .toList();
+
+      expect(icons, contains('brand/png/icon-192.png'));
+      expect(icons, contains('brand/png/icon-512.png'));
+      // **maskable を落とさない。** 無いと Android のホーム画面で
+      // 白い枠に収められ、余白だらけの見た目になる。
+      expect(
+        (manifest['icons'] as List).where((e) => (e as Map)['purpose'] == 'maskable'),
+        hasLength(2),
+      );
+
+      for (final src in icons) {
+        expect(File('web/$src').existsSync(), isTrue, reason: '$src がありません');
+      }
+    });
+
+    test('共有したときの画像は絶対 URL で指す', () {
+      // 相対のままだと、読み取る側が解決できずに画像が出ない。
+      final html = _indexHtml();
+      expect(
+        html,
+        contains('<meta property="og:image" content="https://'),
+        reason: 'og:image は絶対 URL で書くこと',
       );
     });
   });
