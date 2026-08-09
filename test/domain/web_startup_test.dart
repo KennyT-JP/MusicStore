@@ -230,8 +230,15 @@ void main() {
       'brand/png/favicon-32.png',
       'brand/png/apple-touch-icon.png',
       'brand/png/og-image.png',
-      'brand/logo-horizontal-light.svg',
-      'brand/logo-horizontal-dark.svg',
+      // 読み込み中に出すロゴ。**横組み 2 段**（2026-08-09 の依頼者の判断。
+      // 上部バーは横一列のロックアップだが、この画面は正面に大きく
+      // 出す場所なので 2 段のほうが収まりがよい）。
+      //
+      // **PNG を使う。** SVG は文字をテキスト要素のまま持っているので、
+      // Noto Sans JP が入っていない環境では別のフォントで組み直された
+      // 見た目になる（brand/README.md「フォントについて」）。
+      'brand/png/logo-horizontal-light@2x.png',
+      'brand/png/logo-horizontal-dark@2x.png',
     ];
 
     /// manifest.json が指しているもの（ホーム画面・インストール時）。
@@ -280,6 +287,49 @@ void main() {
 
       for (final src in icons) {
         expect(File('web/$src').existsSync(), isTrue, reason: '$src がありません');
+      }
+    });
+
+    test('アプリの中で使うロゴが、資産として積まれている', () {
+      // **pubspec に書き忘れると、画面では何も出ない。**
+      // Image.asset は見つからないときに例外を投げるが、こちらは
+      // errorBuilder で場所だけ空けるので、**黙って消える**。
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+
+      const inApp = [
+        'assets/brand/logo-inline-light.png',
+        'assets/brand/logo-inline-dark-notile.png',
+        'assets/brand/logo-vertical-light.png',
+        'assets/brand/logo-vertical-dark.png',
+      ];
+
+      for (final path in inApp) {
+        expect(File(path).existsSync(), isTrue, reason: '$path がありません');
+        expect(pubspec, contains(path), reason: '$path が pubspec に無い');
+      }
+    });
+
+    test('横一列のロックアップには、細かい画面用の版がある', () {
+      // **ここだけ 1x では足りない。** 元画像が 39px 高で、上部バーには
+      // 30px で出す。等倍に近いので、画面の細かい端末ではそのままだと
+      // ぼやける。
+      //
+      // 縦組みは要らない。元が 420px 高で、出すのは 120px。
+      // **1x のままで 3 倍以上ある**ので、拡大されることがない。
+      for (final name in [
+        'logo-inline-light.png',
+        'logo-inline-dark-notile.png',
+      ]) {
+        expect(
+          File('assets/brand/2.0x/$name').existsSync(),
+          isTrue,
+          reason: '2.0x/$name がありません',
+        );
+        expect(
+          File('assets/brand/3.0x/$name').existsSync(),
+          isTrue,
+          reason: '3.0x/$name がありません',
+        );
       }
     });
 

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 361.8 38.78" width="361.8" height="38.78" role="img" aria-label="音源創庫 Track Cabinet">
+  <!-- サイトトップ用 横一列ロックアップ / 明背景用
+       ・行の高さ  = 日本語「音源創庫」の実際の字面高さ 35.25（font-size 38 のまま）
+       ・アイコン  = その 110% = 38.78（ロゴ全体の高さもこれと同じ）
+       ・日本語・英語とも上下中央でそろえてある
+       ・文字幅は textLength で固定しているので、フォント環境が変わってもレイアウトが崩れない -->
+  <defs>
+    <linearGradient id="lil-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/><stop offset=".6" stop-color="#0F3560"/><stop offset="1" stop-color="#12557F"/>
+    </linearGradient>
+    <linearGradient id="lil-ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A5F3FC"/><stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="lil-core" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#67E8F9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- アイコン 38.78 x 38.78 -->
+  <g transform="scale(0.07574219)">
+    <rect width="512" height="512" rx="104" fill="url(#lil-bg)"/>
+    <g fill="none" stroke="url(#lil-ring)" stroke-linecap="round" stroke-width="36">
+      <path d="M328 170.2 A112 112 0 0 1 328 341.8"/>
+      <path d="M184 170.2 A112 112 0 0 0 184 341.8"/>
+    </g>
+    <circle cx="256" cy="256" r="80" fill="url(#lil-core)"/>
+    <g fill="none" stroke="#0B2648" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M217 278 V303 H295 V278"/>
+    </g>
+    <g fill="#0B2648">
+      <path d="M256 201 L297 253 H215 Z"/>
+      <rect x="243" y="253" width="25" height="33" rx="6"/>
+    </g>
+  </g>
+
+  <g font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif">
+    <text x="50.70" y="33.86" font-size="38" font-weight="700"
+          textLength="163.4" lengthAdjust="spacing" fill="#0B2648">音源創庫</text>
+    <text x="227.73" y="24.04" font-size="12" font-weight="600"
+          textLength="134" lengthAdjust="spacing" fill="#1273A8">TRACK CABINET</text>
+  </g>
+</svg>

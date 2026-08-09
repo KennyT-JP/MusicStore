@@ -72,20 +72,11 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        // **アイコンとアプリ名を並べる（brand/README.md）。**
-        // 横組みロゴは幅 120px 以上と決まっており、上部バーの高さでは
-        // その大きさが入らない。決まりを破って縮めるより、
-        // アイコン（16px 以上）とアプリ名を並べるほうが読める。
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BrandMark(),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(l10n.appTitle, overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
+        // **横一列のロックアップ（brand/README.md）。**
+        // 「サイトトップ用」として用意されたもので、上部バーに収まる
+        // 高さ（下限 28px）で組んである。以前はアイコンとアプリ名を
+        // 並べていたが、そちらは横組み 2 段が入らないための代用だった。
+        title: const BrandLogo.inline(),
         actions: [
           _NotificationBell(
             count: unreadNotificationCount,

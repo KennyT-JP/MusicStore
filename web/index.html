@@ -157,7 +157,10 @@
     }
 
     /* 読み込み中に出すロゴ。**アプリの読み込みを待たない。**
-       画面の明暗で差し替える（明背景には -light、暗背景には -dark）。 */
+       画面の明暗で差し替える（明背景には -light、暗背景には -dark）。
+
+       横組み 2 段は **幅 120px 以上**という決まりがある
+       （brand/README.md）。幅で指定して、下回らないようにする。 */
     #loading .logo { width: 200px; max-width: 60vw; height: auto; }
     #loading .logo.dark { display: none; }
 
@@ -225,8 +228,18 @@
 
   <div id="flutter-host">
     <div id="loading">
-      <img class="logo light" src="brand/logo-horizontal-light.svg" alt="音源創庫" width="300" height="128">
-      <img class="logo dark" src="brand/logo-horizontal-dark.svg" alt="音源創庫" width="300" height="128">
+      <!--
+        **ここは横組み 2 段のロゴ**（2026-08-09 の依頼者の判断）。
+        上部バーには横一列のロックアップを使っているが、この画面は
+        正面に大きく出す場所なので、2 段のほうが収まりがよい。
+
+        **PNG を使う。SVG ではない。** ロゴの SVG は文字をテキスト要素の
+        まま持っているので、Noto Sans JP が入っていない環境では別の
+        フォントで組み直された見た目になる（brand/README.md
+        「フォントについて」）。ラスタ版なら崩れない。
+      -->
+      <img class="logo light" src="brand/png/logo-horizontal-light@2x.png" alt="音源創庫" width="1200" height="512">
+      <img class="logo dark" src="brand/png/logo-horizontal-dark@2x.png" alt="音源創庫" width="1200" height="512">
       <div class="spinner"></div>
       <div class="label">読み込んでいます…</div>
     </div>

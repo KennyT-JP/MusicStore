@@ -156,6 +156,29 @@ if (!target.branch.includes(branch)) {
   );
 }
 
+// **main に、dev を通っていないコミットが積まれていないか。**
+//
+// 本番へ配信したあと `main` に居たまま次の作業を始めると、新しい
+// コミットが `main` へ直接入る。枝の検査だけでは通ってしまい、
+// **検証環境で確認していないものが本番へ出る。**
+// 2026-08-09 に 2 回やった（どちらも配信前に気づいて移し替えた）。
+//
+// 決まりは「確認が取れたものだけを main へ入れる」なので、
+// main にあって dev に無いコミットは、マージの記録以外は在ってはいけない。
+if (branch === 'main') {
+  const ahead = ((await capture('git', ['log', '--oneline', '--no-merges', 'dev..main'])) ?? '')
+    .split('\n').map((l) => l.trim()).filter(Boolean);
+  if (ahead.length > 0) {
+    fail(
+      `main に、dev を通っていないコミットが ${ahead.length} 件あります。`,
+      '検証環境で確認していないものが本番へ出ます。dev へ移してください:\n' +
+        `           ${ahead.slice(0, 5).map((l) => `  ${l}`).join('\n           ')}\n` +
+        '             git switch dev && git cherry-pick <コミット>\n' +
+        '             git switch main && git reset --hard <元の位置>',
+    );
+  }
+}
+
 // 接続設定の 2 ファイルは、手元だけ実際の値になっているのが正常（SETUP 4 章）。
 const generated = new Set([
   'lib/env/firebase_options_staging.dart',
