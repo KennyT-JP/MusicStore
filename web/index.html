@@ -95,6 +95,21 @@
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js" crossorigin>
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js" crossorigin>
 
+  <!--
+    AdSense。パブリッシャー ID は `ca-pub-3984824596223175`。
+    **この ID は秘密ではない**（広告を出すページのソースに必ず出る）。
+
+    いまは**サイト審査を通すための設置**。広告枠（ins 要素）はまだ
+    置いていないので、これだけでは広告は出ない。審査に通ってから枠を足す。
+
+    **配信元は firebase.json の CSP にも足すこと。** 足りないとこの
+    スクリプトが読み込まれず、審査側から「コードが見つからない」と
+    判定される。所有者証明の `ads.txt` は `web/ads.txt`（同じ ID）。
+  -->
+  <script async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175"
+          crossorigin="anonymous"></script>
+
   <style>
     /*
       **読み込み中に白い画面を出さない。**
@@ -114,6 +129,27 @@
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     }
 
+    /* **広告枠はアプリの外に置く。** CanvasKit は画面を canvas に描くので、
+       広告の要素をアプリの中には差し込めない。body を縦並びにして、
+       上に広告枠・下にアプリを置く（描画先は flutter_bootstrap.js が指定）。 */
+    body { display: flex; flex-direction: column; }
+    #ad-top { flex: 0 0 auto; }
+    #flutter-host { flex: 1 1 auto; min-height: 0; position: relative; }
+
+    /* 審査に通るまでの仮の見た目。枠の位置と高さを確かめるためのもので、
+       広告が出るようになったら中身ごと差し替える。 */
+    .ad-placeholder {
+      height: 60px; display: flex; align-items: center; justify-content: center;
+      font: 12px/1 system-ui, sans-serif; color: #6B7280;
+      background: #EEF2F7; border-bottom: 1px solid #D7DEE8;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .ad-placeholder {
+        color: #9FC2E4; background: #0B2044; border-bottom-color: #123157;
+      }
+    }
+
     @media (prefers-color-scheme: dark) {
       /* ブランドの Deep Navy（brand/README.md）。読み込み中から
          暗背景用のロゴと地続きに見えるようにする。 */
@@ -131,7 +167,10 @@
     }
 
     #loading {
-      position: fixed;
+      /* **fixed ではなく absolute。** 広告枠を置いたことで body が
+         縦並びになり、fixed だと枠の上に重なってしまう。
+         描画先（#flutter-host）を基準に広げる。 */
+      position: absolute;
       inset: 0;
       display: flex;
       flex-direction: column;
@@ -174,12 +213,32 @@
   </style>
 </head>
 <body>
-  <div id="loading">
-    <img class="logo light" src="brand/logo-horizontal-light.svg" alt="音源創庫" width="300" height="128">
-    <img class="logo dark" src="brand/logo-horizontal-dark.svg" alt="音源創庫" width="300" height="128">
-    <div class="spinner"></div>
-    <div class="label">読み込んでいます…</div>
+  <!--
+    広告枠（画面の最上部）。
+    **プレミアムには出さない**予定なので、アプリ側から表示を切り替えられる
+    ようにしてある（下の setTopAdVisible）。いまは審査待ちのため仮の枠。
+    通ったら ins 要素に差し替える。
+  -->
+  <div id="ad-top">
+    <div class="ad-placeholder">広告</div>
   </div>
+
+  <div id="flutter-host">
+    <div id="loading">
+      <img class="logo light" src="brand/logo-horizontal-light.svg" alt="音源創庫" width="300" height="128">
+      <img class="logo dark" src="brand/logo-horizontal-dark.svg" alt="音源創庫" width="300" height="128">
+      <div class="spinner"></div>
+      <div class="label">読み込んでいます…</div>
+    </div>
+  </div>
+
+  <script>
+    // アプリから広告枠の表示・非表示を切り替えるための入口。
+    window.setTopAdVisible = function (visible) {
+      var el = document.getElementById('ad-top');
+      if (el) el.style.display = visible ? '' : 'none';
+    };
+  </script>
 
   <!--
     You can customize the "flutter_bootstrap.js" script.

@@ -155,6 +155,70 @@ void main() {
     });
   });
 
+  group('広告枠とアプリの置き場所（2026-08-09）', () {
+    String bootstrap() => File('web/flutter_bootstrap.js').readAsStringSync();
+
+    test('広告枠はアプリの外に置く', () {
+      // **CanvasKit は画面を canvas に描く。** 広告の要素をアプリの
+      // 画面の中には差し込めないので、body を縦並びにして
+      // 上に広告枠・下にアプリを置く。
+      final html = _indexHtml();
+      expect(html, contains('id="ad-top"'));
+      expect(html, contains('id="flutter-host"'));
+
+      // 順番が逆だと、広告が画面の下に出る。
+      expect(
+        html.indexOf('id="ad-top"'),
+        lessThan(html.indexOf('id="flutter-host"')),
+      );
+    });
+
+    test('アプリの描画先を指定している', () {
+      // **これが無いと body 全面に描かれ、広告枠と重なる。**
+      expect(bootstrap(), contains('hostElement'));
+      expect(bootstrap(), contains('flutter-host'));
+    });
+
+    test('ビルドが差し替える印を消していない', () {
+      // **この 2 つはビルド時に flutter.js 本体と設定へ置き換わる。**
+      // 消すとアプリが起動しない。
+      final source = bootstrap();
+      expect(source, contains('{{flutter_js}}'));
+      expect(source, contains('{{flutter_build_config}}'));
+
+      // **印は 1 つずつだけ。** 説明のつもりで書いたものにも
+      // 中身が差し込まれ、起動しなくなる（SessionConcierge で実際に起きた）。
+      expect(RegExp(r'\{\{flutter_js\}\}').allMatches(source), hasLength(1));
+      expect(
+        RegExp(r'\{\{flutter_build_config\}\}').allMatches(source),
+        hasLength(1),
+      );
+    });
+
+    test('読み込み中の表示が広告枠に重ならない', () {
+      // fixed のままだと、body が縦並びになった時点で枠の上に重なる。
+      final html = _indexHtml();
+      final loading = html.substring(html.indexOf('#loading {'));
+      expect(loading, contains('position: absolute'));
+    });
+
+    test('広告の出し分けの入口がある', () {
+      // プレミアムには出さない予定。アプリ側から切り替えられるようにする。
+      expect(_indexHtml(), contains('window.setTopAdVisible'));
+    });
+
+    test('AdSense のコードと ads.txt が揃っている', () {
+      // **片方だけでは審査に通らない。** ads.txt は所有者の証明で、
+      // 同じパブリッシャー ID を書く。
+      const publisherId = 'pub-3984824596223175';
+      expect(_indexHtml(), contains('adsbygoogle.js?client=ca-$publisherId'));
+
+      final adsTxt = File('web/ads.txt').readAsStringSync();
+      expect(adsTxt, contains(publisherId));
+      expect(adsTxt, contains('DIRECT'));
+    });
+  });
+
   group('ブランドの画像（2026-08-09）', () {
     // brand/README.md が置き場所まで指定している。
     // **書いてある場所に、実物があること。** 参照だけ直して置き忘れると、

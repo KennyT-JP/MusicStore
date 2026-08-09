@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../env/app_environment.dart';
 import '../../l10n/app_localizations.dart';
+import 'brand_logo.dart';
 
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
@@ -52,12 +53,12 @@ class AuthScaffold extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      Text(
-                        l10n.appTitle,
-                        style: theme.textTheme.headlineMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
+                      // **アプリ名は文字ではなくロゴで出す**
+                      // （brand/README.md）。最初に目に入る画面なので、
+                      // 何のアプリかがひと目で分かるようにする。
+                      // 読み上げにはアプリ名が伝わる（BrandLogo）。
+                      const Center(child: BrandLogo.vertical()),
+                      const SizedBox(height: 16),
                       Text(
                         title,
                         style: theme.textTheme.titleMedium?.copyWith(
