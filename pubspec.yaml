@@ -58,5 +58,19 @@ flutter:
   # **太字（w700）は同梱しない。** 約 1.2MB（圧縮後）を減らせて、
   # 失うのは見た目だけ。CanvasKit が w400 から擬似的な太字を作る。
   # 日本語では線が太るだけで、字形は保たれる。
+  # ブランドのロゴ（brand/README.md）。
+  #
+  # **SVG ではなく PNG を積む。** SVG を描くには依存を 1 つ増やすことに
+  # なり、足した部品が組み込まれないまま配信される事故を過去に起こして
+  # いる（just_audio／docs/DEVLOG.md）。ロゴは大きさが決まっているので、
+  # 解像度別の PNG で足りる。
+  #
+  # `2.0x/` は Flutter の決まりで、画面の細かい端末で自動的に選ばれる。
+  # 一覧に書くのは 1x のパスだけでよい。
   assets:
     - assets/fonts/NotoSansJP-400.ttf
+    - assets/brand/logo-horizontal-light.png
+    - assets/brand/logo-horizontal-dark.png
+    - assets/brand/logo-vertical-light.png
+    - assets/brand/logo-vertical-dark.png
+    - assets/brand/icon.png

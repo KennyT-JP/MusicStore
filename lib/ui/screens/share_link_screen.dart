@@ -26,6 +26,7 @@ import '../../domain/share_link.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
+import '../widgets/brand_logo.dart';
 import '../widgets/error_message.dart';
 
 class ShareLinkScreen extends ConsumerStatefulWidget {
@@ -57,6 +58,11 @@ class _ShareLinkScreenState extends ConsumerState<ShareLinkScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // **どのサービスからの誘いかを、まず示す。**
+                  // 受け取った人にとっては初めて見る画面になりうる
+                  // （brand/README.md）。
+                  const Center(child: BrandLogo.vertical(height: 96)),
+                  const SizedBox(height: 24),
                   Icon(
                     Icons.link,
                     size: 40,

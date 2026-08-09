@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../../env/app_environment.dart';
 import '../../l10n/app_localizations.dart';
 import '../routes.dart';
+import '../widgets/brand_logo.dart';
 
 /// サイドバーとボトムナビを切り替える境界の幅。
 ///
@@ -71,7 +72,20 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appTitle),
+        // **アイコンとアプリ名を並べる（brand/README.md）。**
+        // 横組みロゴは幅 120px 以上と決まっており、上部バーの高さでは
+        // その大きさが入らない。決まりを破って縮めるより、
+        // アイコン（16px 以上）とアプリ名を並べるほうが読める。
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BrandMark(),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(l10n.appTitle, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
         actions: [
           _NotificationBell(
             count: unreadNotificationCount,
