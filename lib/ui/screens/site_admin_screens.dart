@@ -731,6 +731,73 @@ class _SiteUserTile extends ConsumerWidget {
     // 退会は本人の意思、無効はサイト管理者の判断で、戻し方も違う。
     final isDisabled = user.isDisabled;
 
+    // 名札（サイト管理者・無効）と、役割を変えるボタン。
+    // 広い画面では行の右、狭い画面では名前の下に置く。
+    final badges = <Widget>[
+      if (isDisabled)
+        Chip(
+          visualDensity: VisualDensity.compact,
+          label: Text(l10n.userDisabledLabel),
+          backgroundColor: scheme.surfaceContainerHighest,
+          side: BorderSide.none,
+        ),
+      if (user.isSiteAdmin && !isDisabled)
+        Chip(
+          visualDensity: VisualDensity.compact,
+          label: Text(l10n.roleSiteAdmin),
+          backgroundColor: scheme.primaryContainer,
+          side: BorderSide.none,
+        ),
+      if (!user.isWithdrawn && !isDisabled)
+        (user.isSiteAdmin
+            ? TextButton(
+                onPressed: isLastAdmin ? null : () => _revoke(context, ref),
+                child: Text(l10n.removeSiteAdmin),
+              )
+            : TextButton(
+                onPressed: () => _grant(context, ref),
+                child: Text(l10n.promoteToSiteAdmin),
+              )),
+    ];
+
+    final menu = PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      onSelected: (value) => switch (value) {
+        'addToList' => _addToList(context, ref),
+        'disable' => _confirmDisable(context, ref),
+        'enable' => _confirmEnable(context, ref),
+        _ => _confirmDelete(context, ref),
+      },
+      itemBuilder: (_) => [
+        // リストに加える（仕様書 5.7）。
+        //
+        // **退会した人と無効にした人には出さない。** サーバー側でも
+        // 断るが、押せてしまうと「なぜ失敗したのか」を押した後に
+        // 知ることになる。
+        if (!user.isWithdrawn && !isDisabled)
+          PopupMenuItem(value: 'addToList', child: Text(l10n.addToList)),
+        if (isDisabled)
+          PopupMenuItem(value: 'enable', child: Text(l10n.enableUser))
+        else
+          PopupMenuItem(value: 'disable', child: Text(l10n.disableUser)),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text(l10n.deleteUser, style: TextStyle(color: scheme.error)),
+        ),
+      ],
+    );
+
+    // **狭い画面では、名札とボタンを名前の下へ回す（2026-08-10）。**
+    //
+    // ListTile は leading と trailing を先に置き、**残った幅を名前に渡す**。
+    // 右側に名札 2 つとボタンを並べると、スマホの幅では残りがほぼ無くなり、
+    // **名前とメールアドレスが 1 文字ずつ改行されて縦一列になる**。
+    // サイト管理者の行は名札が 1 つ多いぶん右が広く、そこだけ崩れて見えた。
+    //
+    // 消す操作を役割の変更と並べない方針（下のコメント）は変えない。
+    // 狭いときも、消すのは ⋮ の中だけに置く。
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+
     return ListTile(
       leading: Icon(
         isDisabled
@@ -744,76 +811,37 @@ class _SiteUserTile extends ConsumerWidget {
         (user.isWithdrawn && !isDisabled)
             ? l10n.withdrawnUser
             : (user.displayName.isEmpty ? user.email : user.displayName),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
-      subtitle: (user.isWithdrawn && !isDisabled) ? null : Text(user.email),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!(user.isWithdrawn && !isDisabled))
+            Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (narrow && badges.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: badges,
+            ),
+        ],
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isDisabled)
-            Chip(
-              visualDensity: VisualDensity.compact,
-              label: Text(l10n.userDisabledLabel),
-              backgroundColor: scheme.surfaceContainerHighest,
-              side: BorderSide.none,
-            ),
-          if (user.isSiteAdmin && !isDisabled)
-            Chip(
-              visualDensity: VisualDensity.compact,
-              label: Text(l10n.roleSiteAdmin),
-              backgroundColor: scheme.primaryContainer,
-              side: BorderSide.none,
-            ),
-          const SizedBox(width: 8),
-          if (!user.isWithdrawn && !isDisabled)
-            (user.isSiteAdmin
-                ? TextButton(
-                    onPressed: isLastAdmin ? null : () => _revoke(context, ref),
-                    child: Text(l10n.removeSiteAdmin),
-                  )
-                : TextButton(
-                    onPressed: () => _grant(context, ref),
-                    child: Text(l10n.promoteToSiteAdmin),
-                  )),
+          if (!narrow) ...[...badges, const SizedBox(width: 8)],
           // 無効化・有効化・削除（仕様書 11.1）。
           //
           // **消す操作は、押しやすい場所に置かない。** 役割の変更と
           // 並べると押し間違える。メニューの中に入れ、確認も挟む。
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) => switch (value) {
-              'addToList' => _addToList(context, ref),
-              'disable' => _confirmDisable(context, ref),
-              'enable' => _confirmEnable(context, ref),
-              _ => _confirmDelete(context, ref),
-            },
-            itemBuilder: (_) => [
-              // リストに加える（仕様書 5.7）。
-              //
-              // **退会した人と無効にした人には出さない。** サーバー側でも
-              // 断るが、押せてしまうと「なぜ失敗したのか」を押した後に
-              // 知ることになる。
-              if (!user.isWithdrawn && !isDisabled)
-                PopupMenuItem(
-                  value: 'addToList',
-                  child: Text(l10n.addToList),
-                ),
-              if (isDisabled)
-                PopupMenuItem(value: 'enable', child: Text(l10n.enableUser))
-              else
-                PopupMenuItem(value: 'disable', child: Text(l10n.disableUser)),
-              PopupMenuItem(
-                value: 'delete',
-                child: Text(
-                  l10n.deleteUser,
-                  style: TextStyle(color: scheme.error),
-                ),
-              ),
-            ],
-          ),
+          menu,
         ],
       ),
       // 最後の 1 人であることを、押せない理由として示す。
-      isThreeLine: false,
+      isThreeLine: narrow && badges.isNotEmpty,
       onTap: isLastAdmin
           ? () => ScaffoldMessenger.of(
               context,
