@@ -65,6 +65,16 @@ GoRouter buildAppRouter({
   Listenable? authListenable,
   String initialLocation = AppRoutes.home,
 }) {
+  // **ナビ自身も、認証状態が変わったら描き直す（2026-08-10）。**
+  //
+  // `refreshListenable` はリダイレクトを再評価するだけで、行き先が
+  // 変わらなければ**シェルは描き直されない**。サイト管理者かどうかは
+  // Auth のカスタムクレーム由来で最初の描画に間に合わないため、
+  // **サイト管理の入口が出ないまま**になっていた（依頼者の報告）。
+  // 別の項目を押すと出るのは、画面が移って描き直されるからで、
+  // 直っているわけではない。
+  final shellRefresh = authListenable ?? ValueNotifier<int>(0);
+
   return GoRouter(
     initialLocation: initialLocation,
     refreshListenable: authListenable,
@@ -112,16 +122,19 @@ GoRouter buildAppRouter({
 
       // --- ナビゲーションを備えた画面 ---
       ShellRoute(
-        builder: (context, state, child) {
-          final auth = readAuthState();
-          return AppShell(
-            currentRoute: state.matchedLocation,
-            onNavigate: (route) => context.go(route),
-            isSiteAdmin: auth.isSiteAdmin,
-            unreadNotificationCount: auth.unreadNotificationCount,
-            child: child,
-          );
-        },
+        builder: (context, state, child) => ListenableBuilder(
+          listenable: shellRefresh,
+          builder: (context, _) {
+            final auth = readAuthState();
+            return AppShell(
+              currentRoute: state.matchedLocation,
+              onNavigate: (route) => context.go(route),
+              isSiteAdmin: auth.isSiteAdmin,
+              unreadNotificationCount: auth.unreadNotificationCount,
+              child: child,
+            );
+          },
+        ),
         routes: [
           GoRoute(
             path: AppRoutes.home,
