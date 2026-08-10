@@ -1,0 +1,32 @@
+{
+    "//": "ルールテスト専用のエミュレータ設定。rules-test/run.mjs が --config でこれを指定して起動する。",
+    "//why": "ポートを既定の firebase.json（8080/9199/4400）とずらしてあるのは、統合テストのエミュレータと同時に走らせるため（2026-08-09）。以前は 2 本が直列で、起動・停止を 2 回払っていた。1 つのエミュレータに同居させる案は採らなかった——functions エミュレータが居ると、ルールテストの下ごしらえ（メンバーや項目の投入）にトリガーが毎回反応し、テスト中のデータを書き換えるため。",
+    "firestore": {
+        "rules": "firestore.rules"
+    },
+    "storage": {
+        "rules": "storage.rules"
+    },
+    "emulators": {
+        "firestore": {
+            "port": 8081,
+            "host": "127.0.0.1"
+        },
+        "storage": {
+            "port": 9198,
+            "host": "127.0.0.1"
+        },
+        "hub": {
+            "port": 4401,
+            "host": "127.0.0.1"
+        },
+        "logging": {
+            "port": 4501,
+            "host": "127.0.0.1"
+        },
+        "ui": {
+            "enabled": false
+        },
+        "singleProjectMode": true
+    }
+}

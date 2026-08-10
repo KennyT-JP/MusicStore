@@ -132,9 +132,7 @@ class _ItemHeader extends ConsumerWidget {
                 TextButton.icon(
                   icon: const Icon(Icons.restore),
                   label: Text(l10n.restoreItem),
-                  onPressed: () => ref
-                      .read(itemRepositoryProvider)
-                      .restoreItem(listId: listId, itemId: item.id, uid: uid),
+                  onPressed: () => _restore(context, ref, uid),
                 ),
             ],
           ),
@@ -170,6 +168,20 @@ class _ItemHeader extends ConsumerWidget {
     );
   }
 
+  /// 削除した項目を復元する（仕様書 6.3）。
+  ///
+  /// **失敗を握りつぶさない。** 以前は await すらしておらず、オフラインや
+  /// 権限拒否では押しても何も起きないように見えた（監査 第4回）。
+  Future<void> _restore(BuildContext context, WidgetRef ref, String uid) async {
+    try {
+      await ref
+          .read(itemRepositoryProvider)
+          .restoreItem(listId: listId, itemId: item.id, uid: uid);
+    } catch (error) {
+      if (context.mounted) showWriteFailure(context, error);
+    }
+  }
+
   Future<void> _confirmDelete(
     BuildContext context,
     WidgetRef ref,
@@ -198,14 +210,19 @@ class _ItemHeader extends ConsumerWidget {
     );
 
     if (confirmed != true) return;
-    await ref
-        .read(itemRepositoryProvider)
-        .deleteItem(
-          listId: listId,
-          itemId: item.id,
-          uid: uid,
-          graceDays: graceDays,
-        );
+    try {
+      await ref
+          .read(itemRepositoryProvider)
+          .deleteItem(
+            listId: listId,
+            itemId: item.id,
+            uid: uid,
+            graceDays: graceDays,
+          );
+    } catch (error) {
+      // 失敗したのに一覧から消えたように見える、を避ける（監査 第4回）。
+      if (context.mounted) showWriteFailure(context, error);
+    }
   }
 }
 
@@ -417,8 +434,12 @@ class _CommentSectionState extends ConsumerState<_CommentSection> {
             body: body,
             parent: _replyTo,
           );
+      // **成功したときだけ消す。** 失敗時に消すと、書いた本文ごと失われる。
       _controller.clear();
       if (mounted) setState(() => _replyTo = null);
+    } catch (error) {
+      // オフライン・権限拒否で無反応に見えないようにする（監査 第4回）。
+      if (mounted) showWriteFailure(context, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -610,13 +631,7 @@ class _CommentTile extends ConsumerWidget {
                     ),
                   if (canDelete)
                     TextButton(
-                      onPressed: () => ref
-                          .read(itemRepositoryProvider)
-                          .deleteComment(
-                            listId: listId,
-                            itemId: itemId,
-                            commentId: comment.id,
-                          ),
+                      onPressed: () => _deleteComment(context, ref),
                       child: Text(l10n.deleteItem),
                     ),
                 ],
@@ -629,6 +644,20 @@ class _CommentTile extends ConsumerWidget {
 }
 
 extension _CommentEditing on _CommentTile {
+  /// コメントを削除する（仕様書 9）。
+  ///
+  /// **失敗を握りつぶさない。** 以前は fire-and-forget で、オフラインや
+  /// 権限拒否では押しても何も起きないように見えた（監査 第4回）。
+  Future<void> _deleteComment(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref
+          .read(itemRepositoryProvider)
+          .deleteComment(listId: listId, itemId: itemId, commentId: comment.id);
+    } catch (error) {
+      if (context.mounted) showWriteFailure(context, error);
+    }
+  }
+
   /// コメントを編集する（仕様書 9）。
   Future<void> _editComment(BuildContext context, WidgetRef ref) async {
     final l10n = AppL10n.of(context);
@@ -660,17 +689,25 @@ extension _CommentEditing on _CommentTile {
 
     if (edited == null || edited.isEmpty || edited == comment.body) return;
 
-    await ref
-        .read(itemRepositoryProvider)
-        .updateComment(
-          listId: listId,
-          itemId: itemId,
-          commentId: comment.id,
-          body: edited,
-          // 開いた時点の更新日時を渡し、その間に他の人が直していたら
-          // 弾く（仕様書 6.3 と同じ扱い）。
-          openedWith: comment.updatedAt,
-        );
+    try {
+      await ref
+          .read(itemRepositoryProvider)
+          .updateComment(
+            listId: listId,
+            itemId: itemId,
+            commentId: comment.id,
+            body: edited,
+            // 開いた時点の更新日時を渡し、その間に他の人が直していたら
+            // 弾く（仕様書 6.3 と同じ扱い）。
+            openedWith: comment.updatedAt,
+          );
+    } catch (error) {
+      // **競合を黙って捨てない。** リポジトリは ConcurrentEditException を
+      // 投げる設計なのに受け手が無く、競合時は編集が黙って消えていた
+      // （監査 第4回）。項目編集（item_form_screen.dart）と同じく
+      // conflictBody を出す。それ以外の失敗も無反応にしない。
+      if (context.mounted) showWriteFailure(context, error);
+    }
   }
 }
 

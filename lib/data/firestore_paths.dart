@@ -7,17 +7,21 @@
 /// lists/{listId}                       ← 公開可能な最小情報のみ
 ///   ├ meta/stats                       ← 容量・連番などの内部情報
 ///   ├ members/{uid}
+///   ├ viewers/{uid}                    ← 参加せずに見るだけの人（3.3）
 ///   ├ joinRequests/{uid}
 ///   └ items/{itemId}
 ///       └ comments/{commentId}
 ///
-/// listNames/{nameLower}
 /// listRequests/{requestId}
-/// invites/{inviteId}
 /// siteConfig/global
 /// ```
 ///
 /// パスを文字列で直書きせず、ここに集約する。
+///
+/// **クライアントが触らないパスは持たない。** リスト名の予約
+/// （listNames）や共有リンク（shareLinks）はサーバーだけが読み書きし、
+/// パスの正本は functions/src/config.ts にある。旧設計の invites も
+/// そちらへ移して久しく、ここの定義は 0 参照の残骸だった（監査 第4回）。
 library;
 
 /// Firestore のパス。
@@ -28,9 +32,7 @@ class FirestorePaths {
 
   static const String users = 'users';
   static const String lists = 'lists';
-  static const String listNames = 'listNames';
   static const String listRequests = 'listRequests';
-  static const String invites = 'invites';
   static const String siteConfig = 'siteConfig';
 
   // --- サブコレクション名 ---
@@ -94,13 +96,6 @@ class FirestorePaths {
   static String itemComment(String listId, String itemId, String commentId) =>
       '${itemComments(listId, itemId)}/$commentId';
 
-  /// リスト名の重複チェック用。ドキュメント ID は正規化した名前（13.3）。
-  static String listName(String nameLower) => '$listNames/$nameLower';
-
-  static String listRequest(String requestId) => '$listRequests/$requestId';
-
-  static String invite(String inviteId) => '$invites/$inviteId';
-
   static String get globalConfig => '$siteConfig/$globalConfigDoc';
 }
 
@@ -121,10 +116,8 @@ class StoragePaths {
     required String fileName,
   }) => 'lists/$listId/items/$itemId/$fileName';
 
-  static String itemDirectory({
-    required String listId,
-    required String itemId,
-  }) => 'lists/$listId/items/$itemId';
+  // ディレクトリ単位の削除はサーバー側（Cloud Functions）だけが行うので、
+  // ディレクトリのパスはここに持たない（正本は functions/src/config.ts）。
 }
 
 /// リスト名の正規化（仕様書 5.1 / 13.3）

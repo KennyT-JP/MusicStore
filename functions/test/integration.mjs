@@ -15,6 +15,8 @@
  * **実行するとエミュレータの Auth と Firestore を初期化する。**
  * 前回のサイト管理者が残っていると「最後の 1 人」の判定が変わるため。
  */
+import { readFileSync, readdirSync } from 'node:fs';
+
 const FN = 'http://127.0.0.1:5001/demo-musiclist/asia-northeast1';
 const AUTH = 'http://127.0.0.1:9099';
 const FS = 'http://127.0.0.1:8080/v1/projects/demo-musiclist/databases/(default)/documents';
@@ -27,6 +29,7 @@ const check = (label, ok, detail = '') => {
 };
 
 async function signUp(tag) {
+  const started = Date.now();
   const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=k`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: `${tag}-${stamp}@example.com`, password: 'password', returnSecureToken: true }),
@@ -42,7 +45,10 @@ async function signUp(tag) {
     body: JSON.stringify({ localId: user.localId, emailVerified: true }),
   });
 
-  return { ...user, ...(await refresh(user)) };
+  const result = { ...user, ...(await refresh(user)) };
+  spent.auth += Date.now() - started;
+  spent.auths += 1;
+  return result;
 }
 
 /** メール確認をしていない利用者（3.1 の検証用）。 */
@@ -78,27 +84,75 @@ async function refresh(user) {
  */
 const CALL_TIMEOUT_MS = 180000;
 
+/**
+ * どこで時間を使ったかの記録（最後にまとめて出す）。
+ *
+ * **「遅い」の調査は、まず内訳から（2026-08-09）。**
+ * 関数の実行時間（エミュレータのログの Finished in Xms）を合計しても
+ * 38 秒で、全体の 250 秒と大きく開いていた。残りがどこへ行ったかを
+ * 出せるように、呼び出しと待ちの実測を常に取っておく。
+ */
+const spent = { call: 0, calls: [], wait: 0, waits: 0, auth: 0, auths: 0 };
+
+/**
+ * 接続が切れた 1 回だけで、実行全体を落とさないための再試行つき fetch。
+ *
+ * 並列検証で機械が混むと、エミュレータへの接続がまれにリセットされる
+ * （ECONNRESET / UND_ERR_SOCKET ／メッセージは "fetch failed"）。それが
+ * call() や waitUntil の述語の中で**未捕捉例外**になり、61 件のテストが
+ * 1 件も走らないまま落ちた。**「遅いだけで落とさない」方針
+ * （CALL_TIMEOUT_MS / waitUntil）の残っていた穴**である（監査 第4回）。
+ *
+ * 再試行するのは**接続系のエラーだけ**。時間切れ（AbortSignal）は
+ * CALL_TIMEOUT_MS が受け持つ歯止めなので繰り返さないし、HTTP のエラー
+ * 応答は例外にならず、関数側の本物の答えとしてそのまま呼び出し元へ返る。
+ * 回数は 2 回・間隔は短く。長い待ちの面倒は waitUntil の仕事で、
+ * ここで粘ると失敗の形が「時間切れ」から「原因不明の遅さ」に変わる。
+ */
+function isConnectionError(error) {
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return false;
+  const text = [error?.message, error?.code, error?.cause?.message, error?.cause?.code]
+    .filter((part) => typeof part === 'string')
+    .join(' ');
+  return /ECONNRESET|ECONNREFUSED|EPIPE|UND_ERR|fetch failed|socket|syscall/i.test(text);
+}
+async function fetchRetry(url, options) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      if (attempt >= 2 || !isConnectionError(error)) throw error;
+      await sleep(250 * (attempt + 1));
+    }
+  }
+}
+
 async function call(name, data, token) {
-  const r = await fetch(`${FN}/${name}`, {
+  const started = Date.now();
+  const r = await fetchRetry(`${FN}/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ data }), signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
   });
-  return { status: r.status, body: await r.json().catch(() => ({})) };
+  const result = { status: r.status, body: await r.json().catch(() => ({})) };
+  const ms = Date.now() - started;
+  spent.call += ms;
+  spent.calls.push({ name, ms });
+  return result;
 }
 // Firestore エミュレータの REST は Authorization ヘッダが要る。
 const FS_HEADERS = { Authorization: 'Bearer owner' };
 async function doc(path) {
-  const r = await fetch(`${FS}/${path}`, { headers: FS_HEADERS });
+  const r = await fetchRetry(`${FS}/${path}`, { headers: FS_HEADERS });
   return r.ok ? r.json() : null;
 }
 async function list(path) {
-  const r = await fetch(`${FS}/${path}`, { headers: FS_HEADERS });
+  const r = await fetchRetry(`${FS}/${path}`, { headers: FS_HEADERS });
   return r.ok ? (await r.json()).documents ?? [] : [];
 }
 /** ドキュメントを直接書く（トリガーを動かすため）。 */
 async function setDoc(path, fields) {
-  const r = await fetch(`${FS}/${path}`, {
+  const r = await fetchRetry(`${FS}/${path}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...FS_HEADERS },
     body: JSON.stringify({ fields }),
@@ -126,11 +180,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * ときに落ちないところまで伸ばす（2026-08-08）。
  */
 async function waitUntil(predicate, { timeoutMs = 180000, intervalMs = 500 } = {}) {
-  const deadline = Date.now() + timeoutMs;
-  for (;;) {
-    if (await predicate()) return true;
-    if (Date.now() >= deadline) return false;
-    await sleep(intervalMs);
+  const started = Date.now();
+  const deadline = started + timeoutMs;
+  try {
+    for (;;) {
+      if (await predicate()) return true;
+      if (Date.now() >= deadline) return false;
+      await sleep(intervalMs);
+    }
+  } finally {
+    spent.wait += Date.now() - started;
+    spent.waits += 1;
   }
 }
 
@@ -232,11 +292,45 @@ async function preflight() {
 
 await preflight();
 
+// --- ウォームアップ：全関数のワーカーを同時に立ち上げる ---
+//
+// **各関数は、最初の 1 回だけ呼び出しに約 5 秒かかる（2026-08-09 実測）。**
+// エミュレータが関数ごとに、最初の呼び出しでワーカー（node プロセス）を
+// 立ち上げるため。呼び出し 51 回の内訳を取ると、関数の数と同じ 19 回
+// だけがきれいに 5 秒前後に固まり、残り 29 回は 0.3 秒未満だった。
+// テストの流れの中で直列に払うと、これだけで約 95 秒になる。
+//
+// そこで先に、トークン無しの呼び出しを全関数へ**同時に**投げて、
+// 立ち上げを重ねて払う。返事は「未認証」でよい（ワーカーは立ち上がる）。
+// 関数の一覧は src/callable から読む。手で並べると、増えた関数だけ
+// 5 秒のまま残って、原因に気づきにくい。
+{
+  const started = Date.now();
+  const src = new URL('../src/callable/', import.meta.url);
+  // 空白は `\s` で受ける。`export const NAME =` の直後で改行される
+  // 書き方だと、1 行前提の正規表現では新しい関数を拾えず、その関数だけ
+  // 初回 5 秒のまま残る（setup_doc.test.ts と同じ穴／監査 第4回）。
+  const names = readdirSync(src).flatMap((file) =>
+    [...readFileSync(new URL(file, src), 'utf8')
+      .matchAll(/export\s+const\s+(\w+)\s*=\s*onCall\b/g)].map((m) => m[1]));
+  await Promise.all(names.map((name) =>
+    fetch(`${FN}/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"data":{}}',
+      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    }).catch(() => null)));
+  console.log(`    ウォームアップ: ${names.length} 関数 / ${Math.round((Date.now() - started) / 1000)} 秒`);
+}
+
 // 実行のたびに初期化する。前回のサイト管理者が残っていると
 // 「最後の 1 人」の判定が変わってしまうため。
+//
+// **固定の待ち時間を置かない（waitUntil の説明を参照）。**
+// 消えたことを実際に見る。空の一覧が返れば消えている。
 await fetch(`${AUTH}/emulator/v1/projects/demo-musiclist/accounts`, { method: 'DELETE' });
 await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-musiclist/databases/(default)/documents', { method: 'DELETE' });
-await sleep(1500);
+await waitUntil(async () => (await list('users')).length === 0);
 
 // --- 準備：サイト管理者を作る ---
 let siteAdmin = await signUp('sa');
@@ -288,10 +382,14 @@ if (!listId) {
   const member = await doc(`lists/${listId}/members/${applicant.localId}`);
   check('申請者がリスト管理者になる', sv(member, 'role') === 'listAdmin');
 
-  await sleep(4000);
-  const notifs = await list(`users/${applicant.localId}/notifications`);
-  check('承認が申請者へ通知される', notifs.some((n) => sv(n, 'type') === 'requestApproved'),
-        notifs.map((n) => sv(n, 'type')).join(','));
+  // **固定の待ち時間を置かない（waitUntil の説明を参照）。**
+  // 通知は onCall の中で書かれるので普通は即座に見えるが、
+  // 混んでいる機械では遅れる。届くまで待つ。
+  const approvalNotified = async () =>
+    (await list(`users/${applicant.localId}/notifications`))
+      .some((n) => sv(n, 'type') === 'requestApproved');
+  await waitUntil(approvalNotified);
+  check('承認が申請者へ通知される', await approvalNotified());
 
   // --- 二重承認はできない ---
   r = await call('approveListRequest', { requestId }, siteAdmin.idToken);
@@ -455,12 +553,21 @@ if (!listId) {
   const rejectId = r.body?.result?.requestId;
   check('却下用の申請を作れる', !!rejectId);
 
+  // **先に、予約が実在することを見る。** 予約がそもそも作られていないと、
+  // 下の「解放される」は何も無かっただけで緑になる（前提が崩れると
+  // 自動的に通る形／監査 第4回）。
+  const namePath = `listNames/${`却下される${stamp}`.toLowerCase()}`;
+  const reservedDoc = await doc(namePath);
+  check('申請で名前が予約される（次の確認の土台）',
+        reservedDoc !== null && reservedDoc.fields !== undefined,
+        reservedDoc === null ? '予約が無い' : '予約あり');
+
   r = await call('rejectListRequest', { requestId: rejectId, reason: '重複' }, siteAdmin.idToken);
   check('リスト作成申請を却下できる（5.2.1）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
 
   // **却下したら名前の予約を解放すること。** 解放し忘れると、その名前が
   // 永久に使えなくなる（監査で無検証だった箇所）。
-  const nameDoc = await doc(`listNames/${`却下される${stamp}`.toLowerCase()}`);
+  const nameDoc = await doc(namePath);
   check('却下で名前の予約が解放される（13.3）', nameDoc === null, nameDoc ? '残っている' : '解放済み');
 
   r = await call('rejectListRequest', { requestId: rejectId, reason: '再' }, siteAdmin.idToken);
@@ -493,12 +600,18 @@ if (!listId) {
   r = await call('revokeShareLink', { linkId: revokeToken }, applicantFresh.idToken);
   check('リンクを取り消せる（3.3）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
 
+  // **符号まで見る。** `status !== 200` だけだと、引数の間違いや
+  // 未認証などの**別の理由で弾かれても緑**になる。取り消しの判断は
+  // failed-precondition（membership.ts の shareLinkRevoked）と決まって
+  // いるので、そこまで確かめる（監査 第4回）。
   const revoked = await signUp('rvk');
   r = await call('acceptShareLink', { linkId: revokeToken, mode: 'join' }, revoked.idToken);
-  check('取り消したリンクは使えない', r.status !== 200, r.body?.error?.status);
+  check('取り消したリンクは使えない', r.body?.error?.status === 'FAILED_PRECONDITION',
+        r.body?.error?.status ?? String(r.status));
 
   r = await call('acceptShareLink', { linkId: revokeToken, mode: 'view' }, revoked.idToken);
-  check('取り消したリンクは閲覧にも使えない', r.status !== 200, r.body?.error?.status);
+  check('取り消したリンクは閲覧にも使えない', r.body?.error?.status === 'FAILED_PRECONDITION',
+        r.body?.error?.status ?? String(r.status));
 
   // --- 容量上限の変更（7.2） ---
   r = await call('setListQuota', { listId, quotaBytes: 2 * 1024 * 1024 * 1024 }, siteAdmin.idToken);
@@ -527,6 +640,32 @@ if (!listId) {
   // 2 人になったので降格できるようになる（4.5）。
   r = await call('revokeSiteAdmin', { uid: second.localId }, siteAdmin.idToken);
   check('2 人いれば降格できる（4.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // --- 無効化した管理者は「最後の 1 人」の人数に入らない（4.5／監査 第4回） ---
+  //
+  // 修正前は user.disabled を見ずに数えていたため、管理者 2 人のうち
+  // 1 人を無効化したあとでも「2 人いる」と数え、残る 1 人の降格が通って
+  // **ログインできるサイト管理者が 0 人**になる経路があった。
+  const disabledAdmin = await signUp('sa3');
+  r = await call('grantSiteAdmin', { uid: disabledAdmin.localId }, siteAdmin.idToken);
+  check('2 人目のサイト管理者を作れる（次の確認の土台）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('disableSiteUser', { uid: disabledAdmin.localId }, siteAdmin.idToken);
+  check('サイト管理者を無効化できる（次の確認の土台）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('revokeSiteAdmin', { uid: siteAdmin.localId }, siteAdmin.idToken);
+  check('無効化済みを除けば最後の 1 人なので、残る 1 人は降格できない（4.5）',
+        r.body?.error?.status === 'FAILED_PRECONDITION', r.body?.error?.status);
+
+  // 後片付け。有効に戻せば 2 人なので、降格して元の 1 人に戻す。
+  r = await call('enableSiteUser', { uid: disabledAdmin.localId }, siteAdmin.idToken);
+  check('無効化した管理者を有効に戻せる（後片付け）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+  r = await call('revokeSiteAdmin', { uid: disabledAdmin.localId }, siteAdmin.idToken);
+  check('有効に戻れば数に入り、降格できる（後片付け）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
 
   // --- ユーザーの追加・無効化・削除（11.1） ---
   //
@@ -611,10 +750,28 @@ if (!listId) {
   const promoted = await doc(`lists/${listId}/members/${joiner.localId}`);
   check('指名で listAdmin になる', sv(promoted, 'role') === 'listAdmin', sv(promoted, 'role'));
 
+  // **uid の項目も見る（site_management.ts の「必ず uid を入れる」の見張り）。**
+  // 入れ忘れると、指名された管理者はホームにこのリストが出ず、
+  // 退会してもメンバーから外れない。role だけの検査では、この入れ忘れが
+  // 再発しても緑のままだった（監査 第4回）。
+  check('指名した行に uid が入る', sv(promoted, 'uid') === joiner.localId,
+        String(sv(promoted, 'uid')));
+
   // --- 退会（3.5） ---
+  //
+  // **参加が成立したことを確かめてから退会させる。** 申請か承認が失敗して
+  // いると、下の「メンバーから消える」は最初から居なかっただけの
+  // null 比較で空振り合格する（監査 第4回）。
   const leaver = await signUp('lv');
-  await call('submitJoinRequest', { listId }, leaver.idToken);
-  await call('approveJoinRequest', { listId, uid: leaver.localId, role: 'readOnly' }, applicantFresh.idToken);
+  r = await call('submitJoinRequest', { listId }, leaver.idToken);
+  check('退会する人の参加申請が通る（次の確認の土台）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+  r = await call('approveJoinRequest', { listId, uid: leaver.localId, role: 'readOnly' }, applicantFresh.idToken);
+  check('退会する人の承認が通る（次の確認の土台）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+  const joinedMember = await doc(`lists/${listId}/members/${leaver.localId}`);
+  check('退会する人がメンバーに居る（次の確認の土台）',
+        sv(joinedMember, 'uid') === leaver.localId, String(sv(joinedMember, 'uid')));
 
   r = await call('withdrawAccount', {}, leaver.idToken);
   check('退会できる（3.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
@@ -629,6 +786,26 @@ if (!listId) {
   check('退会しても users は残る（3.5）',
         leftUser !== null && sv(leftUser, 'isWithdrawn') === true,
         String(sv(leftUser, 'isWithdrawn')));
+
+  // **見るだけの人も、退会で viewers から消えること（3.3／監査 第4回）。**
+  // 退会は members しか外しておらず、viewers の行が残り続けていた。
+  r = await call('createShareLink', { listId }, applicantFresh.idToken);
+  const viewerLink = r.body?.result?.linkId;
+  const leavingViewer = await signUp('lvv');
+  r = await call('acceptShareLink', { linkId: viewerLink, mode: 'view' }, leavingViewer.idToken);
+  check('退会する見るだけの人を作れる（次の確認の土台）',
+        r.body?.result?.joined === false, JSON.stringify(r.body?.result));
+  const viewingDoc = await doc(`lists/${listId}/viewers/${leavingViewer.localId}`);
+  check('viewers に居る（次の確認の土台）',
+        sv(viewingDoc, 'uid') === leavingViewer.localId, String(sv(viewingDoc, 'uid')));
+
+  r = await call('withdrawAccount', {}, leavingViewer.idToken);
+  check('見るだけの人も退会できる（3.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  const leftViewer = await doc(`lists/${listId}/viewers/${leavingViewer.localId}`);
+  check('退会で viewers からも消える（監査 第4回）',
+        leftViewer === null || leftViewer.fields === undefined,
+        leftViewer ? '残っている' : '消えている');
 
   // --- 曲が追加されたらメンバー全員へ通知（10.2） ---
   //
@@ -674,6 +851,27 @@ if (!listId) {
   // 曲まで通知されると雑音になるため、役割だけを理由には送らない。
   check('サイト管理者でも参加していなければ届かない',
         !(await itemAdded(siteAdmin.localId)));
+}
+
+// どこで時間を使ったかの内訳（調べるときの手がかり。判定には使わない）。
+{
+  const sec = (ms) => `${Math.round(ms / 1000)}s`;
+  const total = Date.now() - stamp;
+  const slowest = [...spent.calls].sort((a, b) => b.ms - a.ms).slice(0, 5)
+    .map((c) => `${c.name} ${c.ms}ms`).join('、');
+  console.log('\n--- 時間の内訳 ---');
+  console.log(`  テスト全体            : ${sec(total)}`);
+  console.log(`  関数の呼び出し（往復）: ${sec(spent.call)}（${spent.calls.length} 回）`);
+  console.log(`  結果待ち（waitUntil） : ${sec(spent.wait)}（${spent.waits} 回）`);
+  console.log(`  アカウント作成        : ${sec(spent.auth)}（${spent.auths} 人）`);
+  console.log(`  遅い呼び出し上位      : ${slowest}`);
+
+  // 分布を調べたいときのために、呼び出しごとの記録も残しておく。
+  try {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(new URL('./.last-timing.json', import.meta.url),
+      JSON.stringify(spent, null, 2));
+  } catch { /* 記録できなくても本題ではない */ }
 }
 
 console.log(`\n=== ${results.filter(Boolean).length} / ${results.length} 成功 ===`);

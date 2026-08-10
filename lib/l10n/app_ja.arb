@@ -16,7 +16,6 @@
   "signUp": "アカウントを作成",
   "signOut": "ログアウト",
   "signInWithGoogle": "Google でログイン",
-  "signInWithEmail": "メールアドレスでログイン",
   "emailLabel": "メールアドレス",
   "passwordLabel": "パスワード",
   "emailRequired": "メールアドレスを入力してください",
@@ -24,7 +23,7 @@
   "passwordTooShort": "パスワードは 6 文字以上で入力してください",
   "urlRequired": "URL を入力してください",
   "fileRequired": "ファイルを選択してください",
-  "forgotPassword": "パスワードをお忘れですか",
+  "forgotPassword": "パスワードをお忘れですか？",
   "resetPassword": "パスワードを再設定",
   "resetPasswordSent": "再設定用のリンクを送信しました。メールをご確認ください。",
   "verifyEmailTitle": "確認メールを送りました",
@@ -39,7 +38,7 @@
   },
   "verifyEmailAutoDetect": "リンクを開くと、この画面も自動で次に進みます。",
   "verifyEmailResend": "確認メールを再送する",
-  "verifyEmailRecheck": "確認が済んだので次へ",
+  "verifyEmailRecheck": "確認を済ませたら次へ",
   "homeTitle": "参加しているリスト",
   "homeEmpty": "まだどのリストにも参加していません。",
   "homeEmptyHint": "リストを作りたい場合は作成を申請してください。既にあるリストに入りたい場合は、参加している方から共有 URL を受け取ってください。",
@@ -254,7 +253,6 @@
       }
     }
   },
-  "join": "参加する",
   "fileWithSize": "{name}（{size}）",
   "@fileWithSize": {
     "placeholders": {
@@ -312,7 +310,6 @@
   "requestAgain": "もう一度申請する",
   "approve": "承認",
   "reject": "却下",
-  "members": "メンバー",
   "manageMembers": "メンバー管理",
   "joinRequests": "参加申請",
   "removeMember": "リストから外す",
@@ -420,6 +417,10 @@
   },
   "errorGeneric": "エラーが発生しました。しばらくしてからもう一度お試しください。",
   "errorNoPermission": "この操作を行う権限がありません。",
+  "operationFailed": "操作を完了できませんでした。通信状況をご確認のうえ、もう一度お試しください。",
+  "@operationFailed": {
+    "description": "書き込み（削除・復元・投稿など）が例外で返ったときの共通文言（仕様書 14.4）"
+  },
   "notFound": "ページが見つかりません。",
   "createShareLink": "共有リンクを作る",
   "copyShareLink": "リンクをコピー",
@@ -428,7 +429,7 @@
   },
   "shareLinkCopied": "リンクをコピーしました。",
   "shareLinkReusableNote": "有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。",
-  "shareLinkCopyFailed": "リンクを作れませんでした。もう一度お試しください。",
+  "shareLinkCopyFailed": "リンクをコピーできませんでした。もう一度お試しください。",
   "copyItemShareLink": "この曲のリンクをコピー",
   "revokeShareLink": "リンクを取り消す",
   "shareLinkRevokedDone": "リンクを取り消しました。以降このリンクからは入れません。",

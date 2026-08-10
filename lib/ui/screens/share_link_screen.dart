@@ -61,7 +61,12 @@ class _ShareLinkScreenState extends ConsumerState<ShareLinkScreen> {
                   // **どのサービスからの誘いかを、まず示す。**
                   // 受け取った人にとっては初めて見る画面になりうる
                   // （brand/README.md）。
-                  const Center(child: BrandLogo.vertical(height: 96)),
+                  Center(
+                    child: BrandLogo.vertical(
+                      height: 96,
+                      semanticLabel: l10n.appTitle,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Icon(
                     Icons.link,

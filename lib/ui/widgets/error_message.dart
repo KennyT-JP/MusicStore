@@ -1,10 +1,12 @@
 /// エラー表示の共通部品
 library;
 
+// FirebaseException は firebase_auth の再輸出から使う（firebase_core 由来）。
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/repositories/functions_repository.dart';
+import '../../data/repositories/item_repository.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 画面上部に出すエラー。
@@ -37,6 +39,56 @@ class ErrorMessage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 書き込みの失敗を利用者に知らせる（仕様書 14.4）。
+///
+/// **黙って失敗させない。** オフライン・権限拒否・競合では Firestore への
+/// 書き込みが例外で返るが、復元・削除・コメント投稿・メンバー操作など
+/// 8 か所が例外を受けておらず、**押しても何も起きないように見えた**
+/// （監査 第4回）。画面にとどまったまま知らせるので、押し直せる。
+///
+/// 原因が分かるものは文言を変換し、それ以外は「詳細」から原文を読める
+/// ようにする（再生失敗と同じ型／list_detail_screen.dart）。
+void showWriteFailure(BuildContext context, Object error) {
+  final l10n = AppL10n.of(context);
+
+  // 同時編集は読み込み直して押し直せば済むので、専用の文言だけを出す
+  // （item_form_screen.dart が同じ例外に出しているのと同じ扱い／仕様書 6.3）。
+  if (error is ConcurrentEditException) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.conflictBody)));
+    return;
+  }
+
+  final message = error is FirebaseException && error.code == 'permission-denied'
+      ? l10n.errorNoPermission
+      : l10n.operationFailed;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      // 既定の 4 秒では「詳細」を押しそこねる（再生失敗と同じ判断）。
+      duration: const Duration(seconds: 15),
+      content: Text(message),
+      action: SnackBarAction(
+        label: l10n.showDetails,
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(message),
+            content: SelectableText('$error'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(AppL10n.of(context).close),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Firebase Auth のエラーを、利用者に伝わる文言に変換する。

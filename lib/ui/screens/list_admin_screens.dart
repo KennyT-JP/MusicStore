@@ -375,9 +375,19 @@ l10n.removeMemberBody,
         ),
       );
       if (confirmed != true) return;
-      await repo.removeMember(listId, member.uid);
+      try {
+        await repo.removeMember(listId, member.uid);
+      } catch (error) {
+        // オフライン・権限拒否で無反応に見えないようにする（監査 第4回）。
+        if (context.mounted) showWriteFailure(context, error);
+      }
     } else {
-      await repo.updateMemberRole(listId, member.uid, value);
+      try {
+        await repo.updateMemberRole(listId, member.uid, value);
+      } catch (error) {
+        // 役割を変えたつもりで変わっていない、を防ぐ（監査 第4回）。
+        if (context.mounted) showWriteFailure(context, error);
+      }
     }
   }
 
@@ -403,7 +413,13 @@ l10n.leaveListBody,
       ),
     );
     if (confirmed != true) return;
-    await ref.read(listRepositoryProvider).removeMember(listId, member.uid);
+    try {
+      await ref.read(listRepositoryProvider).removeMember(listId, member.uid);
+    } catch (error) {
+      // 抜けられなかったのにホームへ送らない（監査 第4回）。
+      if (context.mounted) showWriteFailure(context, error);
+      return;
+    }
     if (context.mounted) context.go(AppRoutes.home);
   }
 }
@@ -625,7 +641,13 @@ class ListSettingsScreen extends ConsumerWidget {
     );
     if (confirmed != true) return;
 
-    await ref.read(listRepositoryProvider).deleteList(listId);
+    try {
+      await ref.read(listRepositoryProvider).deleteList(listId);
+    } catch (error) {
+      // 消えていないのに消えたように見せない（監査 第4回）。
+      if (context.mounted) showWriteFailure(context, error);
+      return;
+    }
     if (context.mounted) context.go(AppRoutes.home);
   }
 }

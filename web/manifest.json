@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#071426",
     "theme_color": "#0B2044",
-    "description": "みんなで音源をアップして、共有する。",
+    "description": "録音した音源や見つけた楽曲を、みんなで持ち寄って共有するアプリです。",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

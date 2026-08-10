@@ -90,7 +90,7 @@ function portInUse(port) {
   });
 }
 
-console.log('音楽リスト共有アプリ — 開発環境の診断');
+console.log('音源創庫 — 開発環境の診断');
 console.log(`実行しているマシン: ${hostname()}`);
 console.log('（この診断は「いま実行しているマシン」の状態だけを見ます）\n');
 

@@ -1,5 +1,5 @@
 name: music_list_app
-description: "音楽リスト共有アプリ — メンバーが録音した音源や YouTube 等の URL を 1 つのリストに集約して共有する"
+description: "音源創庫（Track Cabinet） — メンバーが録音した音源や YouTube 等の URL を持ち寄って共有するアプリ"
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -69,8 +69,6 @@ flutter:
   # 一覧に書くのは 1x のパスだけでよい。
   assets:
     - assets/fonts/NotoSansJP-400.ttf
-    - assets/brand/logo-horizontal-light.png
-    - assets/brand/logo-horizontal-dark.png
     - assets/brand/logo-vertical-light.png
     - assets/brand/logo-vertical-dark.png
     - assets/brand/logo-inline-light.png

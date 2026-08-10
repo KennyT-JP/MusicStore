@@ -21,23 +21,24 @@
 HEAD と一致しなければ**その場で検証を実行してから**配信します。
 つまり **`deploy` だけ実行すれば、順序は自動的に守られます。**
 
-検証だけを回すときは 1 コマンドです（約 4 分・並列・別窓なし）。
+検証だけを回すときは 1 コマンドです（約 3 分・並列・別窓なし）。
 
 ```
 scripts\check.cmd        （Windows）
 ./scripts/check.sh       （macOS / Linux）
 ```
 
-4 本を同時に走らせ、失敗があれば最後にまとめて出ます。
+5 本を同時に走らせ、失敗があれば最後にまとめて出ます。
 
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 294 |
-| `functions` の単体テスト | 75 |
-| エミュレータ系（統合 → ルールの順に直列） | 61 + 124 |
+| `flutter test` | 304 |
+| `functions` の単体テスト | 85 |
+| `functions` の統合テスト | 89 |
+| セキュリティルール | 130（Firestore 114・Storage 13・見張り 3） |
 
-（件数は 2026-08-08 時点）
+（件数は 2026-08-10 時点）
 
 > **`flutter analyze` ではなく `dart analyze` を使います。**
 > `flutter analyze` は**パスに日本語が含まれると異常終了します**
@@ -106,6 +107,24 @@ git checkout -- firebase.json    ← なっていたら捨てる。リポジト�
 
 **残すのは `lib/env/firebase_options_staging.dart` と `_prod.dart` の 2 つだけ**
 です。それ以外の変更は捨ててください。
+
+## `git reset --hard` を使わない
+
+接続設定の 2 ファイルは「リポジトリ側は `REPLACE_ME`、手元だけ実際の値」
+という作りなので、**作業ツリーを巻き戻すと巻き添えで消えます。**
+消えると配信できません（2026-08-09 に実際にやりました）。
+
+枝の位置だけを戻したいときは、**別の枝に切り替えてから** `git branch -f`
+を使ってください。作業ツリーに触れません。
+
+```
+git switch dev
+git branch -f main <戻したい位置>
+```
+
+やむを得ず巻き戻したときは、接続設定を作り直してください
+（`scripts\configure-firebase.cmd` と `… prod`。そのあと
+`firebase.json` が壊れていないか `git status` で確認）。
 
 ## 参照する文書
 

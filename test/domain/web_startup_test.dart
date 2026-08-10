@@ -18,7 +18,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-String _indexHtml() => File('web/index.html').readAsStringSync();
+/// index.html を、**HTML コメントを取り除いてから**返す。
+///
+/// コメントの中も contains は真になるため、以前は modulepreload 5 本を
+/// 全部 `<!-- -->` で無効化しても緑のままだった（監査 第4回・実験で実証）。
+/// ブラウザが読まないものは、テストも読まない。
+String _indexHtml() => File('web/index.html')
+    .readAsStringSync()
+    .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
 
 void main() {
   group('最初の表示までの待ち時間', () {

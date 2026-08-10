@@ -7,7 +7,7 @@
  *
  * 二重に持つことになるので、片方を変えたらもう片方も直すこと。
  * 双方に同じ内容のテストを置いてある（Dart: test/domain/permissions_test.dart、
- * TypeScript: functions/test/roles.test.ts）。
+ * TypeScript: functions/test/domain.test.ts）。
  */
 
 export type ListRole = 'listAdmin' | 'superUser' | 'readOnly';

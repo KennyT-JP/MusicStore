@@ -10,7 +10,6 @@
   "signUp": "Create account",
   "signOut": "Sign out",
   "signInWithGoogle": "Sign in with Google",
-  "signInWithEmail": "Sign in with email",
   "emailLabel": "Email address",
   "passwordLabel": "Password",
   "emailRequired": "Please enter your email address",
@@ -216,7 +215,6 @@
       }
     }
   },
-  "join": "Join",
   "fileWithSize": "{name} ({size})",
   "@fileWithSize": {
     "placeholders": {
@@ -254,7 +252,6 @@
   "requestAgain": "Request again",
   "approve": "Approve",
   "reject": "Reject",
-  "members": "Members",
   "manageMembers": "Manage members",
   "joinRequests": "Join requests",
   "removeMember": "Remove from list",
@@ -273,7 +270,7 @@
   "language": "Language",
   "notificationSettings": "Notifications",
   "notificationMaster": "All notifications",
-  "withdraw": "Delete my account",
+  "withdraw": "Withdraw from the service",
   "withdrawWarning": "Your items and comments stay in the lists after you leave. Your name will be shown as \"Former member\".",
   "notifyItemAdded": "A song was added",
   "notifyCommentAdded": "A comment was posted",
@@ -338,6 +335,7 @@
   },
   "errorGeneric": "Something went wrong. Please try again later.",
   "errorNoPermission": "You do not have permission to do this.",
+  "operationFailed": "Could not complete the action. Please check your connection and try again.",
   "notFound": "Page not found.",
   "createShareLink": "Create a share link",
   "copyShareLink": "Copy link",
@@ -346,7 +344,7 @@
   },
   "shareLinkCopied": "Link copied.",
   "shareLinkReusableNote": "It never expires and can be used by any number of people, any number of times. Revoke it to stop it.",
-  "shareLinkCopyFailed": "Could not create the link. Please try again.",
+  "shareLinkCopyFailed": "Could not copy the link. Please try again.",
   "copyItemShareLink": "Copy a link to this track",
   "revokeShareLink": "Revoke link",
   "shareLinkRevokedDone": "Link revoked. It can no longer be used.",

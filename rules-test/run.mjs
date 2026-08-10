@@ -53,6 +53,13 @@ const options = [
   'emulators:exec',
   '--project',
   'demo-musiclist',
+  // **専用の設定で、別のポートに立てる（2026-08-09）。**
+  // 統合テストのエミュレータ（ルート設定・8080/9199/4400）と同時に
+  // 走らせるため。設定はルートに置いてある——firebase はルールファイルを
+  // 設定ファイルの場所から探すので、rules-test の中に置くと
+  // 「firestore.rules is outside of project directory」で止まる。
+  '--config',
+  '../firebase.rules-test.json',
   '--only',
   'firestore,storage',
 ];
@@ -150,15 +157,22 @@ if (taken.length > 0) {
   process.exit(1);
 }
 
-/** firebase.json から、このテストが使うエミュレータのポートを読む。 */
+/**
+ * このフォルダの firebase.json から、使うエミュレータのポートを読む。
+ *
+ * **ルートの firebase.json ではない。** ルールテストは統合テストと
+ * 同時に走らせるため、専用の設定で別のポートに立てる（2026-08-09。
+ * firebase は作業ディレクトリから上へ設定を探すので、ここで起動すれば
+ * 自動的にこちらが使われる）。
+ */
 function readEmulatorPorts() {
   const fallback = [
-    { name: 'firestore', port: 8080 },
-    { name: 'storage', port: 9199 },
+    { name: 'firestore', port: 8081 },
+    { name: 'storage', port: 9198 },
   ];
   try {
     const config = JSON.parse(
-      readFileSync(new URL('../firebase.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../firebase.rules-test.json', import.meta.url), 'utf8')
     );
     return fallback.map(({ name, port }) => ({
       name,

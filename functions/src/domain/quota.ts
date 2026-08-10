@@ -7,11 +7,15 @@
  * 片方を変えたらもう片方も直すこと。
  */
 
+// しきい値に export は付けない。使うのはこのファイルの判定関数だけで、
+// どこからも import されない export は死蔵の見張りが弾く（監査 第4回）。
+// 外から要るのは「どのレベルか」の答え（quotaLevel など）であって、数字ではない。
+
 /** Notice を出すしきい値（仕様書 7.3）。 */
-export const NOTICE_THRESHOLD = 0.8;
+const NOTICE_THRESHOLD = 0.8;
 
 /** 警告を出すしきい値（仕様書 7.3）。 */
-export const WARNING_THRESHOLD = 0.9;
+const WARNING_THRESHOLD = 0.9;
 
 export type QuotaLevel = 'normal' | 'notice' | 'warning';
 

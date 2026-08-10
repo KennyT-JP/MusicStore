@@ -39,9 +39,6 @@ class AppL10nEn extends AppL10n {
   String get signInWithGoogle => 'Sign in with Google';
 
   @override
-  String get signInWithEmail => 'Sign in with email';
-
-  @override
   String get emailLabel => 'Email address';
 
   @override
@@ -477,9 +474,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get join => 'Join';
-
-  @override
   String fileWithSize(Object name, Object size) {
     return '$name ($size)';
   }
@@ -572,9 +566,6 @@ class AppL10nEn extends AppL10n {
   String get reject => 'Reject';
 
   @override
-  String get members => 'Members';
-
-  @override
   String get manageMembers => 'Manage members';
 
   @override
@@ -631,7 +622,7 @@ class AppL10nEn extends AppL10n {
   String get notificationMaster => 'All notifications';
 
   @override
-  String get withdraw => 'Delete my account';
+  String get withdraw => 'Withdraw from the service';
 
   @override
   String get withdrawWarning =>
@@ -831,6 +822,10 @@ class AppL10nEn extends AppL10n {
   String get errorNoPermission => 'You do not have permission to do this.';
 
   @override
+  String get operationFailed =>
+      'Could not complete the action. Please check your connection and try again.';
+
+  @override
   String get notFound => 'Page not found.';
 
   @override
@@ -848,7 +843,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get shareLinkCopyFailed =>
-      'Could not create the link. Please try again.';
+      'Could not copy the link. Please try again.';
 
   @override
   String get copyItemShareLink => 'Copy a link to this track';

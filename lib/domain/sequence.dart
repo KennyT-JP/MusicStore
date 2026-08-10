@@ -40,19 +40,10 @@ class SequenceAllocation {
   final SequenceCounter updatedCounter;
 }
 
-/// 連番に関する規則。
-class SequencePolicy {
-  const SequencePolicy._();
-
-  /// 項目の削除では連番を戻さない（6.2：振り直しなし・欠番を残す）。
-  ///
-  /// 削除は項目の `status` を `deleted` にするだけで、カウンタには触らない。
-  /// この関数はその意図を明示するためのもの。
-  static SequenceCounter onItemDeleted(SequenceCounter counter) => counter;
-
-  /// アップロードが失敗・中断したときも連番を消費しない（7.5）。
-  ///
-  /// ファイルのアップロードが完全に終わってから項目を作成するため、
-  /// 失敗した時点では採番自体が行われていない。
-  static SequenceCounter onUploadAborted(SequenceCounter counter) => counter;
-}
+// 欠番の扱い（削除しても振り直さない・中断しても消費しない／6.2・7.5）は、
+// ここには置かない。
+//
+// **ルール（firestore.rules）と Cloud Functions が決める。** クライアント側に
+// 規則の写しを持つと、テストは緑なのに本番では別のコードが動く状態になる
+// （share_link.dart と同じ「サーバーが正」方式／監査 第4回）。
+// ここに残すのは、項目作成のトランザクションが実際に呼ぶ採番の計算だけ。

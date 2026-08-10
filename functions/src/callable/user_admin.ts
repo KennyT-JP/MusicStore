@@ -34,7 +34,12 @@ import {
   rejectUserAdminAction,
   type UserAdminAction,
 } from '../domain/user_admin';
-import { countSiteAdmins, requireSiteAdmin, requireString } from './access';
+import {
+  countSiteAdmins,
+  requireSiteAdmin,
+  requireString,
+  syncSiteAdminCount,
+} from './access';
 import { fail } from '../errors';
 
 /**
@@ -74,6 +79,10 @@ async function ensureAllowed(
 /**
  * 参加中のリストから外す（仕様書 5.4）。
  *
+ * 無効化・削除だけでなく、本人の退会（site_admin.ts の withdrawAccount）
+ * もここを通る。**外す対象と失敗の扱いを 1 か所に集める**ため
+ * （退会だけ viewers を外し忘れていた／監査 第4回）。
+ *
  * **`where('__name__', '==', uid)` は成立しない。** collectionGroup を
  * documentId() で引く場合、値は完全なドキュメントパスでなければならず、
  * 素の uid は「セグメント数が奇数」として拒否される（監査 S14）。
@@ -82,7 +91,7 @@ async function ensureAllowed(
  * **引けなかったら、そこで止める。** 握り潰して先へ進むと、
  * members に残ったままアカウントだけ消える。
  */
-async function leaveAllLists(uid: string): Promise<void> {
+export async function leaveAllLists(uid: string): Promise<void> {
   const db = getFirestore();
 
   const memberships = await db
@@ -105,12 +114,24 @@ async function leaveAllLists(uid: string): Promise<void> {
   );
 
   // 参加せずに見ているリストからも外す（仕様書 3.3）。
+  //
+  // **こちらも、引けなかったらそこで止める。** ここだけ握り潰して
+  // 空の一覧にすると、失敗しても黙って空振りし、viewers に残ったまま
+  // アカウントだけが消える——members で塞いだ穴と同じ形（監査 第4回）。
   const viewers = await db
     .collectionGroup('viewers')
     .where('uid', '==', uid)
     .get()
     .then((snapshot) => snapshot.docs)
-    .catch(() => []);
+    .catch((error) => {
+      logger.error('閲覧中のリストを引けませんでした', {
+        uid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    });
+
+  if (viewers === null) throw fail('internal', 'listNotFound');
 
   await Promise.all(
     viewers.map((doc) => doc.ref.delete().catch(() => undefined))
@@ -189,7 +210,7 @@ export const disableSiteUser = onCall({ region: REGION }, async (request) => {
   const actorUid = requireSiteAdmin(request);
   const uid = requireString(request.data, 'uid', { maxLength: 128 });
 
-  await ensureAllowed('disable', actorUid, uid);
+  const { isSiteAdmin } = await ensureAllowed('disable', actorUid, uid);
 
   await leaveAllLists(uid);
 
@@ -208,6 +229,11 @@ export const disableSiteUser = onCall({ region: REGION }, async (request) => {
 
   await getAuth().updateUser(uid, { disabled: true });
 
+  // 無効な管理者は「最後の 1 人」の人数に入れない（access.ts の
+  // scanSiteAdmins）。siteConfig の控え（人数と通知の宛先）も
+  // その場で実態に合わせる（監査 第4回）。
+  if (isSiteAdmin) await syncSiteAdminCount();
+
   return { ok: true };
 });
 
@@ -222,7 +248,7 @@ export const enableSiteUser = onCall({ region: REGION }, async (request) => {
   const actorUid = requireSiteAdmin(request);
   const uid = requireString(request.data, 'uid', { maxLength: 128 });
 
-  await ensureAllowed('enable', actorUid, uid);
+  const { isSiteAdmin } = await ensureAllowed('enable', actorUid, uid);
 
   await getAuth().updateUser(uid, { disabled: false });
 
@@ -236,6 +262,9 @@ export const enableSiteUser = onCall({ region: REGION }, async (request) => {
       },
       { merge: true }
     );
+
+  // 有効へ戻った管理者は、また人数に入る。控えも合わせ直す（監査 第4回）。
+  if (isSiteAdmin) await syncSiteAdminCount();
 
   return { ok: true };
 });
@@ -258,7 +287,7 @@ export const deleteSiteUser = onCall({ region: REGION }, async (request) => {
   const actorUid = requireSiteAdmin(request);
   const uid = requireString(request.data, 'uid', { maxLength: 128 });
 
-  await ensureAllowed('delete', actorUid, uid);
+  const { isSiteAdmin } = await ensureAllowed('delete', actorUid, uid);
 
   const db = getFirestore();
 
@@ -326,6 +355,11 @@ export const deleteSiteUser = onCall({ region: REGION }, async (request) => {
   await db.doc(paths.user(uid)).delete().catch(() => undefined);
 
   await getAuth().deleteUser(uid);
+
+  // 消したのがサイト管理者なら、siteConfig の控え（人数と uid の一覧）も
+  // 実態に合わせ直す。残したままだと、消えた uid が通知の宛先に混ざり
+  // 続け、画面の人数も減らない（監査 第4回）。
+  if (isSiteAdmin) await syncSiteAdminCount();
 
   return { ok: true, deletedItems: items.length };
 });

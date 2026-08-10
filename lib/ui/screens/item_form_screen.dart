@@ -405,8 +405,11 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
       await _showError(l10n.quotaExceeded);
     } on ConcurrentEditException {
       await _showError(l10n.conflictBody);
-    } catch (_) {
-      await _showError(l10n.uploadFailed);
+    } catch (error) {
+      // **例外を捨てない。** 以前は catch (_) で握りつぶしており、
+      // 通信の失敗なのかルールに弾かれたのかを誰も区別できなかった
+      // （監査 第4回）。再生失敗と同じく原文を読めるようにする。
+      await _showError(l10n.uploadFailed, details: error);
     } finally {
       if (mounted) {
         setState(() {
@@ -425,7 +428,10 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
   ///
   /// 画面の中にも同じ文言を残す。ポップアップを閉じたあと、
   /// 何が起きたのかを見返せるようにするため。
-  Future<void> _showError(String message) async {
+  ///
+  /// [details] には元の例外を渡す。原因を判別できない失敗のとき、
+  /// 原文をそのまま読める（再生失敗の「詳細」と同じ扱い）。
+  Future<void> _showError(String message, {Object? details}) async {
     if (!mounted) return;
     setState(() => _error = message);
 
@@ -434,7 +440,21 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.error_outline),
-        content: Text(message),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            if (details != null) ...[
+              const SizedBox(height: 12),
+              // 問い合わせのときに、そのまま貼って伝えられるようにする。
+              SelectableText(
+                '$details',
+                style: Theme.of(dialogContext).textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),

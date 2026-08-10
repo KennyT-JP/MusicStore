@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/display_name.dart';
+import '../../domain/signup_locale.dart';
 import '../firestore_paths.dart';
 import '../models/app_user.dart';
 
@@ -96,12 +97,10 @@ class AuthRepository {
 
   /// 送信するメールの言語を Firebase Auth に伝える（仕様書 2 章）。
   ///
-  /// 対応していない言語コードを渡すと例外になるため、扱う 2 つに絞る。
-  /// それ以外は Firebase の既定（英語）に任せる。
+  /// 対応していない言語コードを渡すと例外になるため、扱う言語に絞る。
+  /// それ以外は英語に倒す（画面の表示言語と同じ規則）。
   Future<void> _applyLanguage(String languageCode) async {
-    await _auth.setLanguageCode(
-      const {'ja', 'en'}.contains(languageCode) ? languageCode : 'en',
-    );
+    await _auth.setLanguageCode(SignupLocalePolicy.localeFor(languageCode));
   }
 
   /// 確認メールを再送する（仕様書 3.1）。
@@ -172,7 +171,8 @@ class AuthRepository {
       // 登録し終えた瞬間に日本語へ切り替わっていた（監査 第3回）。
       // 確認メールだけは使っている言語で送っていたので、
       // メールは英語・画面は日本語という食い違いになっていた。
-      locale: const {'ja', 'en'}.contains(languageCode) ? languageCode : 'en',
+      // 規則は domain/signup_locale.dart に置き、回帰テストが本物を見る。
+      locale: SignupLocalePolicy.localeFor(languageCode),
       isWithdrawn: false,
       notificationSettings: NotificationSettings.defaults(),
     );

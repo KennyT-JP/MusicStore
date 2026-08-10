@@ -10,32 +10,33 @@
 ///
 /// 認証そのものは Firebase に触れるためここでは動かせない。
 /// 代わりに **`locale` を決める規則と、画面から言語が渡ること**を固定する。
+///
+/// **規則は本物（lib/domain/signup_locale.dart）を検証する。**
+/// 以前はこのファイル内の写し（`_localeFor`）を検証しており、
+/// 本番の実装が変わっても緑のままだった（監査 第4回）。
 library;
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-
-/// 保存する表示言語を決める。`auth_repository.dart` と同じ規則。
-String _localeFor(String languageCode) =>
-    const {'ja', 'en'}.contains(languageCode) ? languageCode : 'en';
+import 'package:music_list_app/domain/signup_locale.dart';
 
 void main() {
   group('登録したときの表示言語', () {
     test('いま使っている言語をそのまま残す', () {
-      expect(_localeFor('ja'), 'ja');
-      expect(_localeFor('en'), 'en');
+      expect(SignupLocalePolicy.localeFor('ja'), 'ja');
+      expect(SignupLocalePolicy.localeFor('en'), 'en');
     });
 
     test('扱わない言語は英語に倒す（日本語にしない）', () {
       // 端末が中国語・韓国語などのとき。日本語に倒すと、
       // 読めない言語で固定されてしまう。
-      expect(_localeFor('zh'), 'en');
-      expect(_localeFor('ko'), 'en');
-      expect(_localeFor(''), 'en');
+      expect(SignupLocalePolicy.localeFor('zh'), 'en');
+      expect(SignupLocalePolicy.localeFor('ko'), 'en');
+      expect(SignupLocalePolicy.localeFor(''), 'en');
     });
 
-    test('保存する値を決め打ちしていない', () {
+    test('本番（auth_repository）がこの規則を呼んでいる', () {
       final source = File(
         'lib/data/repositories/auth_repository.dart',
       ).readAsStringSync();
@@ -45,7 +46,13 @@ void main() {
         isNot(contains("locale: 'ja'")),
         reason: '表示言語を固定すると、英語で登録した人が日本語になる',
       );
-      expect(source, contains('locale: '));
+      // 規則の写しを持たず、domain の本物を呼ぶこと。写しを書くと、
+      // このテストが検証しているものと本番が食い違う。
+      expect(
+        source,
+        contains('locale: SignupLocalePolicy.localeFor('),
+        reason: 'users.locale は SignupLocalePolicy.localeFor で決めること',
+      );
     });
 
     test('users を作る 3 つの入口すべてが、言語を受け取る', () {

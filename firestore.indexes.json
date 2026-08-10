@@ -50,6 +50,26 @@
         { "order": "DESCENDING", "queryScope": "COLLECTION" },
         { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
       ]
+    },
+    {
+      "//": "deleteSiteUser が collectionGroup('items') を createdBy で引くための索引（登録した曲を消す／仕様書 11.1）。エミュレータは索引を強制しないため、これが欠けたまま統合テストだけが緑になっていた——本番では削除がクエリの時点で失敗する（監査 第4回）。",
+      "collectionGroup": "items",
+      "fieldPath": "createdBy",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "//": "leaveAllLists（退会・無効化・削除）が collectionGroup('viewers') を uid で引くための索引（仕様書 3.3）。上の items と同じく、エミュレータでは欠落に気づけない（監査 第4回）。",
+      "collectionGroup": "viewers",
+      "fieldPath": "uid",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     }
   ]
 }

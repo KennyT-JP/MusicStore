@@ -21,9 +21,19 @@
     ],
     "headers": [
       {
-        "//": "画像・フォント・CanvasKit。**immutable にしてはいけない。**",
-        "//2": "アイコン用の MaterialIcons-Regular.otf は、名前は変わらないのに中身がビルドごとに変わる。使っているアイコンだけに削り込まれるため、アイコンを増やすと別の中身になる。ここを immutable にすると、ブラウザは 1 年取り直さず、新しい画面が古いフォントで描かれる。追加したアイコンは場所だけ取って絵柄が出ない、という形になり、強制リロードでも直らない（2026-08 に再生ボタンで実際に起きた）。",
-        "//3": "must-revalidate を付け、毎回サーバーに確認させる。中身が同じなら 304 が返るだけで、転送量はほとんど変わらない。",
+        "//": "Hosting のヘッダは、同じパスに複数のブロックが一致すると**後に書いたものが勝つ**。この並びはそれを前提に組んである：① 既定（すべて no-cache）→ ② 長めに置ける資産 → ③ 絶対に溜め込ませないもの。順序を崩すと ③ が ② に上書きされて無効になる（2026-08 の本番で実際に起きた。flutter_service_worker.js の no-cache が **/*.js の max-age=3600 に負けていた）。test/domain/hosting_cache_test.dart が後勝ちで実効値を検証している。",
+        "//2": "① 既定。rewrite で index.html が返るパス（/ やアプリ内の深い URL）は、拡張子のブロックには一致しない。指定が無いと Hosting 既定の max-age=3600 が付き、配信後 1 時間、トップから入る利用者に旧版が出る（実測）。まず全体を no-cache にし、置いてよいものだけを後ろのブロックで上書きする。",
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "//": "② 中身の変わらない資産（NotoSansJP・画像・CanvasKit）。1 時間は手元のコピーを使う。**max-age の期間内、ブラウザはサーバーに一切問い合わせない**（must-revalidate は期限が切れたあとに必ず確認させる指定で、期限内の確認は起きない）。だから中身の変わるファイルをここに置いてはいけない。",
+        "//2": "MaterialIcons-Regular.otf はここに置けない。名前が同じまま中身がビルドごとに変わるため、下の ③ が後勝ちで no-cache に上書きする。",
         "source": "**/*.@(ttf|otf|woff|woff2|png|jpg|jpeg|gif|svg|webp|wasm)",
         "headers": [
           {
@@ -33,7 +43,17 @@
         ]
       },
       {
-        "//": "index.html と Service Worker は毎回確認させる。ここをキャッシュすると、更新しても古い版が表示され続ける。",
+        "//": "② main.dart.js などのビルド成果物。内容が変わればファイルも作り直されるが、名前は同じなので短めにして更新を取りこぼさないようにする。flutter_service_worker.js などの例外は ③ が後勝ちで上書きする。",
+        "source": "**/*.@(js|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, must-revalidate"
+          }
+        ]
+      },
+      {
+        "//": "③ 絶対に溜め込ませないもの。**必ず ② より後ろに置く**（上の js/json ブロックにも一致するため、前に置くと max-age=3600 に上書きされて無効になる）。ここをキャッシュすると、更新しても古い版が表示され続ける。",
         "source": "/@(index.html|flutter_service_worker.js|flutter_bootstrap.js|version.json)",
         "headers": [
           {
@@ -43,12 +63,12 @@
         ]
       },
       {
-        "//": "main.dart.js などのビルド成果物。内容が変わればファイルも作り直されるが、名前は同じなので短めにして更新を取りこぼさないようにする。",
-        "source": "**/*.@(js|json)",
+        "//": "③ アイコンフォント。名前は変わらないのに、そのビルドで使っているアイコンだけに削り込まれて**中身がビルドごとに変わる**。max-age を与えると、その時間ぶん新旧が混在する窓ができる（immutable にしていた 2026-08 には、追加した再生ボタンが場所だけ取って描かれなかった）。no-cache なら毎回確認し、中身が同じときは 304 で済むので転送量はほとんど変わらない。**フォントのブロック（②）より後ろに置くこと（後勝ち）。**",
+        "source": "**/MaterialIcons-Regular.otf",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=3600, must-revalidate"
+            "value": "no-cache, must-revalidate"
           }
         ]
       }

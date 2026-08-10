@@ -2,6 +2,15 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // **実行範囲と見張り範囲を一致させる（監査 第4回）。**
+    //
+    // discipline.test.js（helpers 経由を強制する見張り）は、このフォルダ
+    // **直下**の *.test.js しか読まない。一方 vitest の既定の include は
+    // 下位フォルダの **/*.test.js まで拾うため、サブフォルダにテストを
+    // 置くと「実行はされるのに見張られない」ものができる。
+    // 実行側を直下に限定して、両者の範囲を揃える。
+    include: ['*.test.js'],
+
     // テストファイルを順番に実行する。
     //
     // 各ファイルの beforeEach で clearFirestore() / clearStorage() を呼んで

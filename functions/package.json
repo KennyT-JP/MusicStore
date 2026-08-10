@@ -2,7 +2,7 @@
   "name": "musiclist-functions",
   "version": "1.0.0",
   "private": true,
-  "description": "音源創庫（音楽リスト共有アプリ）の Cloud Functions（仕様書 13.4）",
+  "description": "音源創庫（Track Cabinet）の Cloud Functions（仕様書 13.4）",
   "main": "lib/index.js",
   "engines": {
     "node": "22"

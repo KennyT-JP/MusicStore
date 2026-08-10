@@ -21,7 +21,8 @@ service firebase.storage {
         && request.auth.token.email_verified == true;
     }
 
-    // クレームが無いユーザーでも評価エラーにならないよう get() で既定値を置く。
+    // クレームが無いユーザーでも評価エラーにならないよう、
+    // `in` で存在を確かめてから読む（isVerified と同じ理由）。
     function isSiteAdmin() {
       return isVerified()
         && 'siteAdmin' in request.auth.token

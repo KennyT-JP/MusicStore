@@ -157,12 +157,6 @@ abstract class AppL10n {
   /// **'Google でログイン'**
   String get signInWithGoogle;
 
-  /// No description provided for @signInWithEmail.
-  ///
-  /// In ja, this message translates to:
-  /// **'メールアドレスでログイン'**
-  String get signInWithEmail;
-
   /// No description provided for @emailLabel.
   ///
   /// In ja, this message translates to:
@@ -208,7 +202,7 @@ abstract class AppL10n {
   /// No description provided for @forgotPassword.
   ///
   /// In ja, this message translates to:
-  /// **'パスワードをお忘れですか'**
+  /// **'パスワードをお忘れですか？'**
   String get forgotPassword;
 
   /// No description provided for @resetPassword.
@@ -250,7 +244,7 @@ abstract class AppL10n {
   /// No description provided for @verifyEmailRecheck.
   ///
   /// In ja, this message translates to:
-  /// **'確認が済んだので次へ'**
+  /// **'確認を済ませたら次へ'**
   String get verifyEmailRecheck;
 
   /// No description provided for @homeTitle.
@@ -871,12 +865,6 @@ abstract class AppL10n {
   /// **'「{body}」への返信'**
   String replyingTo(Object body);
 
-  /// No description provided for @join.
-  ///
-  /// In ja, this message translates to:
-  /// **'参加する'**
-  String get join;
-
   /// No description provided for @fileWithSize.
   ///
   /// In ja, this message translates to:
@@ -1038,12 +1026,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'却下'**
   String get reject;
-
-  /// No description provided for @members.
-  ///
-  /// In ja, this message translates to:
-  /// **'メンバー'**
-  String get members;
 
   /// No description provided for @manageMembers.
   ///
@@ -1501,6 +1483,12 @@ abstract class AppL10n {
   /// **'この操作を行う権限がありません。'**
   String get errorNoPermission;
 
+  /// 書き込み（削除・復元・投稿など）が例外で返ったときの共通文言（仕様書 14.4）
+  ///
+  /// In ja, this message translates to:
+  /// **'操作を完了できませんでした。通信状況をご確認のうえ、もう一度お試しください。'**
+  String get operationFailed;
+
   /// No description provided for @notFound.
   ///
   /// In ja, this message translates to:
@@ -1534,7 +1522,7 @@ abstract class AppL10n {
   /// No description provided for @shareLinkCopyFailed.
   ///
   /// In ja, this message translates to:
-  /// **'リンクを作れませんでした。もう一度お試しください。'**
+  /// **'リンクをコピーできませんでした。もう一度お試しください。'**
   String get shareLinkCopyFailed;
 
   /// No description provided for @copyItemShareLink.
