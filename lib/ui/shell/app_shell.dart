@@ -76,7 +76,8 @@ class AppShell extends StatelessWidget {
         // 「サイトトップ用」として用意されたもので、上部バーに収まる
         // 高さ（下限 28px）で組んである。以前はアイコンとアプリ名を
         // 並べていたが、そちらは横組み 2 段が入らないための代用だった。
-        title: const BrandLogo.inline(),
+        // 読み上げには、いま出ている言語のアプリ名を伝える。
+        title: BrandLogo.inline(semanticLabel: l10n.appTitle),
         actions: [
           _NotificationBell(
             count: unreadNotificationCount,

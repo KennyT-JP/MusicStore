@@ -56,8 +56,12 @@ class AuthScaffold extends StatelessWidget {
                       // **アプリ名は文字ではなくロゴで出す**
                       // （brand/README.md）。最初に目に入る画面なので、
                       // 何のアプリかがひと目で分かるようにする。
-                      // 読み上げにはアプリ名が伝わる（BrandLogo）。
-                      const Center(child: BrandLogo.vertical()),
+                      // 読み上げには、いま出ている言語のアプリ名を伝える。
+                      Center(
+                        child: BrandLogo.vertical(
+                          semanticLabel: l10n.appTitle,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         title,

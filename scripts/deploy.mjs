@@ -354,15 +354,27 @@ function callableNames() {
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.ts')) continue;
     const text = readFileSync(join(dir, file), 'utf8');
-    for (const m of text.matchAll(/export const (\w+) = onCall\b/g)) names.push(m[1]);
+    // 空白は \s+ で受ける。`export const X =`（改行）`onCall` と書かれた関数が
+    // 一覧から漏れる穴が setup_doc.test.ts で実証された（監査 第4回）。
+    for (const m of text.matchAll(/export\s+const\s+(\w+)\s*=\s*onCall\b/g)) names.push(m[1]);
   }
   return names;
 }
 
 if (layers.includes('functions')) {
   const callables = callableNames();
-  const created = [...deployOutput.matchAll(/functions\[([\w-]+)\][^\n]*Successful create operation/g)]
-    .map((m) => m[1].replace(`${REGION}-`, ''))
+  // 配信ログの関数名の表記は firebase-tools の版で違う。**両方受ける。**
+  //   旧: functions[asia-northeast1-createList] Successful create operation
+  //   新: functions[createList(asia-northeast1)] Successful create operation
+  // 片方しか見ていないと、CLI を上げた途端に新規 callable の検出が 0 件に
+  // なり、invoker 付与が黙って抜ける（403 は後段のプローブで捕まるが、
+  // 自動修復が働かない）。
+  const createdRe = new RegExp(
+    `functions\\[(?:${REGION}-)?(\\w+)(?:\\(${REGION}\\))?\\][^\\n]*Successful create operation`,
+    'g',
+  );
+  const created = [...deployOutput.matchAll(createdRe)]
+    .map((m) => m[1])
     .filter((name) => callables.includes(name));
 
   if (created.length > 0) {
@@ -380,8 +392,10 @@ if (layers.includes('functions')) {
     }
   }
 
-  // B. callable 全件に実際へ HTTP を送り、403（許可欠落）と 404 を見つける。
+  // B. callable 全件に実際へ HTTP を送り、403（許可欠落）・404・5xx を見つける。
   //    401/400 は「Cloud Run は通った。関数が未認証を弾いた」＝正常。
+  //    5xx は関数が起動時に落ちている（初期化クラッシュ等）＝異常。
+  //    以前は 403/404 しか見ておらず、500 を返す関数が素通りしていた。
   //
   //    **1 件ずつ送る。** 最初は 15 件を同時に送っていたが、Windows で
   //    9 件が fetch failed になった（HTTP の異常ではなく接続層の失敗。
@@ -407,12 +421,13 @@ if (layers.includes('functions')) {
       }
     }
     if (status === null) bad.push(`${name}（${lastError?.message ?? '接続できない'}）`);
-    else if (status === 403 || status === 404) bad.push(`${name}（${status}）`);
+    else if (status === 403 || status === 404 || status >= 500) bad.push(`${name}（${status}）`);
   }
   if (bad.length > 0) {
     verifyFailed = true;
     console.error(`  異常: ${bad.join(', ')}`);
     console.error('  403 は呼び出し許可の欠落です。docs/SETUP.md「呼び出し可能関数が internal で失敗するとき」');
+    console.error('  5xx は関数が起動時に落ちています。Cloud Functions のログを読んでください');
   } else {
     console.log('    全件、Cloud Run を通って関数に届いています');
   }

@@ -113,6 +113,7 @@ lib/
   providers/
     app_providers.dart     Riverpod のプロバイダ（認証・リスト・項目）
     playback_provider.dart 再生の操作。画面と domain/playback.dart をつなぐ（8.1）
+    font_provider.dart     日本語フォントを最初の描画のあとに読み込む（起動を待たせない）
   env/
     app_environment.dart   本番・検証の切り替え（12.2）
     firebase_options.dart  Firebase の接続設定（クラウド分は要差し替え）
@@ -172,14 +173,15 @@ scripts\check.cmd        :: Windows
 ./scripts/check.sh       # macOS / Linux
 ```
 
-4 本を同時に走らせ、失敗があれば最後にまとめて出ます。
+5 本を同時に走らせ、失敗があれば最後にまとめて出ます。
 
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準** |
-| `flutter test` | 314 |
+| `flutter test` | 304 |
 | `functions` の単体テスト | 85（サーバー側のドメインロジック・通知） |
-| エミュレータ系（統合 → ルールの順に直列） | 75（通し確認）＋ 124（Firestore ルール 111・Storage 13） |
+| `functions` の統合テスト | 89（エミュレータで通し確認） |
+| セキュリティルール | 130（Firestore 114・Storage 13・書き方の見張り 3） |
 
 個別に実行することもできます（`flutter test`、`cd functions && npm test`、
 `cd rules-test && npm test`、`cd functions && npm run test:integration`）。
@@ -218,7 +220,8 @@ scripts\check.cmd        :: Windows
 | 検証 | <https://music-storage-dev.web.app> | 配信済み（2026-08-09 の版） |
 | 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-09 の版） |
 
-**未配信の差分はありません。** 次に何をすればよいかは
+**`dev` には配信後のコミットが先行しています**（未配信の差分あり）。
+配信の順序は「検証環境 → 依頼者の確認 → 本番」です。次に何をすればよいかは
 [docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
 
 ### 枝の使い分け

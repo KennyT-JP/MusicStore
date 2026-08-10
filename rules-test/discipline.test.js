@@ -33,6 +33,29 @@ describe('ルールテストの書き方', () => {
     test(`${file} は helpers を通す（直接呼びは印が付かない）`, () => {
       const source = readFileSync(file, 'utf8');
 
+      // **呼び方ではなく、持ち込むこと自体を禁じる（監査 第4回）。**
+      // 以前は `assertSucceeds(` という呼び出しの形だけを探していたため、
+      // `import { assertSucceeds as sneak }` と別名を付ければ素通りだった。
+      // 生の判定 API を握ってよいのは helpers.js だけなので、これらの名前が
+      // import 文（動的 import 含む）に現れた時点で拒む。
+      const imports =
+        source.match(/import[\s\S]*?from\s*['"][^'"]+['"]|import\s*\(/g) ?? [];
+      for (const statement of imports) {
+        expect(
+          statement,
+          '生の判定 API は import しない（helpers.js の allow / deny / mutateAsAdmin を使う）',
+        ).not.toMatch(
+          /assertSucceeds|assertFails|withSecurityRulesDisabled/,
+        );
+      }
+
+      // 名前を経由しない持ち込み（await import した束から呼ぶ等）も、
+      // 提供元のパッケージ名ごと禁じれば塞がる。
+      expect(
+        source,
+        '@firebase/rules-unit-testing を直接使わない（helpers.js を通す）',
+      ).not.toMatch(/@firebase\/rules-unit-testing/);
+
       // allow / deny を通らない判定は、dirty の印を付けられない。
       expect(source, 'assertSucceeds は allow() を使う').not.toMatch(
         /assertSucceeds\s*\(/,

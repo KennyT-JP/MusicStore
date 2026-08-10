@@ -107,35 +107,12 @@ class QuotaPolicy {
     return const UploadDecision.allow();
   }
 
-  /// 加算後に、新たに送るべき通知レベルを求める（7.3）。
-  ///
-  /// すでに同じレベルの通知を送っている場合は null を返し、重複通知を防ぐ。
-  /// 使用量がしきい値を下回ったときにフラグを戻す処理は [shouldResetNotice] /
-  /// [shouldResetWarning] で判定する。
-  static QuotaLevel? levelToNotify({
-    required QuotaStatus after,
-    required bool noticeAlreadySent,
-    required bool warningAlreadySent,
-  }) {
-    switch (after.level) {
-      case QuotaLevel.warning:
-        return warningAlreadySent ? null : QuotaLevel.warning;
-      case QuotaLevel.notice:
-        return noticeAlreadySent ? null : QuotaLevel.notice;
-      case QuotaLevel.normal:
-        return null;
-    }
-  }
-
-  /// Notice の送信済みフラグを戻すべきか（7.3）。
-  static bool shouldResetNotice({
-    required QuotaStatus after,
-    required bool noticeAlreadySent,
-  }) => noticeAlreadySent && after.ratio <= kQuotaNoticeThreshold;
-
-  /// 警告の送信済みフラグを戻すべきか（7.3）。
-  static bool shouldResetWarning({
-    required QuotaStatus after,
-    required bool warningAlreadySent,
-  }) => warningAlreadySent && after.ratio <= kQuotaWarningThreshold;
+  // 通知境界（80% / 90%）を「誰に・いつ送るか」の判定は、ここには置かない。
+  //
+  // **サーバー側 functions/src/domain/quota.ts が正。** 通知はファイルの
+  // 加算を検知した Functions が送るので、クライアントに規則の写しを持つと
+  // テストは緑なのに本番では別のコードが動く状態になる（share_link.dart が
+  // 既にやった「サーバーが正」方式に合わせる／監査 第4回）。
+  // ここに残すのは、画面が使う表示レベル（QuotaStatus.level）と
+  // アップロード前のブロック判定だけ。
 }

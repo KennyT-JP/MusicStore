@@ -59,6 +59,26 @@ class _ErrorState extends StatelessWidget {
               isPermissionDenied ? l10n.errorNoPermission : l10n.errorGeneric,
               textAlign: TextAlign.center,
             ),
+            // **「エラーが発生しました」で終わらせない。** 何が起きたのかを
+            // 「詳細」から読めるようにする（再生失敗と同じ型）。以前は
+            // errorGeneric 一本で、通信の失敗なのかルールに弾かれたのかを
+            // 誰も区別できなかった（監査 第4回）。
+            TextButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text(l10n.errorGeneric),
+                  content: SelectableText('$error'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(AppL10n.of(context).close),
+                    ),
+                  ],
+                ),
+              ),
+              child: Text(l10n.showDetails),
+            ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               OutlinedButton(onPressed: onRetry, child: Text(l10n.reload)),

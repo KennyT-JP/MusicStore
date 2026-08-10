@@ -60,8 +60,19 @@ void main() {
 
     test('定義したのに使われていない文言が無い', () {
       final source = _allSource();
+      // **「l10n を通した参照」だけを数える。**
+      //
+      // 以前は `\bキー名\b` で探していたため、`join` は `.join(`、
+      // `members` は Firestore のコレクション名という**無関係な識別子に
+      // 食われて、消しても緑のまま**だった（監査 第4回・実験で実証）。
+      // 文言として使うには `l10n.キー名` か `AppL10n.of(context).キー名`
+      // の形を必ず通るので、その前置きがある参照だけを有効とする。
       final unused = _keysOf('lib/l10n/app_ja.arb')
-          .where((key) => !RegExp('\\b$key\\b').hasMatch(source))
+          .where(
+            (key) => !RegExp(
+              '(?:\\bl10n|AppL10n\\.of\\([^)]*\\))\\.$key\\b',
+            ).hasMatch(source),
+          )
           .toList()
         ..sort();
 

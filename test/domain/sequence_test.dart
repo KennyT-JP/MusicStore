@@ -45,36 +45,7 @@ void main() {
     });
   });
 
-  group('振り直しなし・欠番を残す（6.2）', () {
-    test('項目を削除してもカウンタは戻らない', () {
-      var counter = const SequenceCounter.initial();
-      counter = counter.allocate().updatedCounter; // 1 を採番
-      counter = counter.allocate().updatedCounter; // 2 を採番
-      counter = counter.allocate().updatedCounter; // 3 を採番
-      expect(counter.nextSeq, 4);
-
-      // 3 番を削除しても、次は 4 番。3 は欠番のまま残る。
-      final afterDelete = SequencePolicy.onItemDeleted(counter);
-      expect(afterDelete.nextSeq, 4);
-      expect(afterDelete.allocate().seq, 4);
-    });
-
-    test('最後の項目を削除しても番号は使い回さない', () {
-      var counter = const SequenceCounter.initial();
-      final first = counter.allocate();
-      counter = SequencePolicy.onItemDeleted(first.updatedCounter);
-      expect(counter.allocate().seq, 2);
-    });
-  });
-
-  group('アップロード中断時（7.5）', () {
-    test('中断してもカウンタを消費しない', () {
-      // ファイルのアップロードが完全に終わってから項目を作成するため、
-      // 失敗した時点では採番自体が行われていない。
-      const counter = SequenceCounter.initial();
-      final afterAbort = SequencePolicy.onUploadAborted(counter);
-      expect(afterAbort.nextSeq, 1);
-      expect(afterAbort.allocate().seq, 1);
-    });
-  });
+  // 「振り直しなし・欠番を残す」（6.2）と「中断しても消費しない」（7.5）の
+  // テストはここに無い。欠番の扱いはルールと Cloud Functions が決めるため、
+  // クライアント側に規則の写しを持たない（監査 第4回）。
 }

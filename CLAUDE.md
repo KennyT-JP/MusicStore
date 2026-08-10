@@ -28,16 +28,17 @@ scripts\check.cmd        （Windows）
 ./scripts/check.sh       （macOS / Linux）
 ```
 
-4 本を同時に走らせ、失敗があれば最後にまとめて出ます。
+5 本を同時に走らせ、失敗があれば最後にまとめて出ます。
 
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 314 |
+| `flutter test` | 304 |
 | `functions` の単体テスト | 85 |
-| エミュレータ系（統合 → ルールの順に直列） | 75 + 124 |
+| `functions` の統合テスト | 89 |
+| セキュリティルール | 130（Firestore 114・Storage 13・見張り 3） |
 
-（件数は 2026-08-09 時点）
+（件数は 2026-08-10 時点）
 
 > **`flutter analyze` ではなく `dart analyze` を使います。**
 > `flutter analyze` は**パスに日本語が含まれると異常終了します**

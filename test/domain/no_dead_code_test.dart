@@ -34,11 +34,27 @@ List<File> _productionFiles() => filesUnder('lib')
     .map((e) => e.file)
     .toList();
 
+/// `//`・`///` のコメント行を取り除く。
+///
+/// **コメントに書いた名前は「呼び出し」ではない。** 以前はコメント行も
+/// そのまま数えていたため、実装を消してコメントに名前だけ残しても
+/// 緑のままだった（監査 第4回・実験で実証）。
+///
+/// 行の途中から始まるコメント（`foo(); // 説明`）も落とす。
+/// 文字列リテラル内の `//`（URL など）を巻き添えにしないよう、
+/// 直前が `:` のもの（`https://`）は残す。
+String _stripComments(String source) => source
+    .split('\n')
+    .map((line) => line.replaceFirst(RegExp(r'(?<!:)//.*$'), ''))
+    .join('\n');
+
 void main() {
   late String production;
 
   setUpAll(() {
-    production = _productionFiles().map((f) => f.readAsStringSync()).join('\n');
+    production = _stripComments(
+      _productionFiles().map((f) => f.readAsStringSync()).join('\n'),
+    );
   });
 
   test('Permissions のメソッドはすべて本番から呼ばれている', () {
@@ -86,6 +102,48 @@ void main() {
     );
   });
 
+  test('lib/domain の static メソッドはすべて本番から呼ばれている', () {
+    // モジュール単位の検査（上）だけでは、**ファイルは使われているのに
+    // 一部のメソッドだけ死蔵**という形を見逃す。QuotaPolicy の通知判定
+    // 3 本と SequencePolicy がまさにそれで、本番で効いているのは
+    // functions 側だった（監査 第4回）。メソッド粒度でも固定する。
+    final unused = <String>[];
+
+    for (final entry in filesUnder('lib/domain')) {
+      final source = entry.file.readAsStringSync();
+      final fileName = entry.path.split('/').last;
+
+      // static メソッドを、それを包む class / enum の名前と組にする。
+      final owners = RegExp(
+        r'^(?:abstract )?(?:class|enum) (\w+)',
+        multiLine: true,
+      ).allMatches(source).toList();
+
+      // `static const …` は定数（フィールド）なので対象にしない。
+      for (final match in RegExp(
+        r'^  static (?!const\b)[\w<>?,() ]+ (\w+)[(<]',
+        multiLine: true,
+      ).allMatches(source)) {
+        final method = match.group(1)!;
+        if (method.startsWith('_')) continue;
+
+        final owner = owners.lastWhere((o) => o.start < match.start);
+        final call = '${owner.group(1)}.$method';
+        if (!production.contains(call)) unused.add('$fileName の $call');
+      }
+    }
+
+    expect(
+      unused,
+      isEmpty,
+      reason:
+          '本番から呼ばれていない domain の static メソッド: $unused\n'
+          '本番で効いている実装が別の場所（functions など）にないか'
+          '確かめてください。サーバーが正なら、クライアント側の写しは'
+          '消してください。',
+    );
+  });
+
   test('リポジトリの公開メソッドが本番から呼ばれている', () {
     // 呼び出し元の無い公開メソッドは、たいてい「同じことを別の場所で
     // 直接やっている」印。isListNameTaken と canWithdraw がそうだった。
@@ -95,8 +153,12 @@ void main() {
     for (final file in repositories) {
       final source = file.readAsStringSync();
       final name = file.uri.pathSegments.last;
+      // **戻り値の型は貪欲に読む。** 以前は `Future<[^>]*>` で、
+      // 入れ子のジェネリクス（`Future<List<X>>` など）に一致せず、
+      // そのメソッドは**走査対象から黙って漏れていた**
+      // （監査 第4回・実験で実証）。
       for (final match in RegExp(
-        r'^  (?:Future<[^>]*>|Stream<[^>]*>|void|bool|String) (\w+)\(',
+        r'^  (?:Future<.+>|Stream<.+>|void|bool|String) (\w+)\(',
         multiLine: true,
       ).allMatches(source)) {
         final method = match.group(1)!;
@@ -109,7 +171,7 @@ void main() {
         final calls = _productionFiles()
             .where((f) => f.uri.pathSegments.last != name)
             .where((f) {
-              final source = f.readAsStringSync();
+              final source = _stripComments(f.readAsStringSync());
               return RegExp('\\.$method\\b').hasMatch(source);
             })
             .length;

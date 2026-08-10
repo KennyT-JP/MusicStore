@@ -31,7 +31,10 @@ function callableFunctionNames(): string[] {
   for (const file of readdirSync(dir).sort()) {
     if (!file.endsWith('.ts')) continue;
     const text = readFileSync(new URL(file, dir), 'utf8');
-    for (const match of text.matchAll(/export const (\w+) = onCall\b/g)) {
+    // 空白は `\s` で受ける。`export const NAME =` と `onCall` の間で
+    // 改行される書き方（整形ツールが行を折る）だと、1 行前提の
+    // 正規表現では新しい関数が突き合わせから漏れる（監査 第4回）。
+    for (const match of text.matchAll(/export\s+const\s+(\w+)\s*=\s*onCall\b/g)) {
       names.push(match[1]);
     }
   }

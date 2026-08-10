@@ -34,7 +34,8 @@ service cloud.firestore {
     // サイト管理者は Auth のカスタムクレームで判定する（13.5）。
     // ルールから追加の読み取りが発生しないため、高速かつ課金もない。
     //
-    // クレームが無いユーザーでも評価エラーにならないよう get() で既定値を置く。
+    // クレームが無いユーザーでも評価エラーにならないよう、
+    // `in` で存在を確かめてから読む（isVerified と同じ理由）。
     function isSiteAdmin() {
       return isVerified()
         && 'siteAdmin' in request.auth.token
@@ -351,9 +352,22 @@ service cloud.firestore {
           allow create: if canWrite(listId)
             && request.resource.data.createdBy == uid();
 
+          // 復元（deleted → active）はリスト管理者以上のみ。items の
+          // restoreIsAllowed と同じ規則をコメントにも課す（監査 第4回）。
+          // これが無いと、リスト管理者が消したコメントを**投稿者本人が
+          // active に書き戻して**、削除を無かったことにできる。
+          // （コメントに purgeAt は無いので、見るのは status だけ。）
+          function commentRestoreIsAllowed() {
+            return !('status' in resource.data)
+              || resource.data.status != 'deleted'
+              || request.resource.data.status != 'active'
+              || isListAdmin(listId);
+          }
+
           allow update: if (isListAdmin(listId) ||
               (canWrite(listId) && resource.data.createdBy == uid()))
-            && request.resource.data.createdBy == resource.data.createdBy;
+            && request.resource.data.createdBy == resource.data.createdBy
+            && commentRestoreIsAllowed();
 
           // 返信がぶら下がるためソフト削除にする（9）。
           allow delete: if false;
@@ -390,7 +404,7 @@ service cloud.firestore {
     }
 
     // -----------------------------------------------------------------
-    // invites（招待 URL／3.3）
+    // shareLinks（共有リンク／3.3）
     // -----------------------------------------------------------------
 
     match /shareLinks/{linkId} {

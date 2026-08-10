@@ -370,7 +370,7 @@ node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-acc
 Build failed with status: FAILURE and message: An unexpected error occurred.
 ```
 
-**初回デプロイでよく起きます。** 23 個の関数のコンテナが一斉に組み立てられる一方で、
+**初回デプロイでよく起きます。** 27 個の関数のコンテナが一斉に組み立てられる一方で、
 置き場所（Artifact Registry のリポジトリ）はその最中に作られます。用意が整う前に
 始まった分が巻き添えで失敗するため、一部だけ成功して残りが落ちる、という形になります。
 
@@ -996,14 +996,14 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 > scripts\check.cmd
 > ```
 >
-> 4 本を並列に走らせ、エミュレータの起動・後片付けまで行います
+> 5 本を並列に走らせ、エミュレータの起動・後片付けまで行います
 > （約 3 分・別窓なし）。**配信の前にこれを通してください。**
 > 以下は、個別に動かしたいときの説明です。
 
 ### 単体テスト
 
 ```sh
-flutter test      # 314 件
+flutter test      # 304 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
 cd functions && npm test   # 85 件（サーバー側のドメインロジック・通知）
@@ -1023,7 +1023,7 @@ cd functions && npm test   # 85 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 127 件（Firestore 111 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
+npm test          # 130 件（Firestore 114 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
 ```
 
 Firestore ルールは全件エミュレータで検証できます。
@@ -1064,7 +1064,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（75 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（89 件）。
 
 ```sh
 cd functions && npm run test:integration
@@ -1109,21 +1109,26 @@ cd functions && npm run test:integration
 日本語のグリフを実行時に Google Fonts から取得するため、社内ネットワークなどで
 `fonts.gstatic.com` が遮断されていると日本語が表示されなくなるからです。
 
-- ファイル：`assets/fonts/NotoSansJP-400.ttf` / `-700.ttf`（各 2.25MB）
+- ファイル：`assets/fonts/NotoSansJP-400.ttf`（**w400 のみ**・約 2.25MB）
 - ライセンス：SIL Open Font License 1.1（`assets/fonts/OFL.txt` を同梱）
 
-**端末側でキャッシュされます。** 初回のみダウンロードし、2 回目以降は取得しません。
+**`pubspec.yaml` の `fonts:` には宣言していません。** `fonts:` に書くと、
+エンジンが起動時に読み終えるまで最初の描画が始まらず、
+「画面が出るまで 5 秒ほどかかる」という指摘の主因になっていたためです
+（2026-08-08 実測。初回に取りに行く量の半分近くがフォントでした）。
+代わりに `assets:` として積み、**最初の描画のあとに `FontLoader` で読み込みます**
+（`lib/providers/font_provider.dart`）。読み終わるまでは端末の日本語フォントで
+描かれ、終わると差し替わります。字を絞る手（サブセット化）とは違い全グリフを
+持っているので、文字が出ないことはありません。
 
-| 仕組み | 効果 |
-| --- | --- |
-| `firebase.json` の `Cache-Control: max-age=31536000, immutable` | ブラウザが 1 年間キャッシュし、再訪問時にサーバーへ問い合わせない |
-| Flutter の Service Worker（既定で有効） | オフラインでも表示でき、アプリ更新時は変わったファイルだけ取り直す |
+**太字（w700）は同梱していません。** 約 1.2MB（圧縮後）を減らせて、
+太字は CanvasKit が w400 から擬似的に作ります（見た目は少し劣ります）。
 
-`index.html` と Service Worker 自身は毎回確認させる設定にしています。ここをキャッシュすると
-アプリを更新しても古い版が表示され続けるためです。
-
-> 初回の読み込みを軽くしたい場合は、`pubspec.yaml` の `w700` の行を消すと 2.25MB 減ります。
-> 太字は CanvasKit が w400 から擬似的に作りますが、見た目は少し劣ります。
+**端末側でキャッシュされます。** `firebase.json` の指定（`max-age=3600`）の間は
+手元のコピーを使い、Service Worker はアプリ更新時に変わったファイルだけ取り直します。
+`index.html`・Service Worker 自身・ビルドごとに中身の変わる
+`MaterialIcons-Regular.otf` は毎回確認させる設定です（`firebase.json` の
+コメントと `test/domain/hosting_cache_test.dart` を参照）。
 
 ### 手動確認
 

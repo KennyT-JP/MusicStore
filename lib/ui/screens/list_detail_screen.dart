@@ -17,6 +17,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/playback_provider.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_message.dart';
 import 'requests_screens.dart';
 
 /// 一覧の絞り込み・並び替えの状態。
@@ -325,7 +326,13 @@ Future<void> _confirmLeave(
   );
   if (confirmed != true) return;
 
-  await ref.read(listRepositoryProvider).removeMember(listId, uid);
+  try {
+    await ref.read(listRepositoryProvider).removeMember(listId, uid);
+  } catch (error) {
+    // 抜けられなかったのにホームへ送らない（監査 第4回）。
+    if (context.mounted) showWriteFailure(context, error);
+    return;
+  }
   if (context.mounted) context.go(AppRoutes.home);
 }
 

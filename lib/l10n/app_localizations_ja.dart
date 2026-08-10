@@ -39,9 +39,6 @@ class AppL10nJa extends AppL10n {
   String get signInWithGoogle => 'Google でログイン';
 
   @override
-  String get signInWithEmail => 'メールアドレスでログイン';
-
-  @override
   String get emailLabel => 'メールアドレス';
 
   @override
@@ -63,7 +60,7 @@ class AppL10nJa extends AppL10n {
   String get fileRequired => 'ファイルを選択してください';
 
   @override
-  String get forgotPassword => 'パスワードをお忘れですか';
+  String get forgotPassword => 'パスワードをお忘れですか？';
 
   @override
   String get resetPassword => 'パスワードを再設定';
@@ -86,7 +83,7 @@ class AppL10nJa extends AppL10n {
   String get verifyEmailResend => '確認メールを再送する';
 
   @override
-  String get verifyEmailRecheck => '確認が済んだので次へ';
+  String get verifyEmailRecheck => '確認を済ませたら次へ';
 
   @override
   String get homeTitle => '参加しているリスト';
@@ -454,9 +451,6 @@ class AppL10nJa extends AppL10n {
   }
 
   @override
-  String get join => '参加する';
-
-  @override
   String fileWithSize(Object name, Object size) {
     return '$name（$size）';
   }
@@ -543,9 +537,6 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get reject => '却下';
-
-  @override
-  String get members => 'メンバー';
 
   @override
   String get manageMembers => 'メンバー管理';
@@ -792,6 +783,9 @@ class AppL10nJa extends AppL10n {
   String get errorNoPermission => 'この操作を行う権限がありません。';
 
   @override
+  String get operationFailed => '操作を完了できませんでした。通信状況をご確認のうえ、もう一度お試しください。';
+
+  @override
   String get notFound => 'ページが見つかりません。';
 
   @override
@@ -808,7 +802,7 @@ class AppL10nJa extends AppL10n {
       '有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。';
 
   @override
-  String get shareLinkCopyFailed => 'リンクを作れませんでした。もう一度お試しください。';
+  String get shareLinkCopyFailed => 'リンクをコピーできませんでした。もう一度お試しください。';
 
   @override
   String get copyItemShareLink => 'この曲のリンクをコピー';

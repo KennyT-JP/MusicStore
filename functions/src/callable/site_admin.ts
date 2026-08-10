@@ -2,7 +2,6 @@
  * サイト管理者の昇格・降格と退会（仕様書 4.4 / 4.5 / 3.5）
  */
 import { getAuth } from 'firebase-admin/auth';
-import * as logger from 'firebase-functions/logger';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 
@@ -10,12 +9,13 @@ import { REGION, paths } from '../config';
 import { canStepDownAsSiteAdmin } from '../domain/roles';
 import {
   countSiteAdmins,
-  scanSiteAdmins,
   isSiteAdminRequest,
   requireSiteAdmin,
   requireString,
   requireUid,
+  syncSiteAdminCount,
 } from './access';
+import { leaveAllLists } from './user_admin';
 import { fail } from '../errors';
 
 /**
@@ -100,38 +100,15 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
 
   const db = getFirestore();
 
-  // 参加中のリストから抜ける（仕様書 5.4）。
+  // 参加中のリストと、参加せずに見ているリストから抜ける（仕様書 5.4 / 3.3）。
   // 投稿は残るが、members から消えることで表示が
   // 「退会したユーザー」に切り替わる（仕様書 13.3）。
   //
-  // **`where('__name__', '==', uid)` は成立しない。** collectionGroup を
-  // documentId() で引く場合、値は完全なドキュメントパスでなければならず、
-  // 素の uid は「セグメント数が奇数」として拒否される。しかも
-  // `.catch(() => null)` で握り潰していたため、退会しても members が
-  // 残り続けていることに気づけなかった（監査 S14）。
-  //
-  // メンバーのドキュメントに uid を持たせ、その項目で引く。
-  const memberships = await db
-    .collectionGroup('members')
-    .where('uid', '==', uid)
-    .get()
-    .then((snapshot) => snapshot.docs)
-    .catch((error) => {
-      logger.error('参加中のリストを引けませんでした', {
-        uid,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    });
-
-  if (memberships === null) {
-    // ここで先へ進むと、members に残ったまま Auth だけ消える。
-    throw fail('internal', 'listNotFound');
-  }
-
-  await Promise.all(
-    memberships.map((doc) => doc.ref.delete().catch(() => undefined))
-  );
+  // クエリの成立条件（uid 項目で引く／監査 S14）と「引けなかったら止める」
+  // 判断は leaveAllLists（user_admin.ts）にまとめてある。以前はここに
+  // members だけの写しがあり、**退会だけ viewers を外し忘れていた**
+  // （監査 第4回）。
+  await leaveAllLists(uid);
 
   // **users ドキュメントが無い場合に update は失敗する。**
   // その先の Auth 削除まで到達できなくなるため set(merge) にする。
@@ -147,30 +124,10 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
   // Auth のアカウントを消す。以後このメールアドレスで再登録できる。
   await getAuth().deleteUser(uid);
 
+  // 退会したのがサイト管理者なら、siteConfig の控え（人数と uid の一覧）を
+  // 実態に合わせ直す。昇格・降格は同期していたのに、退会だけ控えが
+  // 残り続けていた（監査 第4回）。
+  if (isSiteAdminRequest(request)) await syncSiteAdminCount();
+
   return { ok: true };
 });
-
-/**
- * siteConfig.siteAdminCount を実際の人数に合わせる（仕様書 4.5）。
- *
- * 画面側はこの値を見て「最後の 1 人か」を判断する。
- * 判定そのものはサーバー側でも行うので、ここがずれても権限は守られる。
- */
-async function syncSiteAdminCount(): Promise<void> {
-  // **uid の一覧も控える。** 通知の宛先を集めるたびに Auth の全ユーザーを
-  // 走査していたため、コメントが 1 件付くだけで利用者数に比例した
-  // 往復が発生していた（監査 第2回）。ここで控えておけば読み取り 1 回で済む。
-  const uids = await scanSiteAdmins();
-  const db = getFirestore();
-
-  // 人数は画面が使うので siteConfig/global に置く。
-  await db
-    .doc(paths.siteConfig)
-    .set({ siteAdminCount: uids.length }, { merge: true });
-
-  // uid の一覧は通知の宛先を集めるためだけのもの。利用者に見せる必要が
-  // 無いので、読めない場所に置く。
-  await db
-    .doc(paths.siteInternal)
-    .set({ siteAdminUids: uids }, { merge: true });
-}

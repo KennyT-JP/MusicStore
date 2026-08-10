@@ -29,10 +29,12 @@ enum ListRole {
   /// 権限の強さ。大きいほど上位。
   final int rank;
 
-  /// Firestore の値から復元する。未知の値は [readOnly] に倒す。
+  /// Firestore の値から復元する。**未知の値と null は null を返す。**
   ///
-  /// 不明な役割を強い権限として扱うと、仕様外の値が入り込んだときに
-  /// 権限昇格になってしまうため、必ず最弱へ倒す。
+  /// 役割をどう既定するかは呼び出し側が決める（member の復元では
+  /// [readOnly] に倒している）。不明な役割を強い権限として扱うと、
+  /// 仕様外の値が入り込んだときに権限昇格になってしまうため、
+  /// ここで勝手に役割を与えない。
   static ListRole? tryParse(String? value) {
     if (value == null) return null;
     for (final role in ListRole.values) {

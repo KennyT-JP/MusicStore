@@ -315,6 +315,47 @@ describe('他人の項目（6.3）', () => {
   });
 });
 
+describe('削除済みコメントの復元（9／監査 第4回）', () => {
+  // items と同じ規則（restoreIsAllowed 相当）。以前は status に制約が無く、
+  // リスト管理者が消したコメントを投稿者本人が active に書き戻して、
+  // 削除を無かったことにできた。
+  const commentPath = `lists/${LIST_ID}/items/${ITEM_ID}/comments/${COMMENT_ID}`;
+
+  /** 前提づくり：コメントを削除済みの状態にする。 */
+  const markDeleted = () =>
+    mutateAsAdmin(env, async (ctx) => {
+      await setDoc(
+        doc(ctx.firestore(), commentPath),
+        {
+          body: 'いいですね',
+          parentId: null,
+          path: [],
+          depth: 0,
+          createdBy: UID.superUser,
+          status: 'deleted',
+        },
+      );
+    });
+
+  test('投稿者本人は deleted → active に戻せない', async () => {
+    await markDeleted();
+    const author = db(asUser(env, UID.superUser));
+    await deny(updateDoc(doc(author, commentPath), { status: 'active' }));
+  });
+
+  test('リスト管理者は deleted → active に戻せる', async () => {
+    await markDeleted();
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await allow(updateDoc(doc(listAdmin, commentPath), { status: 'active' }));
+  });
+
+  test('本人の削除（active → deleted）は今までどおりできる（9）', async () => {
+    // 復元だけを縛ったことの確認。締めすぎると自分の発言を消せなくなる。
+    const author = db(asUser(env, UID.superUser));
+    await allow(updateDoc(doc(author, commentPath), { status: 'deleted' }));
+  });
+});
+
 describe('リスト管理者（5.4 / 5.5）', () => {
   test('メンバーの役割を変更できる', async () => {
     const listAdmin = db(asUser(env, UID.listAdmin));

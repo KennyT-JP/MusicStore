@@ -74,7 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// 音源創庫 — 音楽リスト共有アプリ。
+/// 音源創庫（Track Cabinet） — 音源を持ち寄って共有するアプリ。
 class MusicListApp extends ConsumerWidget {
   const MusicListApp({super.key, this.routerOverride});
 

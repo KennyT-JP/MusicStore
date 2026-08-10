@@ -99,7 +99,9 @@ export interface SiteConfig {
   siteAdminCount: number;
 }
 
-export const defaultSiteConfig: SiteConfig = {
+// export は付けない。使うのは下の readSiteConfig だけで、
+// どこからも import されない export は死蔵の見張りが弾く（監査 第4回）。
+const defaultSiteConfig: SiteConfig = {
   defaultQuotaBytes: 1073741824, // 1GB
   itemPurgeGraceDays: 30,
   orphanFileGraceHours: 24,
