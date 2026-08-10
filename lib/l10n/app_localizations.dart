@@ -1626,6 +1626,48 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'まだいません。'**
   String get viewersEmpty;
+
+  /// No description provided for @addToList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストに追加'**
+  String get addToList;
+
+  /// No description provided for @addToListTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} をリストに追加'**
+  String addToListTitle(String name);
+
+  /// No description provided for @addToListEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストがまだありません。'**
+  String get addToListEmpty;
+
+  /// No description provided for @addAs.
+  ///
+  /// In ja, this message translates to:
+  /// **'追加：{role}'**
+  String addAs(String role);
+
+  /// No description provided for @addToListDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{list} に追加しました'**
+  String addToListDone(String list);
+
+  /// No description provided for @functionErrorUserDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'この利用者は無効にされています。先に有効に戻してください。'**
+  String get functionErrorUserDisabled;
+
+  /// No description provided for @functionErrorUserWithdrawn.
+  ///
+  /// In ja, this message translates to:
+  /// **'この利用者は退会しています。'**
+  String get functionErrorUserWithdrawn;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -857,4 +857,31 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get viewersEmpty => 'まだいません。';
+
+  @override
+  String get addToList => 'リストに追加';
+
+  @override
+  String addToListTitle(String name) {
+    return '$name をリストに追加';
+  }
+
+  @override
+  String get addToListEmpty => 'リストがまだありません。';
+
+  @override
+  String addAs(String role) {
+    return '追加：$role';
+  }
+
+  @override
+  String addToListDone(String list) {
+    return '$list に追加しました';
+  }
+
+  @override
+  String get functionErrorUserDisabled => 'この利用者は無効にされています。先に有効に戻してください。';
+
+  @override
+  String get functionErrorUserWithdrawn => 'この利用者は退会しています。';
 }

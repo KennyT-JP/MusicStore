@@ -245,6 +245,23 @@ class FunctionsRepository {
   Future<void> assignListAdmin({required String listId, required String uid}) =>
       _call('assignListAdmin', {'listId': listId, 'uid': uid});
 
+  /// サイト管理者が、ユーザーをリストのメンバーに加える（仕様書 5.7）。
+  ///
+  /// [role] は `superUser` か `readOnly`。**リスト管理者にはできない**
+  /// （それは [assignListAdmin]）。すでにメンバーなら失敗する
+  /// （役割の上げ下げはリスト管理者の仕事・5.4）。
+  Future<void> addListMember({
+    required String listId,
+    required String uid,
+    required ListRole role,
+  }) => _call('addListMember', {
+    'listId': listId,
+    'uid': uid,
+    // **`name` ではなく `wireName`。** 今はたまたま同じ値だが、
+    // Firestore に入る文字列を決めているのは `wireName` のほう。
+    'role': role.wireName,
+  });
+
   /// 退会する（仕様書 3.5）。
   ///
   /// 投稿・履歴は残り、表示名だけ「退会したユーザー」になる。

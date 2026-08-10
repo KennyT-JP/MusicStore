@@ -10,6 +10,7 @@ import { onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
 import { shouldResetNotice, shouldResetWarning } from '../domain/quota';
+import { isAssignableRole } from '../domain/roles';
 import { requireSiteAdmin, requireString } from './access';
 import { fail } from '../errors';
 
@@ -159,6 +160,71 @@ export const assignListAdmin = onCall({ region: REGION }, async (request) => {
       addedBy: actorUid,
     });
   }
+
+  return { ok: true };
+});
+
+/**
+ * サイト管理者が、ユーザーをリストのメンバーに加える（仕様書 5.7）。
+ *
+ * **なぜ要るか。** これまで人がリストに入る道は3つで、いずれも
+ * **入る側か、そのリストの管理者の操作**を要した——参加申請（5.2）・
+ * 共有リンク（3.3）・管理者不在時の指名（5.6）。**運営が「この人を
+ * このリストに入れておく」ことができなかった**。
+ *
+ * **役割は呼び出し側が渡す。** 既定を決め打ちにしない——加える人が
+ * 曲を足せるのか見るだけなのかは、加える側が知っていることで、
+ * こちらが推測してよいものではない。付けてよいのは Super User と
+ * Read Only だけ（`isAssignableRole`）。**リスト管理者にはできない**
+ * ——それは [assignListAdmin]（5.6）の仕事で、意味も条件も違う。
+ *
+ * **すでにメンバーなら断る。** 役割の上げ下げはリスト管理者の仕事
+ * （5.4）で、ここで黙って書き換えると、**リスト管理者が決めた役割を
+ * サイト管理者が知らずに巻き戻す**ことが起きる。
+ */
+export const addListMember = onCall({ region: REGION }, async (request) => {
+  const actorUid = requireSiteAdmin(request);
+  const listId = requireString(request.data, 'listId', { maxLength: 200 });
+  const targetUid = requireString(request.data, 'uid', { maxLength: 200 });
+  const role = (request.data as Record<string, unknown> | undefined)?.role;
+  if (!isAssignableRole(role)) {
+    throw fail('invalid-argument', 'roleNotAllowed');
+  }
+
+  const db = getFirestore();
+
+  const list = await db.doc(paths.list(listId)).get();
+  if (!list.exists) {
+    throw fail('not-found', 'listNotFound');
+  }
+
+  // **Auth と Firestore の両方を見る。** 無効化は Auth 側、退会は
+  // Firestore 側にあり、片方だけ見ると**もう片方の状態の人が入れる**。
+  const user = await getAuth().getUser(targetUid).catch(() => null);
+  if (!user) {
+    throw fail('not-found', 'userNotFound');
+  }
+  if (user.disabled) {
+    throw fail('failed-precondition', 'userDisabled');
+  }
+  const profile = await db.doc(paths.user(targetUid)).get();
+  if (profile.get('isWithdrawn') === true) {
+    throw fail('failed-precondition', 'userWithdrawn');
+  }
+
+  const memberRef = db.doc(paths.listMember(listId, targetUid));
+  if ((await memberRef.get()).exists) {
+    throw fail('already-exists', 'alreadyMember');
+  }
+
+  await memberRef.set({
+    // uid を必ず入れる（理由は assignListAdmin のコメント）。
+    uid: targetUid,
+    role,
+    via: 'assigned',
+    joinedAt: FieldValue.serverTimestamp(),
+    addedBy: actorUid,
+  });
 
   return { ok: true };
 });

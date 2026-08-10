@@ -758,6 +758,57 @@ if (!listId) {
   check('指名した行に uid が入る', sv(promoted, 'uid') === joiner.localId,
         String(sv(promoted, 'uid')));
 
+  // --- サイト管理者がメンバーに加える（5.7） ---
+  //
+  // **役割を渡せること・渡せない役割を断ること・二重に入れないこと**の3点。
+  // 「200 が返る」だけでは、役割が無視されていても緑になる。
+  const added = await signUp('added');
+  r = await call('addListMember',
+                 { listId, uid: added.localId, role: 'readOnly' },
+                 siteAdmin.idToken);
+  check('サイト管理者はメンバーに加えられる（5.7）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  const addedMember = await doc(`lists/${listId}/members/${added.localId}`);
+  check('渡した役割で入る（readOnly）', sv(addedMember, 'role') === 'readOnly',
+        String(sv(addedMember, 'role')));
+  check('加えた行にも uid が入る', sv(addedMember, 'uid') === added.localId,
+        String(sv(addedMember, 'uid')));
+
+  // **リスト管理者にはできない。** それは assignListAdmin の仕事で、
+  // ここから付けられると「管理者不在」の判定を回り込める。
+  r = await call('addListMember',
+                 { listId, uid: added.localId, role: 'listAdmin' },
+                 siteAdmin.idToken);
+  check('listAdmin は付けられない（5.7）',
+        r.body?.error?.details?.code === 'roleNotAllowed',
+        JSON.stringify(r.body?.error?.details ?? r.body).slice(0, 80));
+
+  // **すでにメンバーなら断る。** 黙って上書きすると、リスト管理者が
+  // 決めた役割をサイト管理者が知らずに巻き戻す（5.4）。
+  r = await call('addListMember',
+                 { listId, uid: added.localId, role: 'superUser' },
+                 siteAdmin.idToken);
+  check('すでにメンバーなら断る（5.7）',
+        r.body?.error?.details?.code === 'alreadyMember',
+        JSON.stringify(r.body?.error?.details ?? r.body).slice(0, 80));
+
+  const unchanged = await doc(`lists/${listId}/members/${added.localId}`);
+  check('断ったとき役割は変わっていない', sv(unchanged, 'role') === 'readOnly',
+        String(sv(unchanged, 'role')));
+
+  // **サイト管理者でなければ呼べない。**
+  // **トークンを持つ変数で呼ぶ。** この場面の `joiner` は listSiteUsers から
+  // 作り直した `{localId}` だけの入れ物で、`idToken` を持たない。それで呼ぶと
+  // 返るのは signInRequired（未ログイン）で、**確かめたい siteAdminOnly を
+  // 一度も通らずに緑になる**（docs/AUDIT-CHECKLIST.md 観点4・同じ罠を再度踏んだ）。
+  r = await call('addListMember',
+                 { listId, uid: siteAdmin.localId, role: 'readOnly' },
+                 added.idToken);
+  check('サイト管理者でなければ加えられない（5.7）',
+        r.body?.error?.details?.code === 'siteAdminOnly',
+        JSON.stringify(r.body?.error?.details ?? r.body).slice(0, 80));
+
   // --- 退会（3.5） ---
   //
   // **参加が成立したことを確かめてから退会させる。** 申請か承認が失敗して
