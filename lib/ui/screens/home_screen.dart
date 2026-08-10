@@ -143,11 +143,19 @@ class _ListCard extends ConsumerWidget {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(
-                    // 削除済みは件数に含めない。
-                    l10n.itemCount(stats.value?.itemCount ?? 0),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  // **届くまで件数を出さない（2026-08-11）。**
+                  //
+                  // 以前は `?? 0` で既定に倒しており、開いた直後の数秒は
+                  // **中身があるのに「0件」と言い切って**いた。
+                  // 「空である」と「まだ取れていない」は別のことで、
+                  // 0 と書くと前者にしか読めない
+                  // （docs/AUDIT-CHECKLIST.md 観点 2）。
+                  if (stats.value case final s?)
+                    Text(
+                      // 削除済みは件数に含めない。
+                      l10n.itemCount(s.itemCount),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   if (entry.list.hasNoAdmin)
                     Chip(
                       visualDensity: VisualDensity.compact,

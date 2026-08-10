@@ -1,17 +1,27 @@
-# 引き継ぎ（2026-08-09 時点）
+# 引き継ぎ（2026-08-10 時点）
 
 **この文書は、担当を交代する人が最初に読むものです。**
 いま何が終わっていて、次に何をすればよいかを、判断の理由つきで残します。
 
 - 対象ブランチ：**本番は `main`、検証環境は `dev`**（2026-08-08 に再編。旧 `claude/attachment-continuation-ryb7wv` は `dev` に改名）
-- **2026-08-09 の版までは検証環境・本番環境に配信済みです。**
-  その後 `dev` に積まれたコミットは未配信で、**`dev` が先行しています**（1 節）
+- **2026-08-10 の版が検証環境・本番環境の両方に入っています**（1 節）
 - 詳しい経緯：[DEVLOG.md](DEVLOG.md) — 同じ失敗を繰り返さないための記録
 - **依頼者とのやりとりの原文**：[CONVERSATION-LOG.md](CONVERSATION-LOG.md)
   — 要約では落ちる言い回しを確かめたいときに
-- **直近の監査**：[第 3 回（2026-08-07）](AUDIT-2026-08-07.md) — 未着手の積み残しもここに
-- 仕様：[MusicListApp_Spec.md](MusicListApp_Spec.md)（v1.8）
+- **直近の監査**：[第 4 回（2026-08-10）](AUDIT-2026-08-10.md) — 未着手の積み残しもここに
+- 仕様：[MusicListApp_Spec.md](MusicListApp_Spec.md)（v1.10）
 - 手順：[SETUP.md](SETUP.md)
+
+## 2026-08-10 に入ったもの（要点）
+
+| 何を | どこに書いてあるか |
+| --- | --- |
+| **第 4 回ゼロベース監査**と、その対処 40 件超 | [AUDIT-2026-08-10.md](AUDIT-2026-08-10.md) |
+| 共有リンクで**メンバーになると Super User**（Read Only から戻した） | 仕様 3.3（v1.9） |
+| **サイト管理者がユーザーをリストのメンバーに加えられる**（別チームの実装） | 仕様 5.7（v1.10） |
+| スマホのユーザー一覧で**名前が縦一列に潰れる**のを修正 | DEVLOG 2026-08-10 |
+| サイト管理の入口が**画面を移るまで出ない**のを修正 | DEVLOG 2026-08-10 |
+| 検証の高速化（7〜8 分 → 約 3 分） | DEVLOG 2026-08-09 |
 
 ## 2026-08-08〜09 に入ったもの（要点）
 
@@ -59,13 +69,14 @@
 
 | 環境 | プロジェクト ID | URL | 状態 |
 | --- | --- | --- | --- |
-| 検証 | `music-storage-dev` | <https://music-storage-dev.web.app> | 配信済み（2026-08-09 の版。git タグ `deploy/staging`） |
-| 本番 | `music-storage-d79b2` | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-09 の版。git タグ `deploy/prod`） |
+| 検証 | `music-storage-dev` | <https://music-storage-dev.web.app> | 配信済み（2026-08-10 の版。git タグ `deploy/staging`） |
+| 本番 | `music-storage-d79b2` | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-10 の版。git タグ `deploy/prod`） |
 
-**`dev` が先行しています。** 2026-08-09 の版までは両環境に入っていますが、
-その後 `dev` に積まれたコミット（テストの高速化・文書の実態合わせなど）は未配信です。
+**2026-08-10 時点で、両環境とも同じ内容が入っています。**
 配信の順序は「検証環境へ配信 → 依頼者の確認 → `main` へマージして本番へ」です（4.4 節）。
-どこまで配信済みかは git タグ `deploy/staging` / `deploy/prod` が正確に指しています。
+**どこまで配信済みかは、この表ではなく git タグ `deploy/staging` /
+`deploy/prod` が正確に指しています。** 文書の日付は書き換え忘れが起きるので、
+迷ったらタグを見てください（`git log --oneline -1 deploy/prod`）。
 
 ### テストの実行（2026-08-08 に並列 1 コマンドへ作り直しました）
 
@@ -80,9 +91,9 @@ scripts\check.cmd        （Windows）
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 304 |
+| `flutter test` | 311 |
 | `functions` の単体テスト | 85 |
-| `functions` の統合テスト | 89 |
+| `functions` の統合テスト | 96 |
 | セキュリティルール | 130（Firestore 114・Storage 13・見張り 3） |
 
 **全部緑になると、そのコミットの ID が `.last-check.json` に残ります。**
@@ -140,7 +151,7 @@ scripts\check.cmd        （Windows）
 | — | 配信しても新しいアイコンが出ない不具合 | `firebase.json` のキャッシュ指定 | `7917450` |
 | — | 音として鳴らせるファイルにだけ再生ボタンを出す | `isPlayableAudio`（画像に出て失敗していた） | `7917450` |
 | — | 引き継ぎ文書の作成と、文書一式の実態合わせ | この文書ほか | `ed5a868` |
-| — | `internal` の復旧手順を onCall だけに絞る（当時 15 件・現在 19 件） | Cloud Shell 用の一括コマンド | `186e686` |
+| — | `internal` の復旧手順を onCall だけに絞る（当時 15 件・現在 20 件） | Cloud Shell 用の一括コマンド | `186e686` |
 | — | 再生できない理由を「詳細」で読めるようにする | `play()` を待たない／URL を覚える | `ca48419` |
 | — | 失敗の知らせを 15 秒に | 4 秒では押しそこねる | `b1377c1` |
 | — | 知らせが 1 つも出ない欠陥の修正 | 画面で 1 か所だけ受ける | `154f0f8` |
@@ -266,7 +277,7 @@ Firebase CLI は関数を**新規作成したときだけ**この設定を入れ
 
 **直し方は [SETUP.md](SETUP.md) の「呼び出し可能関数が `internal` で失敗するとき」にあります。**
 Cloud Shell から `gcloud functions add-invoker-policy-binding` を
-**onCall の 19 件**に対して実行するのが早く、関数を止めずに済みます。
+**onCall の 20 件**に対して実行するのが早く、関数を止めずに済みます。
 トリガーと定期実行は利用者が直接呼ばないので、対象外です。
 
 **確かめ方：** Cloud Functions のログに次が出ていれば、この原因で確定です。
@@ -365,7 +376,7 @@ firebase projects:list   → music-storage-dev / music-storage-d79b2 の両方�
 | 確かめること | 状況 |
 | --- | --- |
 | 共有リンクの新しい版が本番に載っている | **確認済み。** 配信済みの `main.dart.js` に `/s/:linkId` があり、旧 `/invite/` は 0 件 |
-| `onCall` の呼び出し許可（Cloud Run の `allUsers`） | **確認済み。** onCall **19 件すべて**に `roles/run.invoker` が `allUsers` で付いている（2026-08-09 にユーザー管理の 4 本を追加したあとも確認） |
+| `onCall` の呼び出し許可（Cloud Run の `allUsers`） | **確認済み。** onCall **20 件すべて**に `roles/run.invoker` が `allUsers` で付いている（2026-08-10 に addListMember を追加したあとも確認） |
 | 曲の ▶ で**実際に音が鳴る** | **未確認。** 画面を操作しないと確かめられません |
 
 > **呼び出し許可は、いまは配信スクリプトが自動で付けます。**

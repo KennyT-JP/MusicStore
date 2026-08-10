@@ -43,7 +43,7 @@
         ]
       },
       {
-        "//": "② main.dart.js などのビルド成果物。内容が変わればファイルも作り直されるが、名前は同じなので短めにして更新を取りこぼさないようにする。flutter_service_worker.js などの例外は ③ が後勝ちで上書きする。",
+        "//": "② js と json のうち、名前が変わらず中身も変わらないもの（CanvasKit など）。**アプリ本体 main.dart.js はここに含めない**——③ が後勝ちで no-cache にする。",
         "source": "**/*.@(js|json)",
         "headers": [
           {
@@ -54,7 +54,8 @@
       },
       {
         "//": "③ 絶対に溜め込ませないもの。**必ず ② より後ろに置く**（上の js/json ブロックにも一致するため、前に置くと max-age=3600 に上書きされて無効になる）。ここをキャッシュすると、更新しても古い版が表示され続ける。",
-        "source": "/@(index.html|flutter_service_worker.js|flutter_bootstrap.js|version.json)",
+        "//2": "**main.dart.js をここに入れた（2026-08-11）。** アプリ本体そのもので、名前は変わらないのに配信のたびに中身が変わる。② に置いていたため、**配信しても最大 1 時間は古いアプリが動き続けた**（実機で確認。直したはずの画面が直らず、原因を配信物ではなくコードに探しかけた）。index.html と flutter_bootstrap.js だけ no-cache にしても、本体が古いままでは意味が無い。no-cache は「毎回確かめる」であって「毎回 4MB 落とす」ではない——中身が同じなら 304 が返るだけ。",
+        "source": "/@(index.html|main.dart.js|flutter_service_worker.js|flutter_bootstrap.js|version.json)",
         "headers": [
           {
             "key": "Cache-Control",
