@@ -95,12 +95,20 @@ String? _effectiveCacheControl(String path) {
 
 void main() {
   group('キャッシュ指定（後勝ちで計算した実効値）', () {
-    test('index.html・SW・bootstrap・version.json は溜め込まない', () {
+    test('index.html・本体・SW・bootstrap・version.json は溜め込まない', () {
       // SW と bootstrap は `**/*.@(js|json)` にも一致する。no-cache の
       // ブロックが前にあると max-age=3600 に上書きされて無効になる
       // （実際に本番で起きた並び）。実効値で確かめる。
+      //
+      // **main.dart.js を含める（2026-08-11）。** アプリ本体そのもので、
+      // 名前は変わらないのに配信のたびに中身が変わる。1 時間の
+      // max-age を与えていたため、**配信しても古いアプリが動き続けた**
+      // （実機で確認。直したはずの画面が直らなかった）。
+      // index.html と bootstrap だけ no-cache にしても、本体が古ければ
+      // 意味が無い。
       for (final path in [
         'index.html',
+        'main.dart.js',
         'flutter_service_worker.js',
         'flutter_bootstrap.js',
         'version.json',
@@ -167,10 +175,12 @@ void main() {
     test('中身の変わらない資産（NotoSansJP・画像）は 1 時間まで置いてよい', () {
       // ここまで no-cache にすると転送量が無駄に増える。包括の `**` が
       // 資産のブロックまで塗り潰していないことを確かめる。
+      // **ここに main.dart.js を入れてはいけない。** 配信のたびに中身が
+      // 変わるので、上の「溜め込まない」側が受け持つ。
       for (final path in [
         'assets/assets/fonts/NotoSansJP-400.ttf',
         'brand/png/icon-192.png',
-        'main.dart.js',
+        'canvaskit/canvaskit.js',
       ]) {
         final value = _effectiveCacheControl(path)!;
         final maxAge = RegExp(r'max-age=(\d+)').firstMatch(value);
