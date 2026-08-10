@@ -426,17 +426,18 @@ if (!listId) {
   check('リンクから参加できる', r.body?.result?.listId === listId, JSON.stringify(r.body).slice(0, 120));
 
   const im = await doc(`lists/${listId}/members/${invitee.localId}`);
-  check('参加すると Read Only で入る（INITIAL_JOIN_ROLE）', sv(im, 'role') === 'readOnly',
+  check('参加すると Super User で入る（INITIAL_JOIN_ROLE）', sv(im, 'role') === 'superUser',
         sv(im, 'role'));
 
   // 役割を渡して作ったリンクでも、結果は変わらない。
   // ここで listAdmin が付いていたら、リンクからリスト管理者を作れてしまう。
+  // **リンクに何を書いても、役割はサーバー側の 1 か所が決める**（3.3）。
   const ignoredUser = await signUp('ign');
   r = await call('acceptShareLink', { linkId: ignored, mode: 'join' }, ignoredUser.idToken);
   check('渡した役割は効かない', r.status === 200, r.body?.error?.status);
   const ignoredMember = await doc(`lists/${listId}/members/${ignoredUser.localId}`);
-  check('リンクからは Read Only より上にならない', sv(ignoredMember, 'role') === 'readOnly',
-        sv(ignoredMember, 'role'));
+  check('リンクに書いた役割（listAdmin）は使われない',
+        sv(ignoredMember, 'role') === 'superUser', sv(ignoredMember, 'role'));
 
   // --- 何度でも・複数人（3.3） ---
   // **ここが以前と逆になっている。** 以前は「二度目は使えない」ことを
@@ -447,7 +448,7 @@ if (!listId) {
         r.body?.error?.message ?? r.body?.error?.status);
 
   const im2 = await doc(`lists/${listId}/members/${second.localId}`);
-  check('2 人目も Read Only で入る', sv(im2, 'role') === 'readOnly', sv(im2, 'role'));
+  check('2 人目も Super User で入る', sv(im2, 'role') === 'superUser', sv(im2, 'role'));
 
   // 同じ人が二度開いても弾かれない。
   r = await call('acceptShareLink', { linkId, mode: 'join' }, second.idToken);
@@ -840,7 +841,7 @@ if (!listId) {
   await waitUntil(async () =>
     (await itemAdded(invitee.localId)) && (await itemAdded(joiner.localId)));
 
-  // invitee はリンクから入った Read Only、joiner はこの時点で listAdmin。
+  // invitee はリンクから入った Super User、joiner はこの時点で listAdmin。
   // **通知は役割で絞らない（10.2）。** メンバーなら届く。
   check('参加しているだけの人にも届く（10.2）', await itemAdded(invitee.localId));
   check('リスト管理者にも届く（10.2）', await itemAdded(joiner.localId));

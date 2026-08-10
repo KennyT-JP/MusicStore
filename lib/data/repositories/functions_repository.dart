@@ -125,7 +125,7 @@ class FunctionsRepository {
   /// **役割は指定できない。** リンクは 1 種類だけで、受け取った人が
   /// 「参加する」か「参加せずに見る」かを選ぶ。参加した人の役割は
   /// サーバーが決める（`functions/src/domain/roles.ts` の
-  /// `INITIAL_JOIN_ROLE`）。
+  /// `INITIAL_JOIN_ROLE`。「メンバーになる」を選んだ人は Super User）。
   Future<String> createShareLink({
     required String listId,
     String? itemId,

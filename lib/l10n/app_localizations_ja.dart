@@ -824,7 +824,7 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get shareLinkJoinBody =>
-      'メンバーになります。メンバー一覧に名前が出て、曲が追加されると通知が届きます。役割によっては曲やコメントを追加できます。';
+      'メンバーになります。曲やコメントを追加できます。メンバー一覧に名前が出て、曲が追加されると通知が届きます。';
 
   @override
   String get shareLinkViewTitle => 'リストのメンバーにならずに見る';
