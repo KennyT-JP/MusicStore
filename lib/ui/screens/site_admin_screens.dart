@@ -956,7 +956,16 @@ class _SiteUserTile extends ConsumerWidget {
   /// どのみち食い違う。**サーバーが断り、その理由をここで出す。**
   Future<void> _addToList(BuildContext context, WidgetRef ref) async {
     final l10n = AppL10n.of(context);
-    final lists = ref.read(allListsProvider).value ?? const <MusicList>[];
+
+    // **届くまで待つ（`.value` で読まない）。**
+    // この画面（/admin/users）は直接開ける。サイト管理のホームを
+    // 経由していないとリストの購読が始まっておらず、`.value` は
+    // まだ null になる。既定の空リストへ倒れると、**リストがあるのに
+    // 「リストがありません」と出て、二度目に押すと出る**——原因の
+    // 分かりにくい出方になる。同じファイルの利用者一覧（`.future`）と
+    // 揃える。
+    final lists = await ref.read(allListsProvider.future);
+    if (!context.mounted) return;
 
     if (lists.isEmpty) {
       ScaffoldMessenger.of(
