@@ -209,8 +209,8 @@ export const createShareLink = onCall({ region: REGION }, async (request) => {
  *
  * 受け取った人は 2 つから選ぶ。
  *
- * - `join`：そのリストの**メンバーになる**。役割は一番低いところから始まる
- *   （`INITIAL_JOIN_ROLE`。リンクは役割を持たない）
+ * - `join`：そのリストの**メンバーになる**。役割は `INITIAL_JOIN_ROLE`
+ *   （リンクの中身は見ない。リンクは役割を持たない）
  * - `view`：**メンバーにはならず**、中身を見るだけ
  *
  * `view` を選んだ人は `lists/{listId}/viewers/{uid}` に入る。

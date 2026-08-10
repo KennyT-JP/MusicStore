@@ -1564,7 +1564,7 @@ abstract class AppL10n {
   /// No description provided for @shareLinkJoinBody.
   ///
   /// In ja, this message translates to:
-  /// **'メンバーになります。メンバー一覧に名前が出て、曲が追加されると通知が届きます。役割によっては曲やコメントを追加できます。'**
+  /// **'メンバーになります。曲やコメントを追加できます。メンバー一覧に名前が出て、曲が追加されると通知が届きます。'**
   String get shareLinkJoinBody;
 
   /// No description provided for @shareLinkViewTitle.

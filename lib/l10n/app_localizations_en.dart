@@ -865,7 +865,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get shareLinkJoinBody =>
-      'You become a member. Your name appears in the member list and you are notified when tracks are added. Depending on your role you can add tracks and comments.';
+      'You become a member. You can add tracks and comments. Your name appears in the member list and you are notified when tracks are added.';
 
   @override
   String get shareLinkViewTitle => 'View without becoming a member';
