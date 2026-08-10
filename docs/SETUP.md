@@ -272,7 +272,7 @@ Cloud Build の失敗などで途中まで進んだ場合、作成後の設定�
 > 配信ログの `create` / `update` を見れば予測できます。
 > 失敗した直後の再実行が `update` になっていたら、この症状を疑ってください。
 
-**対象は `onCall` の 19 件だけです。** トリガー（`onFileUploaded` など）と
+**対象は `onCall` の 20 件だけです。** トリガー（`onFileUploaded` など）と
 定期実行は利用者が直接呼ばないので、呼び出しの許可とは無関係です。
 消す必要はありません。
 
@@ -370,7 +370,7 @@ node scripts/backfill.mjs --project music-storage-dev --key /path/to/service-acc
 Build failed with status: FAILURE and message: An unexpected error occurred.
 ```
 
-**初回デプロイでよく起きます。** 27 個の関数のコンテナが一斉に組み立てられる一方で、
+**初回デプロイでよく起きます。** 28 個の関数のコンテナが一斉に組み立てられる一方で、
 置き場所（Artifact Registry のリポジトリ）はその最中に作られます。用意が整う前に
 始まった分が巻き添えで失敗するため、一部だけ成功して残りが落ちる、という形になります。
 
@@ -1003,7 +1003,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 304 件
+flutter test      # 311 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
 cd functions && npm test   # 85 件（サーバー側のドメインロジック・通知）
@@ -1064,7 +1064,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（89 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（96 件）。
 
 ```sh
 cd functions && npm run test:integration
