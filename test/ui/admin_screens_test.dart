@@ -373,5 +373,63 @@ void main() {
       expect(find.text('退会した人'), findsNothing);
       expect(find.text('サイト管理者にする'), findsNothing);
     });
+
+    // **スマホの幅で名前が潰れないこと（2026-08-10 の不具合）。**
+    //
+    // 行の右に名札 2 つとボタンを並べていたため、ListTile が名前へ渡す
+    // 幅がほぼ無くなり、**名前とメールアドレスが 1 文字ずつ改行されて
+    // 縦一列になった**。サイト管理者の行だけ名札が 1 つ多く、そこだけ
+    // 崩れて見えた（依頼者の報告・添付画像）。
+    //
+    // 「崩れていない」を目で見ずに確かめるため、**描かれた幅を測る**。
+    // 1 文字ずつ折り返されると幅は 1 文字ぶんまで縮むので、しきい値は
+    // それより十分に大きく取れば足りる。
+    testWidgets('狭い画面でも名前とメールが横に伸びる（14.1）', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            siteUsersProvider.overrideWith((ref) async => users(adminCount: 2)),
+          ],
+          child: _app(const SiteAdminUsersScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // サイト管理者の行（名札が多く、いちばん狭くなる）。
+      expect(tester.getSize(find.text('管理者')).width, greaterThan(80));
+      expect(
+        tester.getSize(find.text('admin@example.com')).width,
+        greaterThan(80),
+      );
+
+      // 名札とボタンは消さずに、名前の下へ回してある。
+      expect(find.text('サイト管理者'), findsWidgets);
+      expect(find.widgetWithText(TextButton, '管理者から外す'), findsWidgets);
+    });
+
+    testWidgets('広い画面では名札とボタンを行の右に置く（14.1）', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            siteUsersProvider.overrideWith((ref) async => users(adminCount: 2)),
+          ],
+          child: _app(const SiteAdminUsersScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 名札が名前より右にあれば、行の右側に並んでいる。
+      final name = tester.getTopLeft(find.text('管理者')).dx;
+      final badge = tester.getTopLeft(find.text('サイト管理者').first).dx;
+      expect(badge, greaterThan(name));
+    });
   });
 }
