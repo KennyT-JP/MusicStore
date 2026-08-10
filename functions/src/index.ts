@@ -62,6 +62,7 @@ export {
   listSiteUsers,
   setListQuota,
   assignListAdmin,
+  addListMember,
 } from './callable/site_management';
 export {
   createSiteUser,

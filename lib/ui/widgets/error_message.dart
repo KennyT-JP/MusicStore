@@ -167,6 +167,8 @@ String describeFunctionsError(
     'emailInvalid' => l10n.functionErrorEmailInvalid,
     'passwordTooShort' => l10n.functionErrorPasswordTooShort,
     'emailAlreadyInUse' => l10n.functionErrorEmailAlreadyInUse,
+    'userDisabled' => l10n.functionErrorUserDisabled,
+    'userWithdrawn' => l10n.functionErrorUserWithdrawn,
     'listNameTaken' => l10n.functionErrorListNameTaken(
       e.params['listName'] ?? '',
     ),

@@ -51,6 +51,8 @@ export const ERROR_CODES = [
   'emailInvalid',
   'passwordTooShort',
   'emailAlreadyInUse',
+  'userDisabled',
+  'userWithdrawn',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -90,6 +92,8 @@ const FALLBACK: Record<ErrorCode, string> = {
   emailInvalid: 'メールアドレスの形式が正しくありません。',
   passwordTooShort: 'パスワードは 6 文字以上で入力してください。',
   emailAlreadyInUse: 'このメールアドレスはすでに使われています。',
+  userDisabled: 'この利用者は無効にされています。先に有効に戻してください。',
+  userWithdrawn: 'この利用者は退会しています。',
 };
 
 /**

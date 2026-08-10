@@ -361,5 +361,33 @@
   "functionErrorShareLinkRevoked": "This link has been revoked.",
   "functionErrorItemNotFound": "Track not found.",
   "viewersTitle": "Viewing without joining",
-  "viewersEmpty": "No one yet."
+  "viewersEmpty": "No one yet.",
+  "addToList": "Add to a list",
+  "addToListTitle": "Add {name} to a list",
+  "@addToListTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addToListEmpty": "There are no lists yet.",
+  "addAs": "Add as {role}",
+  "@addAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "addToListDone": "Added to {list}",
+  "@addToListDone": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "functionErrorUserDisabled": "That user is disabled. Enable them first.",
+  "functionErrorUserWithdrawn": "That user has withdrawn."
 }

@@ -900,4 +900,32 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get viewersEmpty => 'No one yet.';
+
+  @override
+  String get addToList => 'Add to a list';
+
+  @override
+  String addToListTitle(String name) {
+    return 'Add $name to a list';
+  }
+
+  @override
+  String get addToListEmpty => 'There are no lists yet.';
+
+  @override
+  String addAs(String role) {
+    return 'Add as $role';
+  }
+
+  @override
+  String addToListDone(String list) {
+    return 'Added to $list';
+  }
+
+  @override
+  String get functionErrorUserDisabled =>
+      'That user is disabled. Enable them first.';
+
+  @override
+  String get functionErrorUserWithdrawn => 'That user has withdrawn.';
 }

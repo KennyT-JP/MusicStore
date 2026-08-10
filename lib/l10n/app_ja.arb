@@ -446,5 +446,33 @@
   "functionErrorShareLinkRevoked": "このリンクは取り消されています。",
   "functionErrorItemNotFound": "曲が見つかりません。",
   "viewersTitle": "参加せずに見ている人",
-  "viewersEmpty": "まだいません。"
+  "viewersEmpty": "まだいません。",
+  "addToList": "リストに追加",
+  "addToListTitle": "{name} をリストに追加",
+  "@addToListTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addToListEmpty": "リストがまだありません。",
+  "addAs": "追加：{role}",
+  "@addAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "addToListDone": "{list} に追加しました",
+  "@addToListDone": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "functionErrorUserDisabled": "この利用者は無効にされています。先に有効に戻してください。",
+  "functionErrorUserWithdrawn": "この利用者は退会しています。"
 }

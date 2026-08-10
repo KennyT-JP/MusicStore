@@ -13,6 +13,7 @@ import '../../data/models/requests.dart';
 import '../../data/repositories/functions_repository.dart';
 import '../../domain/quota.dart';
 import '../../domain/permissions.dart';
+import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
@@ -780,11 +781,22 @@ class _SiteUserTile extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => switch (value) {
+              'addToList' => _addToList(context, ref),
               'disable' => _confirmDisable(context, ref),
               'enable' => _confirmEnable(context, ref),
               _ => _confirmDelete(context, ref),
             },
             itemBuilder: (_) => [
+              // リストに加える（仕様書 5.7）。
+              //
+              // **退会した人と無効にした人には出さない。** サーバー側でも
+              // 断るが、押せてしまうと「なぜ失敗したのか」を押した後に
+              // 知ることになる。
+              if (!user.isWithdrawn && !isDisabled)
+                PopupMenuItem(
+                  value: 'addToList',
+                  child: Text(l10n.addToList),
+                ),
               if (isDisabled)
                 PopupMenuItem(value: 'enable', child: Text(l10n.enableUser))
               else
@@ -932,6 +944,96 @@ class _SiteUserTile extends ConsumerWidget {
           );
         }
       });
+
+  /// リストに加える（仕様書 5.7）。
+  ///
+  /// **リストを選ぶ → 役割を選ぶ**の2段。役割を既定にしないのは、
+  /// 加える人が曲を足せるのか見るだけなのかを、こちらが推測しては
+  /// いけないため（承認のとき・5.2 と同じ考え方）。
+  ///
+  /// **すでにメンバーかどうかは、ここでは調べない。** 調べるには
+  /// リストの数だけ読み取りが要るうえ、読んだ後に他の人が入れれば
+  /// どのみち食い違う。**サーバーが断り、その理由をここで出す。**
+  Future<void> _addToList(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final lists = ref.read(allListsProvider).value ?? const <MusicList>[];
+
+    if (lists.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.addToListEmpty)));
+      return;
+    }
+
+    final listId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l10n.addToListTitle(_name(l10n))),
+        children: [
+          // 数が増えても選べるように、高さを決めて中でスクロールさせる。
+          SizedBox(
+            width: 360,
+            height: 320,
+            child: ListView.builder(
+              itemCount: lists.length,
+              itemBuilder: (_, i) => ListTile(
+                title: Text(lists[i].name),
+                onTap: () => Navigator.of(dialogContext).pop(lists[i].id),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8, top: 4),
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancel),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (listId == null || !context.mounted) return;
+
+    final role = await showDialog<ListRole>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(lists.firstWhere((l) => l.id == listId).name),
+        content: Text(l10n.chooseApprovalRole),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ListRole.readOnly),
+            child: Text(l10n.addAs(l10n.roleReadOnly)),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(ListRole.superUser),
+            child: Text(l10n.addAs(l10n.roleSuperUser)),
+          ),
+        ],
+      ),
+    );
+    if (role == null || !context.mounted) return;
+
+    final name = lists.firstWhere((l) => l.id == listId).name;
+    await _run(context, ref, () async {
+      await ref
+          .read(functionsRepositoryProvider)
+          .addListMember(listId: listId, uid: user.uid, role: role);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.addToListDone(name))));
+      }
+    });
+  }
 
   Future<void> _run(
     BuildContext context,
