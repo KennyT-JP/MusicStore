@@ -51,6 +51,7 @@
  * 報告するだけで直していなかった。
  */
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -73,11 +74,31 @@ if (keyPath) {
   process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 }
 
+
+// gcloud で用意した資格情報（ADC）があれば、鍵のファイルは要らない。
+// firebase-admin の applicationDefault() が、この場所を自動で見る。
+const adcPath = process.platform === 'win32'
+  ? join(process.env.APPDATA ?? '', 'gcloud', 'application_default_credentials.json')
+  : join(process.env.HOME ?? '', '.config', 'gcloud', 'application_default_credentials.json');
+const hasAdc = existsSync(adcPath);
 const usingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
 if (!usingEmulator) {
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    console.error('サービスアカウント鍵が指定されていません。--key <鍵のパス> を付けてください。');
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !hasAdc) {
+    // **鍵のファイルを作らなくてもよい。**
+    // `gcloud auth application-default login` を一度実行しておけば、
+    // その資格情報を firebase-admin が自動で拾う（applicationDefault）。
+    // 長く残る鍵をパソコンに置かずに済むので、こちらを先に案内する。
+    console.error('この操作には、プロジェクトを操作できる資格情報が要ります。');
+    console.error('');
+    console.error('  【おすすめ】鍵のファイルを作らない方法');
+    console.error('    gcloud auth application-default login');
+    console.error('    （ブラウザが開くので、プロジェクトを操作できる Google アカウントで許可します）');
+    console.error('');
+    console.error('  【別の方法】サービスアカウントの鍵を使う');
+    console.error('    Firebase コンソール → プロジェクトの設定 → サービス アカウント');
+    console.error('    → 「新しい秘密鍵の生成」で JSON を保存し、--key <保存先> を付けます');
+    console.error('    **その JSON は誰にも渡さず、リポジトリにも置かないでください。**');
     process.exit(1);
   }
   if (!projectId) {
