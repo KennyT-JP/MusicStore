@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../domain/help_links.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/app_providers.dart';
 import '../../routes.dart';
@@ -77,6 +78,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final auth = ref.watch(authRepositoryProvider);
 
     return AuthScaffold(
+      helpTopic: HelpTopic.signIn,
       title: l10n.signIn,
       busy: _busy,
       child: Column(

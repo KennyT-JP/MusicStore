@@ -6,20 +6,26 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/help_links.dart';
 import '../../env/app_environment.dart';
 import '../../l10n/app_localizations.dart';
 import 'brand_logo.dart';
+import 'help_button.dart';
 
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
     required this.title,
     required this.child,
+    required this.helpTopic,
     this.busy = false,
   });
 
   final String title;
   final Widget child;
+
+  /// 右上のヘルプが開く節（14.2）。
+  final HelpTopic helpTopic;
 
   /// 処理中はローディングを重ねて二重送信を防ぐ。
   final bool busy;
@@ -32,6 +38,15 @@ class AuthScaffold extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
+          // **使い方への入口を、ここにも置く**（14.2）。
+          // 登録や確認メールでつまずく人が最初に見る画面で、
+          // ここに導線が無いと、どこにも聞きに行けない。
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: HelpButton(topic: helpTopic),
+            ),
+          ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(

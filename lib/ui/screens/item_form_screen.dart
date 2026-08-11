@@ -15,11 +15,13 @@ import '../../data/models/list_item.dart';
 import '../../data/repositories/item_repository.dart';
 import '../../domain/local_date.dart';
 import '../../domain/quota.dart';
+import '../../domain/help_links.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
+import '../widgets/help_button.dart';
 
 class ItemFormScreen extends ConsumerStatefulWidget {
   const ItemFormScreen({super.key, required this.listId, this.itemId});
@@ -157,6 +159,8 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
           onPressed: _busy ? null : () => _close(),
         ),
         title: Text(_isEditing ? l10n.editItem : l10n.addItem),
+        // この画面はシェルの外にあるため、上部バーのヘルプが無い（14.4）。
+        actions: const [HelpButton(topic: HelpTopic.itemForm)],
         bottom: TabBar(
           controller: _tabs,
           tabs: [

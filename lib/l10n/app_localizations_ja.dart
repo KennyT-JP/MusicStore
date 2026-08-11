@@ -290,6 +290,9 @@ class AppL10nJa extends AppL10n {
   String get showDetails => '詳細';
 
   @override
+  String get help => '使い方';
+
+  @override
   String get close => '閉じる';
 
   @override

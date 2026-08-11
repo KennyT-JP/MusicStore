@@ -5,6 +5,8 @@
 - アプリ名：**音源創庫**（英語表示では **Track Cabinet**）。2026-08-08 に「音楽リスト」から改名
 
 - **作業の決めごと**：[CLAUDE.md](CLAUDE.md) — **配信の前には必ずテストを全件通す**
+- **使い方（利用者向け）**：`web/help/ja/index.html`／`web/help/en/index.html`
+  — 配信先では `/help/ja/`・`/help/en/`。**各画面の右上のヘルプから、その画面の節へ飛びます**
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
@@ -177,7 +179,7 @@ scripts\check.cmd        :: Windows
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準** |
-| `flutter test` | 321 |
+| `flutter test` | 329 |
 | `functions` の単体テスト | 85（サーバー側のドメインロジック・通知） |
 | `functions` の統合テスト | 96（エミュレータで通し確認） |
 | セキュリティルール | 130（Firestore 114・Storage 13・書き方の見張り 3） |

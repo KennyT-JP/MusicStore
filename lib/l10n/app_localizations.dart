@@ -631,6 +631,12 @@ abstract class AppL10n {
   /// **'詳細'**
   String get showDetails;
 
+  /// No description provided for @help.
+  ///
+  /// In ja, this message translates to:
+  /// **'使い方'**
+  String get help;
+
   /// No description provided for @close.
   ///
   /// In ja, this message translates to:
