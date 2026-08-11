@@ -179,7 +179,7 @@ scripts\check.cmd        :: Windows
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準** |
-| `flutter test` | 329 |
+| `flutter test` | 336 |
 | `functions` の単体テスト | 85（サーバー側のドメインロジック・通知） |
 | `functions` の統合テスト | 96（エミュレータで通し確認） |
 | セキュリティルール | 130（Firestore 114・Storage 13・書き方の見張り 3） |
