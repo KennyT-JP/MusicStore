@@ -33,6 +33,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   bool _busy = false;
   String? _error;
 
+  /// 原因が 1 つに絞れないときだけ入る、技術的な内容。
+  String? _errorDetail;
+
   @override
   void dispose() {
     _name.dispose();
@@ -45,13 +48,24 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorDetail = null;
     });
     try {
       await action();
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = describeAuthError(context, e));
-    } catch (_) {
-      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+      if (mounted) {
+        setState(() {
+          _error = describeAuthError(context, e);
+          _errorDetail = authErrorDetail(e);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = AppL10n.of(context).errorGeneric;
+          _errorDetail = '$error';
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -69,7 +83,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_error != null) ...[
-            ErrorMessage(_error!),
+            ErrorMessage(_error!, detail: _errorDetail),
             const SizedBox(height: 16),
           ],
           FilledButton.tonalIcon(

@@ -28,6 +28,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   bool _sent = false;
   String? _error;
 
+  /// 原因が 1 つに絞れないときだけ入る、技術的な内容。
+  String? _errorDetail;
+
   @override
   void dispose() {
     _email.dispose();
@@ -39,6 +42,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorDetail = null;
     });
     try {
       await ref
@@ -54,10 +58,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       if (e.code == 'user-not-found') {
         if (mounted) setState(() => _sent = true);
       } else if (mounted) {
-        setState(() => _error = describeAuthError(context, e));
+        setState(() {
+          _error = describeAuthError(context, e);
+          _errorDetail = authErrorDetail(e);
+        });
       }
-    } catch (_) {
-      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = AppL10n.of(context).errorGeneric;
+          _errorDetail = '$error';
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -88,7 +100,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_error != null) ...[
-                    ErrorMessage(_error!),
+                    ErrorMessage(_error!, detail: _errorDetail),
                     const SizedBox(height: 16),
                   ],
                   TextFormField(

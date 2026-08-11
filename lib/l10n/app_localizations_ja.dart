@@ -219,6 +219,17 @@ class AppL10nJa extends AppL10n {
   String get authNetworkFailed => 'ネットワークに接続できませんでした。通信状況をご確認ください。';
 
   @override
+  String get authPopupBlocked =>
+      'ログイン用のウィンドウがブラウザにブロックされました。このサイトのポップアップを許可してから、もう一度お試しください。';
+
+  @override
+  String get authProviderDisabled => 'この方法でのログインは、いま利用できません。管理者にお問い合わせください。';
+
+  @override
+  String get authUnauthorizedDomain =>
+      'このアドレスからはログインできない設定になっています。管理者にお問い合わせください。';
+
+  @override
   String get requestSubmitted => '申請しました。';
 
   @override

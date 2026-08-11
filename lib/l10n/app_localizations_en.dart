@@ -227,6 +227,18 @@ class AppL10nEn extends AppL10n {
       'Could not reach the network. Please check your connection.';
 
   @override
+  String get authPopupBlocked =>
+      'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+
+  @override
+  String get authProviderDisabled =>
+      'This sign-in method is not available right now. Please contact an administrator.';
+
+  @override
+  String get authUnauthorizedDomain =>
+      'Sign-in is not allowed from this address. Please contact an administrator.';
+
+  @override
   String get requestSubmitted => 'Request submitted.';
 
   @override

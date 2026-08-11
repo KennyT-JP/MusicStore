@@ -493,6 +493,24 @@ abstract class AppL10n {
   /// **'ネットワークに接続できませんでした。通信状況をご確認ください。'**
   String get authNetworkFailed;
 
+  /// No description provided for @authPopupBlocked.
+  ///
+  /// In ja, this message translates to:
+  /// **'ログイン用のウィンドウがブラウザにブロックされました。このサイトのポップアップを許可してから、もう一度お試しください。'**
+  String get authPopupBlocked;
+
+  /// No description provided for @authProviderDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'この方法でのログインは、いま利用できません。管理者にお問い合わせください。'**
+  String get authProviderDisabled;
+
+  /// No description provided for @authUnauthorizedDomain.
+  ///
+  /// In ja, this message translates to:
+  /// **'このアドレスからはログインできない設定になっています。管理者にお問い合わせください。'**
+  String get authUnauthorizedDomain;
+
   /// No description provided for @requestSubmitted.
   ///
   /// In ja, this message translates to:
