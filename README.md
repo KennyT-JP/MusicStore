@@ -5,7 +5,8 @@
 - アプリ名：**音源創庫**（英語表示では **Track Cabinet**）。2026-08-08 に「音楽リスト」から改名
 
 - **作業の決めごと**：[CLAUDE.md](CLAUDE.md) — **配信の前には必ずテストを全件通す**
-- **引き継ぎ**：[docs/HANDOVER.md](docs/HANDOVER.md) — **担当を交代する人はここから**
+- **使い方（利用者向け）**：`web/help/ja/index.html`／`web/help/en/index.html`
+  — 配信先では `/help/ja/`・`/help/en/`。**各画面の右上のヘルプから、その画面の節へ飛びます**
 - **仕様書**：[docs/MusicListApp_Spec.md](docs/MusicListApp_Spec.md)
 - **セットアップ手順**：[docs/SETUP.md](docs/SETUP.md)
 - **開発ログ**：[docs/DEVLOG.md](docs/DEVLOG.md) — つまずいた点と、そう決めた理由
@@ -178,7 +179,7 @@ scripts\check.cmd        :: Windows
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準** |
-| `flutter test` | 311 |
+| `flutter test` | 329 |
 | `functions` の単体テスト | 85（サーバー側のドメインロジック・通知） |
 | `functions` の統合テスト | 96（エミュレータで通し確認） |
 | セキュリティルール | 130（Firestore 114・Storage 13・書き方の見張り 3） |
@@ -220,9 +221,10 @@ scripts\check.cmd        :: Windows
 | 検証 | <https://music-storage-dev.web.app> | 配信済み（2026-08-09 の版） |
 | 本番 | <https://music-storage-d79b2.web.app> | 配信済み（2026-08-09 の版） |
 
-**`dev` には配信後のコミットが先行しています**（未配信の差分あり）。
-配信の順序は「検証環境 → 依頼者の確認 → 本番」です。次に何をすればよいかは
-[docs/HANDOVER.md](docs/HANDOVER.md) にまとめてあります。
+配信の順序は「検証環境 → 依頼者の確認 → 本番」です。
+**どこまで配信済みかは、git タグ `deploy/staging` / `deploy/prod` が正確に
+指しています**（`git log --oneline -1 deploy/prod`）。次にやることは
+[docs/BACKLOG.md](docs/BACKLOG.md) にあります。
 
 ### 枝の使い分け
 
@@ -300,4 +302,4 @@ dev    ← **検証環境専用。** 作業はここで行う
 - 項目編集時の**ファイル差し替え**（未実装。ファイル → URL の切り替えだけは通り、旧ファイルは 24 時間で消えます）
 - 本番の**予算アラートの設定**（仕様書 12.1）— 自動停止を実装しない方針のため、唯一の歯止めです
 - 依存パッケージの脆弱性確認（`npm audit` / `flutter pub outdated` を 2 回の監査でどちらも未実行）
-- 古いブラウザに残った**アイコンフォントの手当て**（2026-08-07 の不具合の残り。[docs/HANDOVER.md](docs/HANDOVER.md) 参照）
+- 古いブラウザに残った**アイコンフォントの手当て**（2026-08-07 の不具合の残り。[docs/BACKLOG.md](docs/BACKLOG.md) 参照）

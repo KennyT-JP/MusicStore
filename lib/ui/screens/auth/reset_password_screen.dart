@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../domain/help_links.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/app_providers.dart';
 import '../../routes.dart';
@@ -80,6 +81,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final l10n = AppL10n.of(context);
 
     return AuthScaffold(
+      helpTopic: HelpTopic.signIn,
       title: l10n.resetPassword,
       busy: _busy,
       child: _sent

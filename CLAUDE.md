@@ -33,7 +33,7 @@ scripts\check.cmd        （Windows）
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 311 |
+| `flutter test` | 329 |
 | `functions` の単体テスト | 85 |
 | `functions` の統合テスト | 96 |
 | セキュリティルール | 130（Firestore 114・Storage 13・見張り 3） |
@@ -128,7 +128,7 @@ git branch -f main <戻したい位置>
 
 ## 参照する文書
 
-- `docs/HANDOVER.md` — **担当を交代したら最初にここ。** 現状と次の一手
+- `docs/BACKLOG.md` — **次にやること。** 着手していない作業を理由つきで
 - `docs/MusicListApp_Spec.md` — 仕様書。振る舞いを変えたらここも直す
 - `docs/DEVLOG.md` — 経緯。同じ失敗を繰り返さないための記録
 - `docs/AUDIT-CHECKLIST.md` — 監査で**見つけられなかった**欠陥の記録

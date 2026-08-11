@@ -11,9 +11,11 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../env/app_environment.dart';
+import '../../domain/help_links.dart';
 import '../../l10n/app_localizations.dart';
 import '../routes.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/help_button.dart';
 
 /// サイドバーとボトムナビを切り替える境界の幅。
 ///
@@ -79,6 +81,9 @@ class AppShell extends StatelessWidget {
         // 読み上げには、いま出ている言語のアプリ名を伝える。
         title: BrandLogo.inline(semanticLabel: l10n.appTitle),
         actions: [
+          // **いま出ている画面の説明へ飛ぶ**（14.2）。目次の先頭に
+          // 落とすだけでは、困っている人が自分で探すことになる。
+          HelpButton(topic: helpTopicForRoute(currentRoute)),
           _NotificationBell(
             count: unreadNotificationCount,
             // ナビの「通知」とベルアイコンは同じ画面へ遷移する（14.1）。

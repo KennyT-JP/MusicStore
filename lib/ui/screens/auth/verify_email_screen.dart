@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/help_links.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/app_providers.dart';
 import '../../widgets/auth_scaffold.dart';
@@ -143,6 +144,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final email = ref.watch(firebaseUserProvider).value?.email ?? '';
 
     return AuthScaffold(
+      helpTopic: HelpTopic.account,
       title: l10n.verifyEmailTitle,
       busy: _busy,
       child: Column(

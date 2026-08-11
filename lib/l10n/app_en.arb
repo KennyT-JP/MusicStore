@@ -89,6 +89,7 @@
   "stopPlayback": "Stop",
   "playbackFailed": "Could not play this. Please try again.",
   "showDetails": "Details",
+  "help": "Help",
   "close": "Close",
   "removeMemberBody": "This member will be removed from the list.\n\nTheir items and comments stay, but their name will be shown as \"Former member\". They can request to join again.",
   "leaveListBody": "You will leave this list.\n\nYour items and comments stay, but your name will be shown as \"Former member\".",

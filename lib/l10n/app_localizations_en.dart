@@ -300,6 +300,9 @@ class AppL10nEn extends AppL10n {
   String get showDetails => 'Details';
 
   @override
+  String get help => 'Help';
+
+  @override
   String get close => 'Close';
 
   @override
