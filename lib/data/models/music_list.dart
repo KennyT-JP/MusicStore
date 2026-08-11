@@ -55,6 +55,8 @@ class ListStats {
     this.itemCount = 0,
     this.notifiedNotice80 = false,
     this.notifiedWarning90 = false,
+    this.ownerUsedBytes,
+    this.ownerQuotaBytes,
   });
 
   /// 次に採番する連番（仕様書 6.2）。
@@ -72,8 +74,28 @@ class ListStats {
   final bool notifiedNotice80;
   final bool notifiedWarning90;
 
+  /// **このリストを作った人の合計**の使用量と上限の写し
+  /// （docs/PREMIUM-DESIGN.md D5 の補足）。
+  ///
+  /// 上限の判定は人ごとの合計で行うので、画面もこちらを出す。
+  /// サーバーが書くまでは無い（多少古いこともある）ため、
+  /// **null を 0 で埋めない。**
+  final int? ownerUsedBytes;
+  final int? ownerQuotaBytes;
+
   QuotaStatus get quota =>
       QuotaStatus(usedBytes: usedBytes, quotaBytes: quotaBytes);
+
+  /// リストを作った人の合計。まだ届いていなければ null。
+  ///
+  /// **このリストぶんの値へ倒さない。** 倒すと「作った人の合計」と
+  /// 名乗ったまま別の数字が出る。分からないうちは出さない。
+  QuotaStatus? get ownerQuota {
+    final used = ownerUsedBytes;
+    final quota = ownerQuotaBytes;
+    if (used == null || quota == null) return null;
+    return QuotaStatus(usedBytes: used, quotaBytes: quota);
+  }
 
   factory ListStats.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
@@ -84,6 +106,8 @@ class ListStats {
       itemCount: (data['itemCount'] as num?)?.toInt() ?? 0,
       notifiedNotice80: data['notifiedNotice80'] as bool? ?? false,
       notifiedWarning90: data['notifiedWarning90'] as bool? ?? false,
+      ownerUsedBytes: (data['ownerUsedBytes'] as num?)?.toInt(),
+      ownerQuotaBytes: (data['ownerQuotaBytes'] as num?)?.toInt(),
     );
   }
 }

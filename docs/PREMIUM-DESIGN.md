@@ -207,6 +207,19 @@ users/{uid}
 別に持つと、期限切れのときに 2 つが食い違います
 （[AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md)「同じ規則を 2 か所に持つな」）。
 
+> **書き込みはクライアントから完全に塞ぎます**（ルールで禁止）。
+> **ただし読みは他人にも見えます。** 当初この文書には「本人が読める
+> だけ」と書いていましたが、**実装できませんでした。**
+> Firestore のルールに項目単位の読み取り制限は無く、
+> `users/{uid}` は**表示名の解決のためログイン済みなら誰でも取得できる**
+> 設計だからです（そこにはメールアドレスも入っています）。
+>
+> **詐称には繋がりません**（書けないため）。漏れるのは「誰がプレミアムか」
+> と「どれだけ使っているか」で、**既にある露出の延長**です。
+> 閉じるには `users/{uid}/private/…` のような別の置き場所へ移す必要があり、
+> **メールアドレスの露出とまとめて**判断すべきなので、
+> [BACKLOG.md](BACKLOG.md) へ回しました。
+
 ### 3.2 クーポン
 
 ```
@@ -317,7 +330,7 @@ coupons/{couponId}/redemptions/{uid}   ← 誰がいつ使ったか
 | 3b | **利用者の期限を管理画面から延ばす**（D4） | `functions/src/callable/premium.ts` |
 | 4 | `createListDirectly`（4.2） | `functions/src/callable/list_requests.ts` |
 | 4b | **人ごとの合計容量**（集計・上限の判定・自動拡張） | `functions/src/domain/quota.ts`、`functions/src/triggers/storage.ts` |
-| 5 | ルール：`coupons` を全面禁止。`users.premium` は本人が読めるだけ | `firestore.rules` |
+| 5 | ルール：`coupons` を全面禁止。`users.premium` / `storage` は**書き込みを全面禁止**（読みは上の注記のとおり） | `firestore.rules` |
 | 6 | 画面：クーポン入力（設定）、リストを作る（ホーム） | `lib/ui/screens/` |
 | 7 | 画面：クーポン管理（サイト管理） | 同上 |
 | 8 | 文言（日英）、使い方への追記 | `lib/l10n/`、`web/help/` |

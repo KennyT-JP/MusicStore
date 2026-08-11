@@ -16,6 +16,8 @@ export const LIST_ID = 'list-1';
 export const OTHER_LIST_ID = 'list-2';
 export const ITEM_ID = 'item-1';
 export const COMMENT_ID = 'comment-1';
+/** プレミアムのクーポン（PREMIUM-DESIGN 3.2）。 */
+export const COUPON_ID = 'coupon-1';
 
 /** テストで使う uid。役割ごとに分けている。 */
 export const UID = {
@@ -39,7 +41,12 @@ export const UID = {
 export async function createTestEnv() {
   const config = JSON.parse(readFileSync('../firebase.rules-test.json', 'utf8'));
   return initializeTestEnvironment({
-    projectId: 'demo-musiclist',
+    // **統合テストと別のプロジェクト ID にする（2026-08-11）。**
+    // 同じ ID で Storage エミュレータを 2 つ同時に動かすと、
+    // **バケットの登録が食い合って、統合テスト側の保存が失敗する**
+    // （検証を並列にしたときだけ落ちた。単独では両方とも通る）。
+    // ポートは分けてあっても、プロジェクト ID が同じだと足りない。
+    projectId: 'demo-musiclist-rules',
     firestore: {
       rules: readFileSync('../firestore.rules', 'utf8'),
       host: config.emulators.firestore.host,
@@ -164,9 +171,21 @@ export async function seed(env) {
       displayName: '管理者',
       isWithdrawn: false,
     });
+    // **プレミアムの状態は users/{uid} の項目として持つ**
+    // （PREMIUM-DESIGN 3.1。クレームは使わない）。
+    // 書くのは Functions だけ。ここでは前提として直接入れる。
+    //
+    // **premium を持たない人もそのまま置く**（listAdmin など）。
+    // 「項目が無い＝プレミアムでない」と読む決まりなので、
+    // 移行の作業は無い（同 7）。
     put(`users/${UID.superUser}`, {
       displayName: '投稿者',
       isWithdrawn: false,
+      premium: {
+        until: new Date('2027-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-08-11T00:00:00Z'),
+      },
+      storage: { usedBytes: 100, quotaBytes: 2147483648 },
     });
     put(`users/${UID.readOnly}`, {
       displayName: '閲覧者',
@@ -255,6 +274,25 @@ export async function seed(env) {
       });
 
     put('listNames/テストリスト', { listId: LIST_ID });
+
+    // **クーポン（PREMIUM-DESIGN 3.2）。**
+    // クライアントからは読めない。読めるとコードの一覧が漏れる。
+    // **実データを置くのは意味がある**——空のコレクションだと、
+    // ルールが開いていても取得は空で返り、拒否と見分けが付かない。
+    put(`coupons/${COUPON_ID}`, {
+      code: 'CAMPAIGN2026',
+      codeHash: 'hash-of-CAMPAIGN2026',
+      months: 3,
+      maxUses: 10,
+      usedCount: 1,
+      expiresAt: new Date('2027-01-01T00:00:00Z'),
+      disabled: false,
+      createdBy: UID.siteAdmin,
+      createdAt: new Date('2026-08-11T00:00:00Z'),
+    });
+    put(`coupons/${COUPON_ID}/redemptions/${UID.superUser}`, {
+      redeemedAt: new Date('2026-08-11T00:00:00Z'),
+    });
 
     put('listRequests/req-1', {
       listName: '新しいリスト',

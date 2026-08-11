@@ -5,17 +5,21 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/models/coupon.dart';
 import '../../data/models/music_list.dart';
 import '../../data/models/requests.dart';
 import '../../data/repositories/functions_repository.dart';
+import '../../domain/premium.dart';
 import '../../domain/quota.dart';
 import '../../domain/permissions.dart';
 import '../../domain/role.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../routes.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
@@ -61,6 +65,12 @@ class SiteAdminHomeScreen extends ConsumerWidget {
             icon: Icons.people_outline,
             title: l10n.siteAdminUsers,
             route: AppRoutes.siteAdminUsers,
+          ),
+          // クーポン（docs/PREMIUM-DESIGN.md 5）。
+          _AdminEntry(
+            icon: Icons.confirmation_number_outlined,
+            title: l10n.siteAdminCoupons,
+            route: AppRoutes.siteAdminCoupons,
           ),
           _AdminEntry(
             icon: Icons.tune,
@@ -764,6 +774,8 @@ class _SiteUserTile extends ConsumerWidget {
       icon: const Icon(Icons.more_vert),
       onSelected: (value) => switch (value) {
         'addToList' => _addToList(context, ref),
+        'extendPremium' => _extendPremium(context, ref),
+        'setQuota' => _setQuota(context, ref),
         'disable' => _confirmDisable(context, ref),
         'enable' => _confirmEnable(context, ref),
         _ => _confirmDelete(context, ref),
@@ -774,8 +786,19 @@ class _SiteUserTile extends ConsumerWidget {
         // **退会した人と無効にした人には出さない。** サーバー側でも
         // 断るが、押せてしまうと「なぜ失敗したのか」を押した後に
         // 知ることになる。
-        if (!user.isWithdrawn && !isDisabled)
+        if (!user.isWithdrawn && !isDisabled) ...[
           PopupMenuItem(value: 'addToList', child: Text(l10n.addToList)),
+          // プレミアムの延長と容量の上限（docs/PREMIUM-DESIGN.md D4）。
+          // クーポンを配らずに延ばす経路。上限は**人ごとの合計**に効く。
+          PopupMenuItem(
+            value: 'extendPremium',
+            child: Text(l10n.extendPremium),
+          ),
+          PopupMenuItem(
+            value: 'setQuota',
+            child: Text(l10n.setUserQuotaTitle),
+          ),
+        ],
         if (isDisabled)
           PopupMenuItem(value: 'enable', child: Text(l10n.enableUser))
         else
@@ -952,6 +975,125 @@ class _SiteUserTile extends ConsumerWidget {
     return answer ?? false;
   }
 
+  /// プレミアムを延長する（docs/PREMIUM-DESIGN.md D4）。
+  ///
+  /// **足し算であって上書きではない。** すでに期限がある人は、その後ろに
+  /// 足される。取り消す操作は用意しない（返金の扱いを決めていないため／
+  /// 設計 8）。
+  Future<void> _extendPremium(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final months = await _askNumber(
+      context,
+      title: l10n.extendPremium,
+      body: l10n.extendPremiumBody(_name(l10n)),
+      label: l10n.extendPremiumMonthsLabel,
+      initial: '1',
+    );
+    if (months == null || !context.mounted) return;
+
+    await _run(context, ref, () async {
+      final until = await ref
+          .read(functionsRepositoryProvider)
+          .extendPremium(uid: user.uid, months: months);
+      if (!context.mounted) return;
+      final l10n = AppL10n.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            // 期限が返らなかったときに、日付を作って埋めない。
+            until == null
+                ? l10n.saved
+                : l10n.extendPremiumDone(formatDateTime(until)),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// 容量上限を変える（設計 D5 の補足）。
+  ///
+  /// **人ごとの合計に効く。** リストごとの上限（`setListQuota`）とは
+  /// 別物なので、本文でそう書いてある。
+  Future<void> _setQuota(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final mb = await _askNumber(
+      context,
+      title: l10n.setUserQuotaTitle,
+      body: l10n.setUserQuotaBody(_name(l10n)),
+      label: l10n.defaultQuotaLabel,
+      suffix: 'MB',
+      // **いまの値は出せない。** `users/{uid}.storage` は本人しか
+      // 読めない（設計 3）。空欄から始めるより、既定の値を置く。
+      initial: '${kDefaultQuotaBytes ~/ (1024 * 1024)}',
+    );
+    if (mb == null || !context.mounted) return;
+
+    await _run(context, ref, () async {
+      await ref
+          .read(functionsRepositoryProvider)
+          .setUserQuota(uid: user.uid, quotaBytes: mb * 1024 * 1024);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppL10n.of(context).setUserQuotaDone)));
+      }
+    });
+  }
+
+  /// 1 以上の数をひとつ尋ねる。取り消しか、数として読めなければ null。
+  Future<int?> _askNumber(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required String label,
+    required String initial,
+    String? suffix,
+  }) async {
+    final l10n = AppL10n.of(context);
+    final controller = TextEditingController(text: initial);
+
+    return showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(body),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: label,
+                  suffixText: suffix,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              Navigator.pop(
+                dialogContext,
+                (parsed != null && parsed > 0) ? parsed : null,
+              );
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _grant(BuildContext context, WidgetRef ref) =>
       _run(context, ref, () async {
         await ref.read(functionsRepositoryProvider).grantSiteAdmin(user.uid);
@@ -1086,6 +1228,548 @@ class _SiteUserTile extends ConsumerWidget {
           context,
         ).showSnackBar(SnackBar(content: Text(describeFunctionsError(context, e))));
       }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// クーポン管理（docs/PREMIUM-DESIGN.md 5）
+//
+// **クーポンはクライアントから直接読めない。** ルールで全面禁止にして
+// あり、読めるとコードの一覧がそのまま漏れて誰でもプレミアムになれる
+// （設計 9 の 3）。一覧・発行・停止はすべて呼び出し可能関数を通す。
+// ---------------------------------------------------------------------------
+
+class SiteAdminCouponsScreen extends ConsumerWidget {
+  const SiteAdminCouponsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    final coupons = ref.watch(couponsProvider);
+
+    return Scaffold(
+      body: AsyncView(
+        value: coupons,
+        onRetry: () => ref.invalidate(couponsProvider),
+        builder: (items) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _SiteAdminHeader(title: l10n.siteAdminCoupons),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text(l10n.couponListEmpty)),
+              ),
+            for (final coupon in items) _CouponCard(coupon: coupon),
+            // 発行ボタン（FAB）に隠れないよう、末尾に余白を置く。
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _create(context, ref),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.couponCreate),
+      ),
+    );
+  }
+
+  Future<void> _create(BuildContext context, WidgetRef ref) async {
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => const _CreateCouponDialog(),
+    );
+    if (code == null) return;
+    ref.invalidate(couponsProvider);
+    if (!context.mounted) return;
+    // **発行したコードをその場で出す。** 自動生成のときは、ここで
+    // 見ないと配れない。
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).couponCreated(code))));
+  }
+}
+
+class _CouponCard extends ConsumerWidget {
+  const _CouponCard({required this.coupon});
+
+  final Coupon coupon;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final expiresAt = coupon.expiresAt;
+    final isExpired = expiresAt != null && expiresAt.isBefore(DateTime.now());
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // **コードは選べるようにする。** 配るときに写し間違えると、
+                // 「使えない」という問い合わせになって戻ってくる。
+                Expanded(
+                  child: SelectableText(
+                    coupon.code,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy),
+                  tooltip: l10n.couponCopyCode,
+                  onPressed: () => _copy(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // **Wrap にする。** 狭い画面で横に並べ続けると、
+            // 文字が 1 文字ずつ折り返されて縦一列になる（2026-08-10）。
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
+              children: [
+                Text(
+                  l10n.couponMonthsValue(coupon.months),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                Text(
+                  l10n.couponUsesValue(coupon.usedCount, coupon.maxUses),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                Text(
+                  expiresAt == null
+                      ? l10n.couponNoExpiry
+                      : l10n.couponExpiresOn(formatDateTime(expiresAt)),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+            if (coupon.disabled || coupon.isUsedUp || isExpired) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  // 止めてある・尽きた・期限切れは、**別々に出す。**
+                  // 使えない理由が違えば、打つ手も違う。
+                  if (coupon.disabled)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text(l10n.couponDisabledLabel),
+                      backgroundColor: scheme.errorContainer,
+                      side: BorderSide.none,
+                    ),
+                  if (coupon.isUsedUp)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text(l10n.couponUsedUpLabel),
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      side: BorderSide.none,
+                    ),
+                  if (isExpired)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text(l10n.couponExpiredLabel),
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      side: BorderSide.none,
+                    ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                OutlinedButton(
+                  onPressed: () => _changeMaxUses(context, ref),
+                  child: Text(l10n.couponChangeMaxUses),
+                ),
+                OutlinedButton(
+                  onPressed: () => _toggleDisabled(context, ref),
+                  child: Text(
+                    coupon.disabled ? l10n.couponEnable : l10n.couponDisable,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _showRedemptions(context, ref),
+                  child: Text(l10n.couponViewRedemptions),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copy(BuildContext context) async {
+    final l10n = AppL10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await Clipboard.setData(ClipboardData(text: coupon.code));
+    messenger.showSnackBar(SnackBar(content: Text(l10n.couponCodeCopied)));
+  }
+
+  /// 使える人数を変える（設計 D1）。
+  ///
+  /// **すでに使われた数より少なくもできる。** 「配りすぎたので止めたい」に
+  /// 対して、停止とは別の粒度で応えるため。すでに使った方のプレミアムは
+  /// 取り消されない——そのことを本文に書いてある。
+  Future<void> _changeMaxUses(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final controller = TextEditingController(text: '${coupon.maxUses}');
+
+    final value = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.couponChangeMaxUses),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.couponChangeMaxUsesBody(coupon.code)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.couponMaxUsesLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              Navigator.pop(
+                dialogContext,
+                (parsed != null && parsed > 0) ? parsed : null,
+              );
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+    if (value == null || !context.mounted) return;
+
+    await _run(
+      context,
+      ref,
+      () => ref
+          .read(functionsRepositoryProvider)
+          .updateCoupon(couponId: coupon.id, maxUses: value),
+    );
+  }
+
+  /// 止める・止めるのをやめる（設計 5）。**消さない。**
+  Future<void> _toggleDisabled(BuildContext context, WidgetRef ref) => _run(
+    context,
+    ref,
+    () => ref
+        .read(functionsRepositoryProvider)
+        .updateCoupon(couponId: coupon.id, disabled: !coupon.disabled),
+  );
+
+  /// 使った人を見る（設計 5）。
+  Future<void> _showRedemptions(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+
+    final List<CouponRedemption> redemptions;
+    final Map<String, String> names;
+    try {
+      // **届くまで待つ（`.value` で読まない）。** この画面は URL から
+      // 直接開けるので、購読が始まっていないと空に見える（2026-08-10）。
+      redemptions = await ref.read(
+        couponRedemptionsProvider(coupon.id).future,
+      );
+      final users = await ref.read(siteUsersProvider.future);
+      names = {
+        for (final user in users)
+          user.uid: user.displayName.isEmpty ? user.email : user.displayName,
+      };
+    } on FunctionsCallException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(describeFunctionsError(context, e))),
+        );
+      }
+      return;
+    } catch (error) {
+      // 読めなかったことを黙って空欄にしない（監査 第4回）。
+      if (context.mounted) showWriteFailure(context, error);
+      return;
+    }
+    if (!context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.couponRedemptionsTitle(coupon.code)),
+        content: SizedBox(
+          width: 360,
+          child: redemptions.isEmpty
+              ? Text(l10n.couponRedemptionsEmpty)
+              : ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final redemption in redemptions)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          names[redemption.uid] ?? redemption.uid,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: redemption.redeemedAt == null
+                            ? null
+                            : Text(formatDateTime(redemption.redeemedAt!)),
+                      ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+      ref.invalidate(couponsProvider);
+    } on FunctionsCallException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(describeFunctionsError(context, e))),
+        );
+      }
+    } catch (error) {
+      // **黙って失敗させない。** 押しても何も起きないように見えるのが
+      // いちばん困る（監査 第4回）。
+      if (context.mounted) showWriteFailure(context, error);
+    }
+  }
+}
+
+/// クーポンを発行する（設計 D8）。
+///
+/// **コードは自動生成か、文字列の指定かを選べる。** 指定したものは
+/// 覚えやすいぶん推測されやすいので、その旨を画面に出し、
+/// 人数と期限を必ず決めてもらう。
+class _CreateCouponDialog extends ConsumerStatefulWidget {
+  const _CreateCouponDialog();
+
+  @override
+  ConsumerState<_CreateCouponDialog> createState() =>
+      _CreateCouponDialogState();
+}
+
+class _CreateCouponDialogState extends ConsumerState<_CreateCouponDialog> {
+  final _months = TextEditingController(text: '1');
+  final _maxUses = TextEditingController(text: '1');
+  final _code = TextEditingController();
+  bool _manualCode = false;
+  DateTime? _expiresAt;
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _months.dispose();
+    _maxUses.dispose();
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final expiresAt = _expiresAt;
+
+    return AlertDialog(
+      title: Text(l10n.couponCreate),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error case final error?) ...[
+                ErrorMessage(error),
+                const SizedBox(height: 12),
+              ],
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(value: false, label: Text(l10n.couponCodeAuto)),
+                  ButtonSegment(
+                    value: true,
+                    label: Text(l10n.couponCodeManual),
+                  ),
+                ],
+                selected: {_manualCode},
+                onSelectionChanged: (selection) =>
+                    setState(() => _manualCode = selection.first),
+              ),
+              if (_manualCode) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _code,
+                  decoration: InputDecoration(
+                    labelText: l10n.couponCodeManualLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // 推測されやすいことを、選んだその場で伝える（D8）。
+                Text(
+                  l10n.couponCodeManualWarning,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _months,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.couponMonthsLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _maxUses,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.couponMaxUsesLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(l10n.couponExpiresLabel, style: theme.textTheme.bodySmall),
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    expiresAt == null
+                        ? l10n.couponNoExpiry
+                        : formatDateTime(expiresAt),
+                  ),
+                  TextButton(
+                    onPressed: _pickExpiry,
+                    child: Text(l10n.couponChooseExpiry),
+                  ),
+                  if (expiresAt != null)
+                    TextButton(
+                      onPressed: () => setState(() => _expiresAt = null),
+                      child: Text(l10n.couponClearExpiry),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: Text(l10n.couponCreate),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickExpiry() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expiresAt ?? now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked == null) return;
+    // その日の終わりまでを有効とする。日付だけを選ばせて、
+    // 「選んだ日の朝に切れる」ことが起きないようにする。
+    setState(
+      () => _expiresAt = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        23,
+        59,
+        59,
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final l10n = AppL10n.of(context);
+    final months = int.tryParse(_months.text.trim());
+    final maxUses = int.tryParse(_maxUses.text.trim());
+    final code = PremiumPolicy.normalizeCouponCode(_code.text);
+
+    if (_manualCode && code.isEmpty) {
+      setState(() => _error = l10n.couponCodeRequired);
+      return;
+    }
+    if (months == null || months <= 0 || maxUses == null || maxUses <= 0) {
+      setState(() => _error = l10n.invalidNumber);
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final created = await ref
+          .read(functionsRepositoryProvider)
+          .createCoupon(
+            months: months,
+            maxUses: maxUses,
+            code: _manualCode ? code : null,
+            expiresAt: _expiresAt,
+          );
+      if (mounted) Navigator.of(context).pop(created.code);
+    } on FunctionsCallException catch (e) {
+      // コードの重複・月数や人数の不正を、それぞれの文言で出す。
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
+    } catch (_) {
+      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }

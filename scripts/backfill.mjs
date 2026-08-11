@@ -32,6 +32,18 @@
  * uid の無い行は**申請者からも見えず、ルールの判定にも合致しない**。
  * アプリの中に復旧手段が無い。
  *
+ * ### 5. users に容量の合計を入れる（2026-08-11・プレミアム対応）
+ *
+ * 容量の上限を**リストごと**から**人ごとの合計**へ変えた
+ * （docs/PREMIUM-DESIGN.md）。集計はファイルの保存・削除のたびに
+ * 加減算する形なので、**この変更より前からあるファイルは合計に
+ * 入っていない**。入れておかないと、実際には使っているのに
+ * 「0 バイト使用」と見え、上限をすり抜ける。
+ *
+ * 各リストの `stats.usedBytes` を、そのリストを作った人ごとに合計して
+ * `users/{uid}.storage.usedBytes` に入れる。**毎回ゼロから数え直す**ので、
+ * 何度実行しても同じ結果になる。
+ *
  * ### 4. stats が無いリストを作る（監査 第2回）
  *
  * stats が無いと項目追加のトランザクションが NOT_FOUND で失敗し、
@@ -97,6 +109,10 @@ async function main() {
   let statsFixed = 0;
   let joinRequestFixed = 0;
   let statsCreated = 0;
+  let storageFixed = 0;
+  let storageOk = 0;
+  let ownerless = 0;
+  let missingUser = 0;
 
   for (const list of lists.docs) {
     // --- 1. members に uid を足す ---
@@ -161,12 +177,70 @@ async function main() {
     statsFixed++;
   }
 
+  // ---------------------------------------------------------------------
+  // 5. users に容量の合計を入れる（プレミアム対応）
+  //
+  // **毎回ゼロから数え直す。** 差分を足す作りにすると、途中で失敗した
+  // ときに二重に足さる。数え直しなら、何度実行しても同じ結果になる。
+  // ---------------------------------------------------------------------
+
+  /** 既定の上限（人ごとの合計）。docs/PREMIUM-DESIGN.md と合わせる。 */
+  const USER_DEFAULT_QUOTA_BYTES = 2 * 1024 * 1024 * 1024;
+
+  const usedByOwner = new Map();
+  for (const list of lists.docs) {
+    const owner = list.get('createdBy');
+    // 作った人が分からないリストは、誰の枠にも入れられない。
+    // 黙って捨てると合計が合わなくなるので、数えて報告する。
+    if (typeof owner !== 'string' || !owner) {
+      ownerless++;
+      continue;
+    }
+    const stats = await db.doc(`lists/${list.id}/meta/stats`).get();
+    const used = Number(stats.get('usedBytes') ?? 0);
+    usedByOwner.set(owner, (usedByOwner.get(owner) ?? 0) + used);
+  }
+
+  for (const [uid, used] of usedByOwner) {
+    const userRef = db.doc(`users/${uid}`);
+    const user = await userRef.get();
+    if (!user.exists) {
+      // リストは作ったが users が無い人。触らずに報告だけする。
+      missingUser++;
+      continue;
+    }
+
+    const storage = user.get('storage') ?? {};
+    const base = Number(storage.quotaBytesBase ?? USER_DEFAULT_QUOTA_BYTES);
+    // 実効値は、すでに自動拡張されていればそれを尊重する。
+    const quota = Number(storage.quotaBytes ?? base);
+
+    if (Number(storage.usedBytes ?? -1) === used
+        && Number(storage.quotaBytesBase ?? -1) === base
+        && Number(storage.quotaBytes ?? -1) === quota) {
+      storageOk++;
+      continue;
+    }
+
+    console.log(`  合計容量を設定: ${uid} → ${(used / 1024 / 1024).toFixed(1)} MB`);
+    if (!dryRun) {
+      await userRef.set(
+        { storage: { usedBytes: used, quotaBytes: quota, quotaBytesBase: base } },
+        { merge: true },
+      );
+    }
+    storageFixed++;
+  }
+
   console.log('');
   console.log('結果');
   console.log(`  members に uid を追加      : ${memberFixed} 件（すでに正しい: ${memberOk} 件）`);
   console.log(`  joinRequests に uid を追加 : ${joinRequestFixed} 件`);
   console.log(`  stats の itemCount         : ${statsFixed} 件`);
   console.log(`  stats を新しく作成         : ${statsCreated} 件`);
+  console.log(`  users の合計容量           : ${storageFixed} 件（すでに正しい: ${storageOk} 人）`);
+  if (ownerless > 0) console.log(`  ** 作った人が不明のリスト  : ${ownerless} 件（合計に入れていません）**`);
+  if (missingUser > 0) console.log(`  ** users が無い作成者      : ${missingUser} 人（触っていません）**`);
   if (dryRun) console.log('\n下見のみでした。実行するには --dry-run を外してください。');
 }
 

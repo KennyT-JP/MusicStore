@@ -910,4 +910,221 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get functionErrorUserWithdrawn => 'この利用者は退会しています。';
+
+  @override
+  String get premiumSection => 'プレミアム';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return '$date までプレミアムをご利用いただけます。';
+  }
+
+  @override
+  String get premiumInactive => '現在はプレミアムではありません。';
+
+  @override
+  String get premiumInactiveNote =>
+      'プレミアムでない間も、これまでに保存した音源やリストはそのまま残ります。新しいリストを申請なしで作れないだけです。';
+
+  @override
+  String get couponCodeLabel => 'クーポンコード';
+
+  @override
+  String get couponCodeRequired => 'クーポンコードを入力してください';
+
+  @override
+  String get couponRedeem => 'クーポンを適用';
+
+  @override
+  String couponRedeemed(String date) {
+    return 'クーポンを適用しました。$date までプレミアムをご利用いただけます。';
+  }
+
+  @override
+  String get createList => 'リストを作る';
+
+  @override
+  String get createListNote => 'プレミアムの方は、申請せずにその場でリストを作成できます。';
+
+  @override
+  String get listCreated => 'リストを作成しました。';
+
+  @override
+  String get myStorageTitle => '使用中の容量（あなたの合計）';
+
+  @override
+  String get myStorageNote =>
+      'あなたが作成したすべてのリストの合計です。上限はリストごとではなく、この合計に対してかかります。';
+
+  @override
+  String get myStorageUnknown => '使用量はまだ集計されていません。音源を追加すると表示されます。';
+
+  @override
+  String get ownerQuotaTitle => '使用中の容量（作成者の合計）';
+
+  @override
+  String get ownerQuotaCaption => '作成者の合計';
+
+  @override
+  String get ownerQuotaNote =>
+      'このリストを作成した方が持つ、すべてのリストの合計です。このリスト 1 つ分の量ではありません。どなたが音源を追加しても、作成した方の容量から引かれます。';
+
+  @override
+  String get ownerQuotaUnknown => '作成者の合計容量は、まだ集計されていません。しばらくしてからご確認ください。';
+
+  @override
+  String get siteAdminCoupons => 'クーポン';
+
+  @override
+  String get couponListEmpty => 'まだクーポンはありません。';
+
+  @override
+  String get couponCreate => 'クーポンを発行';
+
+  @override
+  String get couponMonthsLabel => '付与する月数';
+
+  @override
+  String get couponMaxUsesLabel => '使える人数';
+
+  @override
+  String get couponExpiresLabel => 'クーポンの有効期限';
+
+  @override
+  String get couponNoExpiry => '期限なし';
+
+  @override
+  String get couponChooseExpiry => '期限を決める';
+
+  @override
+  String get couponClearExpiry => '期限を外す';
+
+  @override
+  String get couponCodeAuto => '自動で作る';
+
+  @override
+  String get couponCodeManual => '文字列を指定';
+
+  @override
+  String get couponCodeManualLabel => '指定するコード';
+
+  @override
+  String get couponCodeManualWarning =>
+      '指定した文字列は覚えやすいぶん、推測もされやすくなります。使える人数と有効期限を必ず決めてください。';
+
+  @override
+  String couponMonthsValue(int months) {
+    return '$months か月';
+  }
+
+  @override
+  String couponUsesValue(int used, int max) {
+    return '$used / $max 人';
+  }
+
+  @override
+  String couponExpiresOn(String date) {
+    return '期限 $date';
+  }
+
+  @override
+  String get couponDisabledLabel => '停止中';
+
+  @override
+  String get couponUsedUpLabel => '上限に達しました';
+
+  @override
+  String get couponExpiredLabel => '期限切れ';
+
+  @override
+  String get couponDisable => '停止する';
+
+  @override
+  String get couponEnable => '停止を解除';
+
+  @override
+  String get couponChangeMaxUses => '人数を変える';
+
+  @override
+  String couponChangeMaxUsesBody(String code) {
+    return '「$code」を使える人数を入力してください。すでに使った方より少ない人数にもできます。その場合、これ以上は使えなくなるだけで、すでに使った方のプレミアムは取り消されません。';
+  }
+
+  @override
+  String get couponViewRedemptions => '使った人を見る';
+
+  @override
+  String couponRedemptionsTitle(String code) {
+    return '「$code」を使った方';
+  }
+
+  @override
+  String get couponRedemptionsEmpty => 'まだどなたも使っていません。';
+
+  @override
+  String couponCreated(String code) {
+    return 'クーポンを発行しました：$code';
+  }
+
+  @override
+  String get couponCopyCode => 'コードをコピー';
+
+  @override
+  String get couponCodeCopied => 'コードをコピーしました。';
+
+  @override
+  String get extendPremium => 'プレミアムを延長';
+
+  @override
+  String extendPremiumBody(String name) {
+    return '$name のプレミアムを延長します。すでに期限がある場合は、その後ろに足されます。';
+  }
+
+  @override
+  String get extendPremiumMonthsLabel => '延長する月数';
+
+  @override
+  String extendPremiumDone(String date) {
+    return '$date まで延長しました。';
+  }
+
+  @override
+  String get setUserQuotaTitle => '利用者の容量上限を変更';
+
+  @override
+  String setUserQuotaBody(String name) {
+    return '$name の容量上限を MB 単位で入力してください。リストごとではなく、その方が作成したすべてのリストの合計に効きます。';
+  }
+
+  @override
+  String get setUserQuotaDone => '容量上限を変更しました。';
+
+  @override
+  String get functionErrorPremiumRequired =>
+      'この操作にはプレミアムが必要です。設定画面でクーポンコードを入力してください。';
+
+  @override
+  String get functionErrorCouponNotFound => 'そのクーポンコードは見つかりません。入力した文字をご確認ください。';
+
+  @override
+  String get functionErrorCouponDisabled => 'このクーポンは停止されています。配布元にお問い合わせください。';
+
+  @override
+  String get functionErrorCouponExpired => 'このクーポンは有効期限が切れています。';
+
+  @override
+  String get functionErrorCouponUsedUp => 'このクーポンは、使える人数の上限に達しています。';
+
+  @override
+  String get functionErrorCouponAlreadyUsed =>
+      'このクーポンはすでにお使いです。同じクーポンは一度だけ使えます。';
+
+  @override
+  String get functionErrorCouponCodeTaken => 'そのコードはすでに使われています。別の文字列を指定してください。';
+
+  @override
+  String get functionErrorMonthsInvalid => '月数は 1 以上の整数で指定してください。';
+
+  @override
+  String get functionErrorMaxUsesInvalid => '使える人数は 1 以上の整数で指定してください。';
 }

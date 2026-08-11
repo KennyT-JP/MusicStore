@@ -3,6 +3,8 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/quota.dart';
+
 /// 通知種別（仕様書 10.2 / 13.3）。
 enum NotificationType {
   itemAdded('itemAdded'),
@@ -108,6 +110,31 @@ class NotificationSettings {
   ) => copyWith(types: {...types, type: setting});
 }
 
+/// 自分の合計の容量（`users/{uid}.storage`）。
+///
+/// **本人だけが読める**（firestore.rules）。上限は人ごとの合計で、
+/// リストごとの上限は使わない（docs/PREMIUM-DESIGN.md D5 の補足）。
+class UserStorage {
+  const UserStorage({required this.usedBytes, required this.quotaBytes});
+
+  final int usedBytes;
+  final int quotaBytes;
+
+  QuotaStatus get quota =>
+      QuotaStatus(usedBytes: usedBytes, quotaBytes: quotaBytes);
+
+  /// **無ければ null を返す。** 0 で埋めると「まだ集計されていない」と
+  /// 「使っていない」が区別できず、届く前に確定した数を出してしまう
+  /// （docs/AUDIT-CHECKLIST.md 観点 2）。
+  static UserStorage? fromMap(Map<String, dynamic>? map) {
+    if (map == null) return null;
+    final used = (map['usedBytes'] as num?)?.toInt();
+    final quota = (map['quotaBytes'] as num?)?.toInt();
+    if (used == null || quota == null) return null;
+    return UserStorage(usedBytes: used, quotaBytes: quota);
+  }
+}
+
 /// ユーザー。
 class AppUser {
   const AppUser({
@@ -118,6 +145,8 @@ class AppUser {
     required this.isWithdrawn,
     required this.notificationSettings,
     this.photoUrl,
+    this.premiumUntil,
+    this.storage,
   });
 
   final String uid;
@@ -133,6 +162,15 @@ class AppUser {
 
   final NotificationSettings notificationSettings;
 
+  /// プレミアムの期限（`premium.until`）。
+  ///
+  /// **無ければプレミアムでない**（docs/PREMIUM-DESIGN.md 7 節）。
+  /// 判定は `PremiumPolicy.isActive` を通す。
+  final DateTime? premiumUntil;
+
+  /// 自分の合計の容量。**他人のドキュメントでは常に null**（読めない）。
+  final UserStorage? storage;
+
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
     return AppUser(
@@ -145,6 +183,10 @@ class AppUser {
       notificationSettings: NotificationSettings.fromMap(
         data['notificationSettings'] as Map<String, dynamic>?,
       ),
+      premiumUntil:
+          ((data['premium'] as Map<String, dynamic>?)?['until'] as Timestamp?)
+              ?.toDate(),
+      storage: UserStorage.fromMap(data['storage'] as Map<String, dynamic>?),
     );
   }
 

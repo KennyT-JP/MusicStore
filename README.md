@@ -179,10 +179,10 @@ scripts\check.cmd        :: Windows
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準** |
-| `flutter test` | 337 |
-| `functions` の単体テスト | 85（サーバー側のドメインロジック・通知） |
+| `flutter test` | 379 |
+| `functions` の単体テスト | 122（サーバー側のドメインロジック・通知） |
 | `functions` の統合テスト | 96（エミュレータで通し確認） |
-| セキュリティルール | 130（Firestore 114・Storage 13・書き方の見張り 3） |
+| セキュリティルール | 161（Firestore 145・Storage 13・書き方の見張り 3） |
 
 個別に実行することもできます（`flutter test`、`cd functions && npm test`、
 `cd rules-test && npm test`、`cd functions && npm run test:integration`）。

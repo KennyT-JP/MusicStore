@@ -270,6 +270,20 @@ String describeFunctionsError(
     'listNameTaken' => l10n.functionErrorListNameTaken(
       e.params['listName'] ?? '',
     ),
+    // プレミアムとクーポン（docs/PREMIUM-DESIGN.md）。
+    //
+    // **「クーポンを使えません」に丸めない。** 見つからない・止められた・
+    // 期限切れ・人数の上限・すでに使った、は利用者が取れる次の手が
+    // それぞれ違う（打ち直す／配布元に聞く／諦める／何もしなくてよい）。
+    'premiumRequired' => l10n.functionErrorPremiumRequired,
+    'couponNotFound' => l10n.functionErrorCouponNotFound,
+    'couponDisabled' => l10n.functionErrorCouponDisabled,
+    'couponExpired' => l10n.functionErrorCouponExpired,
+    'couponUsedUp' => l10n.functionErrorCouponUsedUp,
+    'couponAlreadyUsed' => l10n.functionErrorCouponAlreadyUsed,
+    'couponCodeTaken' => l10n.functionErrorCouponCodeTaken,
+    'monthsInvalid' => l10n.functionErrorMonthsInvalid,
+    'maxUsesInvalid' => l10n.functionErrorMaxUsesInvalid,
     // まだ翻訳を用意していない符号。サーバーの文を出す。
     // サーバーが文を返さなかったときは、一般的な文言に倒す。
     // ここで日本語を書き足すと、英語表示でも日本語が出る。

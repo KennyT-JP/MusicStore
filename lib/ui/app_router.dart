@@ -217,6 +217,11 @@ GoRouter buildAppRouter({
                 path: 'settings',
                 builder: (context, state) => const SiteAdminSettingsScreen(),
               ),
+              // クーポン管理（docs/PREMIUM-DESIGN.md 5）。
+              GoRoute(
+                path: 'coupons',
+                builder: (context, state) => const SiteAdminCouponsScreen(),
+              ),
             ],
           ),
         ],

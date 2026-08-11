@@ -17,6 +17,13 @@ export type NotificationType =
   | 'commentAdded'
   | 'quotaNotice'
   | 'quotaWarning'
+  /**
+   * 容量を自動で増やしたことの知らせ（PREMIUM-DESIGN「自動拡張の作り」）。
+   *
+   * **黙って増やさない。** 増えた理由が分からないと、請求が増えたときに
+   * 利用者も運営も説明できない。宛先はリストを作った人（枠の持ち主）。
+   */
+  | 'quotaExpanded'
   | 'listRequested'
   | 'joinRequested'
   | 'requestApproved';

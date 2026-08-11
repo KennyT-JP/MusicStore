@@ -9,6 +9,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../domain/share_link.dart';
 import '../../domain/role.dart';
+import '../models/coupon.dart';
 import '../models/requests.dart';
 
 /// Functions の呼び出しが失敗したときに投げる。
@@ -267,6 +268,111 @@ class FunctionsRepository {
   /// 投稿・履歴は残り、表示名だけ「退会したユーザー」になる。
   /// 最後のサイト管理者は退会できない（仕様書 4.5）。
   Future<void> withdrawAccount() => _call('withdrawAccount', const {});
+
+  // -------------------------------------------------------------------
+  // プレミアム（docs/PREMIUM-DESIGN.md）
+  // -------------------------------------------------------------------
+
+  /// クーポンを引き換える（本人／設計 5）。
+  ///
+  /// 返るのは**引き換えた後の期限**。2 枚目のクーポンなら月数が足される
+  /// （設計 6 のテスト項目）。上書きではないので、返ってきた値をそのまま
+  /// 「いつまでプレミアムか」として出してよい。
+  ///
+  /// 失敗の符号は `couponNotFound` / `couponDisabled` / `couponExpired` /
+  /// `couponUsedUp` / `couponAlreadyUsed`。**原因ごとに文言が違う**ので、
+  /// 呼び出し側は describeFunctionsError を通すこと。
+  Future<DateTime?> redeemCoupon(String code) async {
+    final result = await _call('redeemCoupon', {'code': code});
+    return parseServerTime(result['premiumUntil']);
+  }
+
+  /// 申請なしでリストを作る（プレミアムの本人／設計 4.2）。
+  ///
+  /// **名前の予約は承認の流れと同じものを通る。** プレミアムでなければ
+  /// `premiumRequired`、名前が使われていれば `listNameTaken` が返る。
+  Future<String> createListDirectly(String listName) async {
+    final result = await _call('createListDirectly', {'listName': listName});
+    return result['listId'] as String;
+  }
+
+  // --- クーポン管理（サイト管理者のみ／設計 5） ---
+
+  /// クーポンを発行する。
+  ///
+  /// [code] を渡すとその文字列になり、渡さなければサーバーが作る（D8）。
+  /// **指定したコードは短く覚えやすい＝推測されやすい**ので、
+  /// 人数（[maxUses]）と期限（[expiresAt]）を必ず添える。
+  Future<({String couponId, String code})> createCoupon({
+    required int months,
+    required int maxUses,
+    String? code,
+    DateTime? expiresAt,
+  }) async {
+    final result = await _call('createCoupon', {
+      'code': ?code,
+      'months': months,
+      'maxUses': maxUses,
+      // **UTC の ISO 文字列で送る。** callable の引数は JSON になるため
+      // Timestamp をそのまま渡せない。時差で 1 日ずれないよう UTC に寄せる。
+      'expiresAt': ?expiresAt?.toUtc().toIso8601String(),
+    });
+    return (
+      couponId: result['couponId'] as String? ?? '',
+      code: result['code'] as String? ?? '',
+    );
+  }
+
+  /// 使える人数を変える、または止める（D1）。
+  ///
+  /// **消さない。** 消すと誰が使ったかの記録まで消える（設計 5）。
+  Future<void> updateCoupon({
+    required String couponId,
+    int? maxUses,
+    bool? disabled,
+  }) => _call('updateCoupon', {
+    'couponId': couponId,
+    'maxUses': ?maxUses,
+    'disabled': ?disabled,
+  });
+
+  /// クーポンの一覧。
+  Future<List<Coupon>> listCoupons() async {
+    final result = await _call('listCoupons', const {});
+    final coupons = result['coupons'] as List<dynamic>? ?? const [];
+    return coupons
+        .map((e) => Coupon.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  /// そのクーポンを使った人（追跡と、問い合わせへの回答用／設計 5）。
+  Future<List<CouponRedemption>> listCouponRedemptions(String couponId) async {
+    final result = await _call('listCouponRedemptions', {'couponId': couponId});
+    final redemptions = result['redemptions'] as List<dynamic>? ?? const [];
+    return redemptions
+        .map(
+          (e) => CouponRedemption.fromMap(Map<String, dynamic>.from(e as Map)),
+        )
+        .toList();
+  }
+
+  /// 利用者のプレミアムを延ばす（サイト管理者／D4）。
+  ///
+  /// クーポンを配らずに延ばす経路。**足し算**であって上書きではない。
+  Future<DateTime?> extendPremium({
+    required String uid,
+    required int months,
+  }) async {
+    final result = await _call('extendPremium', {'uid': uid, 'months': months});
+    return parseServerTime(result['premiumUntil']);
+  }
+
+  /// 利用者の容量上限を変える（サイト管理者）。
+  ///
+  /// **上限は人ごとの合計**（設計 D5 の補足）。リストごとの上限
+  /// （[setListQuota]）とは別のもの。
+  Future<void> setUserQuota({required String uid, required int quotaBytes}) =>
+      _call('setUserQuota', {'uid': uid, 'quotaBytes': quotaBytes});
 
   // -------------------------------------------------------------------
 

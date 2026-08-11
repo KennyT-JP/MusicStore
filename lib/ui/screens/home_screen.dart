@@ -44,11 +44,7 @@ class HomeScreen extends ConsumerWidget {
               action: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FilledButton.icon(
-                    onPressed: () => context.go(AppRoutes.requestList),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.requestNewList),
-                  ),
+                  const _NewListButton(),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => context.go(AppRoutes.myRequests),
@@ -71,14 +67,15 @@ class HomeScreen extends ConsumerWidget {
               ),
               for (final entry in entries) _ListCard(entry: entry),
               const SizedBox(height: 24),
-              Row(
+              // **Wrap にする。** 狭い画面でボタンを横に並べ続けると、
+              // 文字が 1 文字ずつ折り返されて縦一列になる（2026-08-10 に
+              // サイト管理の一覧で起きた形）。入りきらなければ折り返す。
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () => context.go(AppRoutes.requestList),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.requestNewList),
-                  ),
-                  const SizedBox(width: 12),
+                  const _NewListButton(),
                   TextButton(
                     onPressed: () => context.go(AppRoutes.myRequests),
                     child: Text(l10n.myRequests),
@@ -90,6 +87,169 @@ class HomeScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+}
+
+/// リストを増やす導線（docs/PREMIUM-DESIGN.md 4.3）。
+///
+/// - プレミアムの方 …… 「リストを作る」。その場で作れる
+/// - それ以外 …… いままでどおり「リスト作成を申請」
+///
+/// **プレミアムかどうかが分かるまで、どちらも出さない。**
+/// 既定を「プレミアムでない」に倒すと、開いた直後の一瞬だけ
+/// 申請の導線が出て、直後に別のボタンへ入れ替わる。押そうとした先が
+/// 変わるので、**押し間違いを誘う**（AUDIT-CHECKLIST 観点 2。
+/// ホームの「0件」と同じ、届く前に確定を出す形）。
+class _NewListButton extends ConsumerWidget {
+  const _NewListButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppL10n.of(context);
+    final premium = ref.watch(isPremiumProvider);
+
+    return premium.when(
+      loading: () => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      // 読めなかったときは、誰でも通れる申請の導線に倒す。
+      // **「プレミアムでない」と断定はしない**（文言も変えない）。
+      error: (_, _) => const _RequestButton(),
+      data: (isPremium) => isPremium
+          ? FilledButton.icon(
+              onPressed: () => _createList(context, ref),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.createList),
+            )
+          : const _RequestButton(),
+    );
+  }
+
+  Future<void> _createList(BuildContext context, WidgetRef ref) async {
+    final listId = await showDialog<String>(
+      context: context,
+      builder: (_) => const _CreateListDialog(),
+    );
+    if (listId == null || !context.mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).listCreated)));
+    // 作ったリストへ移る。作ったのに一覧が古いままだと、
+    // 「できたのかどうか」が分からない。
+    context.go(AppRoutes.list(listId));
+  }
+}
+
+class _RequestButton extends StatelessWidget {
+  const _RequestButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    return OutlinedButton.icon(
+      onPressed: () => context.go(AppRoutes.requestList),
+      icon: const Icon(Icons.add),
+      label: Text(l10n.requestNewList),
+    );
+  }
+}
+
+/// 申請なしでリストを作る（設計 4.2）。
+///
+/// 名前だけを入れて即作成する。**名前の重複はサーバーが断る**ので、
+/// ここでは調べない（調べても、読んだ後に他の人が取れば食い違う）。
+class _CreateListDialog extends ConsumerStatefulWidget {
+  const _CreateListDialog();
+
+  @override
+  ConsumerState<_CreateListDialog> createState() => _CreateListDialogState();
+}
+
+class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
+  final _name = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+
+    return AlertDialog(
+      title: Text(l10n.createList),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.createListNote,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            if (_error case final error?) ...[
+              ErrorMessage(error),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.listNameLabel,
+                helperText: l10n.listNameHelper,
+                helperMaxLines: 2,
+              ),
+              onSubmitted: _busy ? null : (_) => _submit(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: Text(l10n.createList),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final l10n = AppL10n.of(context);
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = l10n.listNameRequired);
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final listId = await ref
+          .read(functionsRepositoryProvider)
+          .createListDirectly(name);
+      if (mounted) Navigator.of(context).pop(listId);
+    } on FunctionsCallException catch (e) {
+      // 名前が使われている・プレミアムが切れた、を区別して出す。
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
+    } catch (_) {
+      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
@@ -175,9 +335,14 @@ class _ListCard extends ConsumerWidget {
   }
 }
 
-/// 容量の使用状況（仕様書 7.3 / 7.4）。
+/// 容量の使用状況（仕様書 7.3 / 7.4、docs/PREMIUM-DESIGN.md D5 の補足）。
 ///
 /// 80% 超で Notice、90% 超で警告の色に変える。
+///
+/// **出すのは「このリストの使用量」ではなく、リストを作った人の合計。**
+/// 上限は人ごとの合計にかかるので、リストぶんだけを見せると
+/// 「まだ空いているのに追加できない」ことになる。**どちらの数字かが
+/// 分かるよう、必ず「作成者の合計」と添える。**
 class _QuotaBar extends ConsumerWidget {
   const _QuotaBar({required this.listId});
 
@@ -189,7 +354,12 @@ class _QuotaBar extends ConsumerWidget {
     final stats = ref.watch(listStatsProvider(listId)).value;
     if (stats == null) return const SizedBox.shrink();
 
-    final quota = stats.quota;
+    // **合計がまだ届いていないなら、何も出さない。**
+    // リストぶんの数字で代用すると、「作成者の合計」と名乗ったまま
+    // 別の量を出すことになる（AUDIT-CHECKLIST 観点 2）。
+    final quota = stats.ownerQuota;
+    if (quota == null) return const SizedBox.shrink();
+
     final scheme = Theme.of(context).colorScheme;
     final color = switch (quota.level) {
       QuotaLevel.warning => scheme.error,
@@ -216,6 +386,13 @@ class _QuotaBar extends ConsumerWidget {
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: color),
+          ),
+          // **数字だけを出さない。** 誰の合計なのかを必ず添える。
+          // 文の中に括弧を書き足すと、言語によって書き方が変わって
+          // しまうので、行を分けて l10n の文言そのものを出す。
+          Text(
+            l10n.ownerQuotaCaption,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),

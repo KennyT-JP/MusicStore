@@ -20,7 +20,8 @@
  *    このプロジェクトでは、処理を .mjs に寄せる方針にしている（SETUP.md）。
  */
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { connect } from 'node:net';
 import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +31,33 @@ const isWindows = process.platform === 'win32';
 
 const env = { ...process.env };
 delete env.JAVA_TOOL_OPTIONS;
+
+// ---------------------------------------------------------------------------
+// 一時フォルダを、統合テストと分ける（2026-08-11）
+//
+// **Storage エミュレータは、置かれたファイルを一時フォルダに書く。**
+// その置き場所は `os.tmpdir()/firebase/storage/blobs` で、
+// **プロジェクト ID でもポートでも分かれない。**
+//
+// 統合テストと同時に走らせると、**先に終わったほうがこのフォルダを消し、
+// まだ動いているほうの保存が壊れる**。
+//
+//     ENOENT: no such file or directory, open
+//     '…\Temp\firebase\storage\blobs\…'
+//
+// 検証を並列にしたときだけ落ち、単独ではどちらも通るため、
+// 原因が分かりにくい（実際、ポートとプロジェクト ID を分けても直らず、
+// エミュレータの詳細ログを読んで初めて分かった）。
+//
+// Node の `os.tmpdir()` は Windows では TEMP / TMP を見る。
+// **こちら専用の場所を渡して、置き場所ごと分ける。**
+// ---------------------------------------------------------------------------
+
+const tempDir = join(tmpdir(), 'musicstore-rules-test');
+mkdirSync(tempDir, { recursive: true });
+env.TEMP = tempDir;
+env.TMP = tempDir;
+env.TMPDIR = tempDir;
 
 // vitest は依存パッケージなので node_modules/.bin にある。
 //
@@ -52,7 +80,8 @@ env[pathKey] = [join(here, 'node_modules', '.bin'), env[pathKey]]
 const options = [
   'emulators:exec',
   '--project',
-  'demo-musiclist',
+  // 統合テストと別の ID にする（helpers.js のコメントを参照）。
+  'demo-musiclist-rules',
   // **専用の設定で、別のポートに立てる（2026-08-09）。**
   // 統合テストのエミュレータ（ルート設定・8080/9199/4400）と同時に
   // 走らせるため。設定はルートに置いてある——firebase はルールファイルを

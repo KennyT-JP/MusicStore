@@ -272,7 +272,7 @@ Cloud Build の失敗などで途中まで進んだ場合、作成後の設定�
 > 配信ログの `create` / `update` を見れば予測できます。
 > 失敗した直後の再実行が `update` になっていたら、この症状を疑ってください。
 
-**対象は `onCall` の 20 件だけです。** トリガー（`onFileUploaded` など）と
+**対象は `onCall` の 28 件だけです。** トリガー（`onFileUploaded` など）と
 定期実行は利用者が直接呼ばないので、呼び出しの許可とは無関係です。
 消す必要はありません。
 
@@ -290,7 +290,9 @@ for f in submitListRequest approveListRequest rejectListRequest \
          createShareLink acceptShareLink revokeShareLink \
          grantSiteAdmin revokeSiteAdmin withdrawAccount \
          listSiteUsers setListQuota assignListAdmin addListMember \
-         createSiteUser disableSiteUser enableSiteUser deleteSiteUser; do
+         createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
+         createListDirectly setUserQuota extendPremium \
+         createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon; do
   gcloud functions add-invoker-policy-binding "$f" \
     --region="$REGION" --member=allUsers --project="$PROJECT"
 done
@@ -309,6 +311,8 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin addListMember \
   createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
+  createListDirectly setUserQuota extendPremium \
+  createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon \
   --region asia-northeast1 --project music-storage-d79b2 --force
 
 ./scripts/deploy.sh prod --no-build --only=functions
@@ -1003,10 +1007,10 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 337 件
+flutter test      # 379 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
-cd functions && npm test   # 85 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）
 ```
 
 権限判定・容量上限・連番・共有リンク・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
@@ -1023,7 +1027,7 @@ cd functions && npm test   # 85 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 130 件（Firestore 114 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
+npm test          # 161 件（Firestore 145 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
 ```
 
 Firestore ルールは全件エミュレータで検証できます。
@@ -1064,7 +1068,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（96 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（164 件）。
 
 ```sh
 cd functions && npm run test:integration

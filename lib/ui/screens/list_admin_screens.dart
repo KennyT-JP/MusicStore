@@ -652,6 +652,12 @@ class ListSettingsScreen extends ConsumerWidget {
   }
 }
 
+/// 容量（仕様書 7.4、docs/PREMIUM-DESIGN.md D5 の補足）。
+///
+/// **出すのは「このリストの使用量」ではなく、リストを作った人の合計。**
+/// 上限は人ごとの合計にかかる（誰が音源を上げても、作った人の枠から
+/// 引かれる）ため、リストぶんだけを出すと「まだ空いているのに
+/// 追加できない」という説明のつかない状態になる。
 class _QuotaCard extends StatelessWidget {
   const _QuotaCard({required this.stats});
 
@@ -660,8 +666,34 @@ class _QuotaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
-    final quota = stats.quota;
     final scheme = Theme.of(context).colorScheme;
+
+    // **合計がまだ届いていないなら、数字を出さない。**
+    // このリストぶんの値で代用すると、「作成者の合計」と名乗ったまま
+    // 別の量を出すことになる（AUDIT-CHECKLIST 観点 2）。
+    final quota = stats.ownerQuota;
+    if (quota == null) {
+      return Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.ownerQuotaTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.ownerQuotaUnknown,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     final color = switch (quota.level) {
       QuotaLevel.warning => scheme.error,
@@ -676,7 +708,17 @@ class _QuotaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.usedCapacity, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.ownerQuotaTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            // **誰の、何の合計なのかを書く。** 数字だけでは
+            // 「このリストの容量」と読まれる。
+            Text(
+              l10n.ownerQuotaNote,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             LinearProgressIndicator(
               value: quota.ratio.clamp(0.0, 1.0),

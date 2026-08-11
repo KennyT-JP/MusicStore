@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/firestore_paths.dart';
 import '../data/models/app_user.dart';
+import '../data/models/coupon.dart';
 import '../data/models/list_item.dart';
 import '../data/models/music_list.dart';
 import '../data/models/requests.dart';
@@ -20,6 +21,7 @@ import '../data/repositories/item_repository.dart';
 import '../data/repositories/list_repository.dart';
 import '../env/firebase_emulators.dart';
 import '../domain/display_name.dart';
+import '../domain/premium.dart';
 import '../domain/quota.dart';
 import '../domain/role.dart';
 import '../ui/app_router.dart';
@@ -501,3 +503,36 @@ final siteUsersProvider = FutureProvider<List<SiteUser>>((ref) async {
   if (!isSiteAdmin) return const [];
   return ref.watch(functionsRepositoryProvider).listSiteUsers();
 });
+
+// ---------------------------------------------------------------------------
+// プレミアム（docs/PREMIUM-DESIGN.md）
+// ---------------------------------------------------------------------------
+
+/// 自分がいまプレミアムか。
+///
+/// **AsyncValue のまま返す。** 「プレミアムでない」と「まだ分からない」を
+/// 混ぜると、届く前に「プレミアムでない人の画面」を確定して見せてしまう
+/// （docs/AUDIT-CHECKLIST.md 観点 2。ホームの「0件」問題と同じ形）。
+/// 画面は読み込み中のあいだ、どちらのボタンも出し分けないこと。
+final isPremiumProvider = Provider<AsyncValue<bool>>((ref) {
+  return ref
+      .watch(currentAppUserProvider)
+      .whenData((user) => PremiumPolicy.isActive(user?.premiumUntil));
+});
+
+/// クーポンの一覧（サイト管理者のみ／設計 5）。
+///
+/// **Firestore からは読めない。** ルールで全面禁止にしてあり、
+/// 読めるとコードの一覧がそのまま漏れる（設計 9 の 3）。
+final couponsProvider = FutureProvider<List<Coupon>>((ref) async {
+  final isSiteAdmin = ref.watch(isSiteAdminProvider).value ?? false;
+  if (!isSiteAdmin) return const [];
+  return ref.watch(functionsRepositoryProvider).listCoupons();
+});
+
+/// そのクーポンを使った人（サイト管理者のみ／設計 5）。
+final couponRedemptionsProvider =
+    FutureProvider.autoDispose.family<List<CouponRedemption>, String>(
+      (ref, couponId) =>
+          ref.watch(functionsRepositoryProvider).listCouponRedemptions(couponId),
+    );

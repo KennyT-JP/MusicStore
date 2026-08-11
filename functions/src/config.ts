@@ -75,6 +75,23 @@ export const paths = {
   shareLink: (linkId: string) => `shareLinks/${linkId}`,
 
   /**
+   * クーポン（docs/PREMIUM-DESIGN.md 3.2 / 9-3）。
+   *
+   * **クライアントからは一切読めない**（ルールで全面禁止）。読めると
+   * コードの一覧がそのまま漏れ、誰でもプレミアムになれる。発行・一覧・
+   * 停止・引き換えはすべて呼び出し可能関数を通す。
+   */
+  coupons: 'coupons',
+  coupon: (couponId: string) => `coupons/${couponId}`,
+  /**
+   * 誰がいつ使ったか。**ドキュメント ID を uid にする。**
+   * トランザクションの中で「無ければ作る」を行えば二重取りが起きない。
+   */
+  couponRedemptions: (couponId: string) => `coupons/${couponId}/redemptions`,
+  couponRedemption: (couponId: string, uid: string) =>
+    `coupons/${couponId}/redemptions/${uid}`,
+
+  /**
    * 参加せずに見るだけの人（仕様書 3.3）。
    *
    * **メンバーとは別に持つ。** メンバー一覧にも人数にも通知の宛先にも

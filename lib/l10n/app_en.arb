@@ -96,7 +96,6 @@
   "noPendingRequests": "There are no pending requests.",
   "chooseApprovalRole": "Choose the role to grant",
   "deleteListBody": "This will delete \"{name}\".\n\nThere is no backup, so deleted content cannot be restored.",
-  "usedCapacity": "Storage used",
   "quotaOver90": "Over 90% of the limit. Ask a site administrator to raise it.",
   "quotaOver80": "Over 80% of the limit.",
   "quotaGraceNote": "Files from deleted items are kept for a while, so deleting does not free space immediately.",
@@ -397,5 +396,154 @@
     }
   },
   "functionErrorUserDisabled": "That user is disabled. Enable them first.",
-  "functionErrorUserWithdrawn": "That user has withdrawn."
+  "functionErrorUserWithdrawn": "That user has withdrawn.",
+
+  "premiumSection": "Premium",
+  "premiumActiveUntil": "Premium is active until {date}.",
+  "@premiumActiveUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumInactive": "You are not on Premium at the moment.",
+  "premiumInactiveNote": "Without Premium, everything you have already saved stays as it is. You simply cannot create a new list without submitting a request.",
+  "couponCodeLabel": "Coupon code",
+  "couponCodeRequired": "Please enter a coupon code",
+  "couponRedeem": "Redeem coupon",
+  "couponRedeemed": "Coupon redeemed. Premium is active until {date}.",
+  "@couponRedeemed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "createList": "Create a list",
+  "createListNote": "With Premium you can create a list right away, without a request.",
+  "listCreated": "The list has been created.",
+
+  "myStorageTitle": "Storage in use (your total)",
+  "myStorageNote": "This is the total across every list you created. The limit applies to that total, not to each list.",
+  "myStorageUnknown": "Usage has not been calculated yet. It appears once tracks are added.",
+
+  "ownerQuotaTitle": "Storage in use (creator's total)",
+  "ownerQuotaCaption": "creator's total",
+  "ownerQuotaNote": "This is the total across every list created by the person who created this list. It is not the amount used by this list alone. Whoever uploads a track, it counts against the creator's storage.",
+  "ownerQuotaUnknown": "The creator's total has not been calculated yet. Please check again later.",
+
+  "siteAdminCoupons": "Coupons",
+  "couponListEmpty": "There are no coupons yet.",
+  "couponCreate": "Issue a coupon",
+  "couponMonthsLabel": "Months granted",
+  "couponMaxUsesLabel": "Number of people",
+  "couponExpiresLabel": "Coupon expiry",
+  "couponNoExpiry": "No expiry",
+  "couponChooseExpiry": "Set an expiry",
+  "couponClearExpiry": "Remove the expiry",
+  "couponCodeAuto": "Generate automatically",
+  "couponCodeManual": "Specify the text",
+  "couponCodeManualLabel": "Code to use",
+  "couponCodeManualWarning": "A code you choose is easy to remember, and just as easy to guess. Always set the number of people and an expiry.",
+  "couponMonthsValue": "{months} months",
+  "@couponMonthsValue": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "couponUsesValue": "{used} / {max} people",
+  "@couponUsesValue": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "couponExpiresOn": "Expires {date}",
+  "@couponExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "couponDisabledLabel": "Disabled",
+  "couponUsedUpLabel": "Fully used",
+  "couponExpiredLabel": "Expired",
+  "couponDisable": "Disable",
+  "couponEnable": "Re-enable",
+  "couponChangeMaxUses": "Change the number of people",
+  "couponChangeMaxUsesBody": "Enter how many people may use \"{code}\". You may set a number lower than the people who already used it: no one else can use it, and the Premium already granted is not taken away.",
+  "@couponChangeMaxUsesBody": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "couponViewRedemptions": "See who used it",
+  "couponRedemptionsTitle": "People who used \"{code}\"",
+  "@couponRedemptionsTitle": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "couponRedemptionsEmpty": "No one has used it yet.",
+  "couponCreated": "Coupon issued: {code}",
+  "@couponCreated": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "couponCopyCode": "Copy the code",
+  "couponCodeCopied": "The code has been copied.",
+
+  "extendPremium": "Extend Premium",
+  "extendPremiumBody": "Extend Premium for {name}. If they already have an expiry date, the months are added to it.",
+  "@extendPremiumBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extendPremiumMonthsLabel": "Months to add",
+  "extendPremiumDone": "Extended until {date}.",
+  "@extendPremiumDone": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "setUserQuotaTitle": "Change a user's storage limit",
+  "setUserQuotaBody": "Enter the storage limit for {name} in MB. It applies to the total across every list they created, not to each list.",
+  "@setUserQuotaBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setUserQuotaDone": "The storage limit has been changed.",
+
+  "functionErrorPremiumRequired": "This action requires Premium. Enter a coupon code on the settings screen.",
+  "functionErrorCouponNotFound": "That coupon code was not found. Please check what you entered.",
+  "functionErrorCouponDisabled": "This coupon has been disabled. Please contact whoever gave it to you.",
+  "functionErrorCouponExpired": "This coupon has expired.",
+  "functionErrorCouponUsedUp": "This coupon has reached the number of people who may use it.",
+  "functionErrorCouponAlreadyUsed": "You have already used this coupon. Each coupon can be used once per person.",
+  "functionErrorCouponCodeTaken": "That code is already in use. Please choose different text.",
+  "functionErrorMonthsInvalid": "Months must be a whole number of 1 or more.",
+  "functionErrorMaxUsesInvalid": "The number of people must be a whole number of 1 or more."
 }
