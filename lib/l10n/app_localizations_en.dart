@@ -36,9 +36,6 @@ class AppL10nEn extends AppL10n {
   String get signOut => 'Sign out';
 
   @override
-  String get signInWithGoogle => 'Sign in with Google';
-
-  @override
   String get emailLabel => 'Email address';
 
   @override
@@ -225,6 +222,21 @@ class AppL10nEn extends AppL10n {
   @override
   String get authNetworkFailed =>
       'Could not reach the network. Please check your connection.';
+
+  @override
+  String get signUpPrompt => 'New here? Create an account';
+
+  @override
+  String get orSeparator => 'or';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
 
   @override
   String get authPopupBlocked =>

@@ -151,12 +151,6 @@ abstract class AppL10n {
   /// **'ログアウト'**
   String get signOut;
 
-  /// No description provided for @signInWithGoogle.
-  ///
-  /// In ja, this message translates to:
-  /// **'Google でログイン'**
-  String get signInWithGoogle;
-
   /// No description provided for @emailLabel.
   ///
   /// In ja, this message translates to:
@@ -492,6 +486,36 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'ネットワークに接続できませんでした。通信状況をご確認ください。'**
   String get authNetworkFailed;
+
+  /// No description provided for @signUpPrompt.
+  ///
+  /// In ja, this message translates to:
+  /// **'はじめての方はこちら（新規登録）'**
+  String get signUpPrompt;
+
+  /// No description provided for @orSeparator.
+  ///
+  /// In ja, this message translates to:
+  /// **'または'**
+  String get orSeparator;
+
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Google で続ける'**
+  String get continueWithGoogle;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードを表示'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In ja, this message translates to:
+  /// **'パスワードを隠す'**
+  String get hidePassword;
 
   /// No description provided for @authPopupBlocked.
   ///

@@ -86,21 +86,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             ErrorMessage(_error!, detail: _errorDetail),
             const SizedBox(height: 16),
           ],
-          FilledButton.tonalIcon(
-            onPressed: _busy
-                ? null
-                : () => _run(
-                    () => auth.signInWithGoogle(
-                      // 登録時の表示言語を、その人の設定として残す（2 章）。
-                      languageCode: Localizations.localeOf(context).languageCode,
-                    ),
-                  ),
-            icon: const Icon(Icons.account_circle_outlined),
-            label: Text(l10n.signInWithGoogle),
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 16),
+          // 並びはログイン画面に合わせる（2026-08-11・依頼者の指定）。
+          // 片方だけ変えると、行き来したときに置き場所が変わって迷う。
           Form(
             key: _formKey,
             child: Column(
@@ -147,10 +134,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           TextButton(
             onPressed: _busy ? null : () => context.go(_withRedirect()),
             child: Text(l10n.signIn),
+          ),
+          const SizedBox(height: 8),
+          const OrDivider(),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _busy
+                ? null
+                : () => _run(
+                    () => auth.signInWithGoogle(
+                      // 登録時の表示言語を、その人の設定として残す（2 章）。
+                      languageCode: Localizations.localeOf(context).languageCode,
+                    ),
+                  ),
+            icon: const GoogleMark(),
+            label: Text(l10n.continueWithGoogle),
           ),
         ],
       ),

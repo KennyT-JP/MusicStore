@@ -88,3 +88,55 @@ class AuthScaffold extends StatelessWidget {
     );
   }
 }
+
+/// 「または」を挟んだ区切り線。
+///
+/// メール＋パスワードと、外部サービスでのログインを分ける。
+/// **どちらか一方でよい**ことが、線だけより伝わる。
+class OrDivider extends StatelessWidget {
+  const OrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            AppL10n.of(context).orSeparator,
+            style: TextStyle(color: scheme.outline, fontSize: 12),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
+  }
+}
+
+/// Google のボタンに置く「G」。
+///
+/// **画像を持ち込まない。** ロゴの画像は配布の条件が別にあるため、
+/// 文字で代用する。色は Google の青に寄せてある。
+class GoogleMark extends StatelessWidget {
+  const GoogleMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 18,
+      height: 18,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF4285F4),
+          ),
+        ),
+      ),
+    );
+  }
+}

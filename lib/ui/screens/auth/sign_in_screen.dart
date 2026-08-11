@@ -30,6 +30,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _busy = false;
   String? _error;
 
+  /// パスワードを伏せずに見せているか。
+  bool _passwordVisible = false;
+
   /// 原因が 1 つに絞れないときだけ入る、技術的な内容。
   String? _errorDetail;
 
@@ -83,21 +86,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             ErrorMessage(_error!, detail: _errorDetail),
             const SizedBox(height: 16),
           ],
-          FilledButton.tonalIcon(
-            onPressed: _busy
-                ? null
-                : () => _run(
-                    () => auth.signInWithGoogle(
-                      // 登録時の表示言語を、その人の設定として残す（2 章）。
-                      languageCode: Localizations.localeOf(context).languageCode,
-                    ),
-                  ),
-            icon: const Icon(Icons.account_circle_outlined),
-            label: Text(l10n.signInWithGoogle),
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 16),
+          // **並びは 2026-08-11 に依頼者の指定で変更した。**
+          // メール＋パスワードを先に置き、Google は「または」で区切った
+          // 下に回す。以前は Google が最上段にあった。
           Form(
             key: _formKey,
             child: Column(
@@ -118,17 +109,43 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _password,
-                  obscureText: true,
+                  obscureText: !_passwordVisible,
                   autofillHints: const [AutofillHints.password],
                   decoration: InputDecoration(
                     labelText: l10n.passwordLabel,
                     border: const OutlineInputBorder(),
+                    // **入力したものを確かめられるようにする。**
+                    // 打ち間違いに気づけず「パスワードが違います」を
+                    // 繰り返すのは、防げる失敗。
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(
+                        () => _passwordVisible = !_passwordVisible,
+                      ),
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
+                      tooltip: _passwordVisible
+                          ? l10n.hidePassword
+                          : l10n.showPassword,
+                    ),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? l10n.passwordRequired : null,
                   onFieldSubmitted: (_) => _submit(auth),
                 ),
-                const SizedBox(height: 16),
+                // 忘れたときの導線は、パスワード欄のすぐ下に置く。
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => context.go(AppRoutes.resetPassword),
+                    child: Text(l10n.forgotPassword),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 FilledButton(
                   onPressed: _busy ? null : () => _submit(auth),
                   child: Text(l10n.signIn),
@@ -136,16 +153,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: _busy ? null : () => context.go(AppRoutes.resetPassword),
-            child: Text(l10n.forgotPassword),
-          ),
+          const SizedBox(height: 8),
           TextButton(
             onPressed: _busy
                 ? null
                 : () => context.go(_withRedirect(AppRoutes.signUp)),
-            child: Text(l10n.signUp),
+            child: Text(l10n.signUpPrompt),
+          ),
+          const SizedBox(height: 8),
+          const OrDivider(),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _busy
+                ? null
+                : () => _run(
+                    () => auth.signInWithGoogle(
+                      // 登録時の表示言語を、その人の設定として残す（2 章）。
+                      languageCode: Localizations.localeOf(context).languageCode,
+                    ),
+                  ),
+            icon: const GoogleMark(),
+            label: Text(l10n.continueWithGoogle),
           ),
         ],
       ),

@@ -53,8 +53,33 @@ void main() {
 
     expect(tester.takeException(), isNull);
     // Google ログインとメール入力欄が出ている。
-    expect(find.text('Google でログイン'), findsOneWidget);
+    expect(find.text('Google で続ける'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
+  });
+
+  // **並びは依頼者が指定したもの（2026-08-11）。**
+  // メール＋パスワードが先、「または」を挟んで Google が下。
+  // 以前は Google が最上段だった。積み直すと元へ戻りやすいので固定する。
+  testWidgets('メール入力が先、Google はその下に置く', (tester) async {
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    final email = tester.getTopLeft(find.byType(TextFormField).first).dy;
+    final separator = tester.getTopLeft(find.text('または')).dy;
+    final google = tester.getTopLeft(find.text('Google で続ける')).dy;
+
+    expect(email, lessThan(separator));
+    expect(separator, lessThan(google));
+  });
+
+  testWidgets('パスワードは伏せてあり、押すと見える', (tester) async {
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.visibility_outlined));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
   });
 
   testWidgets('メールとパスワードを入れてログインできる', (tester) async {
