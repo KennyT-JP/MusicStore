@@ -215,8 +215,11 @@ export const redeemCoupon = onCall({ region: REGION }, async (request) => {
       ? db.doc(paths.couponRedemption(couponDoc.id, uid))
       : null;
     const redemption = redemptionRef ? await tx.get(redemptionRef) : null;
-    const userRef = db.doc(paths.user(uid));
-    const user = await tx.get(userRef);
+    // **プレミアムは本人だけの場所にある（config.ts の userPrivate）。**
+    // `users/{uid}` はログイン済みなら誰でも ID 指定で読めるため、期限を
+    // そこに置くと他の利用者にも見えていた。
+    const privateRef = db.doc(paths.userPrivate(uid));
+    const state = await tx.get(privateRef);
 
     const data = couponDoc?.data();
     const verdict = evaluateCouponRedemption({
@@ -240,7 +243,7 @@ export const redeemCoupon = onCall({ region: REGION }, async (request) => {
     }
 
     const until = extendedPremiumUntil({
-      currentUntilMs: toMillis(user.data()?.premium?.until),
+      currentUntilMs: toMillis(state.data()?.premium?.until),
       months: Number(data?.months ?? 0),
       nowMs,
     });
@@ -249,7 +252,7 @@ export const redeemCoupon = onCall({ region: REGION }, async (request) => {
     tx.set(redemptionRef!, { redeemedAt: FieldValue.serverTimestamp() });
     tx.update(couponDoc!.ref, { usedCount: FieldValue.increment(1) });
     tx.set(
-      userRef,
+      privateRef,
       {
         premium: {
           until: Timestamp.fromMillis(until),

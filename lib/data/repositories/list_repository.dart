@@ -113,9 +113,13 @@ class ListRepository {
   ///
   /// 項目・コメントには uid のみを持たせているため、表示時にここで解決する。
   ///
+  /// **`users/{uid}` の公開されるぶんだけを読む。** メールアドレスなどの
+  /// 私的な項目は `users/{uid}/private/state` にあり、本人しか読めない
+  /// （2026-08-11）。ここで引くのは他人ぶんも含むので、公開のぶんに限る。
+  ///
   /// **ID を 1 件ずつ指定して取得する。** 以前は `whereIn` を使っていたが、
   /// これは Firestore のルール上「一覧取得」に当たる。一覧を許すと
-  /// 全会員のメールアドレスと表示名を一括で収集できてしまうため、
+  /// 全会員の表示名を一括で収集できてしまうため、
   /// `users` の一覧はサイト管理者だけに絞った（監査 S2）。
   /// 読み取るドキュメント数は `whereIn` と同じで、課金も変わらない。
   Future<Map<String, AppUser>> fetchUsers(Iterable<String> uids) async {
@@ -137,7 +141,18 @@ class ListRepository {
       .snapshots()
       .map((doc) => doc.exists ? AppUser.fromDoc(doc) : null);
 
+  /// 私的な情報を監視する（`users/{uid}/private/state`）。
+  ///
+  /// **自分の uid でしか呼べない。** 他人のぶんはルールで断られる。
+  /// まだ書かれていなければ null を流す（0 や既定値で埋めない）。
+  Stream<UserPrivate?> watchUserPrivate(String uid) => _db
+      .doc(FirestorePaths.userPrivate(uid))
+      .snapshots()
+      .map((doc) => doc.exists ? UserPrivate.fromDoc(doc) : null);
+
   /// 表示名を変更する（仕様書 3.4）。
+  ///
+  /// 表示名は公開されるぶんなので `users/{uid}` を直す。
   Future<void> updateDisplayName(String uid, String displayName) =>
       _db.doc(FirestorePaths.user(uid)).update({
         'displayName': displayName.trim(),
@@ -145,18 +160,31 @@ class ListRepository {
       });
 
   /// 表示言語を変更する（仕様書 2 章）。
+  ///
+  /// **私的な情報なので `private/state` を直す。** 以前は誰でも読める
+  /// `users/{uid}` に置いていた（2026-08-11 に移した）。
+  ///
+  /// **`update` ではなく `set(merge: true)` を使う。** 移行前からいる人と
+  /// 登録したばかりの人は、この文書がまだ無い。`update` は文書が無いと
+  /// 失敗するので、切り替えても保存できないまま終わる。
+  /// `premium` と `storage` はサーバーだけが書く（ルールで縛ってある）。
   Future<void> updateLocale(String uid, String locale) => _db
-      .doc(FirestorePaths.user(uid))
-      .update({'locale': locale, 'updatedAt': FieldValue.serverTimestamp()});
+      .doc(FirestorePaths.userPrivate(uid))
+      .set({
+        'locale': locale,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
   /// 通知設定を保存する（仕様書 10.3）。
+  ///
+  /// [updateLocale] と同じ理由で `set(merge: true)`。
   Future<void> updateNotificationSettings(
     String uid,
     NotificationSettings settings,
-  ) => _db.doc(FirestorePaths.user(uid)).update({
+  ) => _db.doc(FirestorePaths.userPrivate(uid)).set({
     'notificationSettings': settings.toMap(),
     'updatedAt': FieldValue.serverTimestamp(),
-  });
+  }, SetOptions(merge: true));
 
   /// メンバーの役割を変更する（仕様書 4.3）。
   Future<void> updateMemberRole(String listId, String uid, String role) =>

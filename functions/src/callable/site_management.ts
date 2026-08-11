@@ -21,6 +21,12 @@ import { fail } from '../errors';
  * （仕様書 13.5）、クライアントからは他人の状態を知る手段がない。
  * ここで Auth と Firestore を突き合わせて返す。
  *
+ * **メールアドレスは Auth から取る。Firestore からは読まない**
+ * （2026-08-11）。控えは `users/{uid}/private/state` へ移してあり、
+ * そこは本人しか読めない。Auth 側が本来の持ち主なので、こちらを見るほうが
+ * 確実で、控えが古くてもずれない。**リスト管理者には見せない**——
+ * メールアドレスを見るのは本人と、ここを通るサイト管理者だけ。
+ *
  * **注意**：全ユーザーを走査する。人数が増えたらページングが必要になる。
  */
 export const listSiteUsers = onCall({ region: REGION }, async (request) => {
@@ -155,7 +161,10 @@ export const setUserQuota = onCall({ region: REGION }, async (request) => {
     throw fail('not-found', 'userNotFound');
   }
 
-  const ref = getFirestore().doc(paths.user(uid));
+  // **容量は本人だけの場所にある（config.ts の userPrivate）。**
+  // `users/{uid}` は誰でも ID 指定で読めるため、使用量をそこに置くと
+  // 「誰がどれだけ溜め込んでいるか」が他の利用者にも見えていた。
+  const ref = getFirestore().doc(paths.userPrivate(uid));
 
   // **使用量も一緒に埋める。** 画面は `usedBytes` と `quotaBytes` の
   // 両方が揃って初めて容量を出す（片方だけでは「まだ集計されていない」と
@@ -266,6 +275,9 @@ export const addListMember = onCall({ region: REGION }, async (request) => {
   if (user.disabled) {
     throw fail('failed-precondition', 'userDisabled');
   }
+  // **`isWithdrawn` は `users/{uid}` に残してある**（2026-08-11 の移動の対象外）。
+  // 退会した人の表示名を「退会したユーザー」に切り替えるのに要るので、
+  // 誰でも読める側に置いたままにする（仕様書 3.5）。
   const profile = await db.doc(paths.user(targetUid)).get();
   if (profile.get('isWithdrawn') === true) {
     throw fail('failed-precondition', 'userWithdrawn');

@@ -1,4 +1,12 @@
-/// ユーザー（仕様書 13.3 `users/{uid}`）
+/// ユーザー（仕様書 13.3 `users/{uid}` と `users/{uid}/private/state`）
+///
+/// **公開されるものと私的なものを、型ごと分けてある**（2026-08-11）。
+///
+/// `users/{uid}` は表示名を解決するためにログイン済みなら誰でも読める。
+/// そこにメールアドレス・プレミアムの期限・容量の使用量まで置いていたため、
+/// 他の利用者からも見えていた。私的な項目は `users/{uid}/private/state` へ
+/// 移し、**[AppUser] からは持てないようにした**。他人のぶんは読めないので、
+/// 型の上でも「持っているかもしれない」状態を作らない。
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -110,7 +118,7 @@ class NotificationSettings {
   ) => copyWith(types: {...types, type: setting});
 }
 
-/// 自分の合計の容量（`users/{uid}.storage`）。
+/// 自分の合計の容量（`users/{uid}/private/state.storage`）。
 ///
 /// **本人だけが読める**（firestore.rules）。上限は人ごとの合計で、
 /// リストごとの上限は使わない（docs/PREMIUM-DESIGN.md D5 の補足）。
@@ -135,30 +143,77 @@ class UserStorage {
   }
 }
 
-/// ユーザー。
+/// ユーザーの**公開される**ぶん（`users/{uid}`）。
+///
+/// ログイン済みなら誰でも読める。表示名を解決するために必要な項目だけを
+/// 置く。**私的な項目をここへ足さないこと**（[UserPrivate] へ入れる）。
 class AppUser {
   const AppUser({
     required this.uid,
     required this.displayName,
-    required this.email,
-    required this.locale,
     required this.isWithdrawn,
-    required this.notificationSettings,
     this.photoUrl,
-    this.premiumUntil,
-    this.storage,
   });
 
   final String uid;
   final String displayName;
-  final String email;
   final String? photoUrl;
-
-  /// 表示言語（`ja` / `en`）。
-  final String locale;
 
   /// 退会済みか（仕様書 3.5）。退会してもドキュメントは残す。
   final bool isWithdrawn;
+
+  factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      AppUser.fromMap(doc.id, doc.data());
+
+  /// 保存されている中身から作る。
+  ///
+  /// **私的な項目が混ざっていても取り出さない。** 移行の途中は
+  /// `users/{uid}` にも古い項目が残っていることがあるが、ここを通る限り
+  /// 画面までは届かない（`DocumentSnapshot` は模擬できないので、
+  /// テストはこちらを直に呼ぶ）。
+  factory AppUser.fromMap(String uid, Map<String, dynamic>? data) {
+    final map = data ?? const <String, dynamic>{};
+    return AppUser(
+      uid: uid,
+      displayName: map['displayName'] as String? ?? '',
+      photoUrl: map['photoURL'] as String?,
+      isWithdrawn: map['isWithdrawn'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toCreateMap() => {
+    'displayName': displayName,
+    if (photoUrl != null) 'photoURL': photoUrl,
+    'isWithdrawn': false,
+    'createdAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+}
+
+/// ユーザーの**私的な**ぶん（`users/{uid}/private/state`）。
+///
+/// **本人しか読めない**（firestore.rules）。したがって、このクラスの値は
+/// 「自分のもの」以外には存在しない。他人の分を作れてしまうと、画面が
+/// うっかり他人のメールアドレスや容量を出す形が書けてしまうので、
+/// [AppUser] とは合流させない。
+class UserPrivate {
+  const UserPrivate({
+    required this.locale,
+    required this.notificationSettings,
+    // サーバーだけが書く項目は、クライアントから作るときに渡さない。
+    this.email = '',
+    this.premiumUntil,
+    this.storage,
+  });
+
+  /// ログインに使っているメールアドレス。
+  ///
+  /// **画面には出さない**（2026-08-11 の判断）。**書くのはサーバーだけ**で、
+  /// クライアントは読むだけ（[toCreateMap] にも入れない）。
+  final String email;
+
+  /// 表示言語（`ja` / `en`）。
+  final String locale;
 
   final NotificationSettings notificationSettings;
 
@@ -168,34 +223,39 @@ class AppUser {
   /// 判定は `PremiumPolicy.isActive` を通す。
   final DateTime? premiumUntil;
 
-  /// 自分の合計の容量。**他人のドキュメントでは常に null**（読めない）。
+  /// 自分の合計の容量。**まだ集計されていなければ null**（0 で埋めない）。
   final UserStorage? storage;
 
-  factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? const {};
-    return AppUser(
-      uid: doc.id,
-      displayName: data['displayName'] as String? ?? '',
-      email: data['email'] as String? ?? '',
-      photoUrl: data['photoURL'] as String?,
-      locale: data['locale'] as String? ?? 'ja',
-      isWithdrawn: data['isWithdrawn'] as bool? ?? false,
+  factory UserPrivate.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      UserPrivate.fromMap(doc.data());
+
+  /// 保存されている中身から作る。
+  ///
+  /// **無いものを 0 や既定値で埋めない。** 容量とプレミアムの期限は
+  /// null のまま返し、「まだ届いていない」を画面まで伝える。
+  factory UserPrivate.fromMap(Map<String, dynamic>? data) {
+    final map = data ?? const <String, dynamic>{};
+    return UserPrivate(
+      email: map['email'] as String? ?? '',
+      locale: map['locale'] as String? ?? 'ja',
       notificationSettings: NotificationSettings.fromMap(
-        data['notificationSettings'] as Map<String, dynamic>?,
+        map['notificationSettings'] as Map<String, dynamic>?,
       ),
       premiumUntil:
-          ((data['premium'] as Map<String, dynamic>?)?['until'] as Timestamp?)
+          ((map['premium'] as Map<String, dynamic>?)?['until'] as Timestamp?)
               ?.toDate(),
-      storage: UserStorage.fromMap(data['storage'] as Map<String, dynamic>?),
+      storage: UserStorage.fromMap(map['storage'] as Map<String, dynamic>?),
     );
   }
 
+  /// クライアントから作るときに書く中身。
+  ///
+  /// **本人が書けるのは `locale` と `notificationSettings` だけ**
+  /// （firestore.rules）。`email` はログイン情報、`premium` と `storage` は
+  /// 課金と集計の結果なので、いずれもサーバーだけが書く。ここへ足すと
+  /// 書き込みごとルールに断られ、**登録そのものが失敗する。**
   Map<String, dynamic> toCreateMap() => {
-    'displayName': displayName,
-    'email': email,
-    if (photoUrl != null) 'photoURL': photoUrl,
     'locale': locale,
-    'isWithdrawn': false,
     'notificationSettings': notificationSettings.toMap(),
     'createdAt': FieldValue.serverTimestamp(),
     'updatedAt': FieldValue.serverTimestamp(),

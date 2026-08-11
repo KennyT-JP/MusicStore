@@ -116,11 +116,27 @@ final authStateProvider = Provider<AuthState>((ref) {
   );
 });
 
-/// 自分のユーザードキュメント。
+/// 自分のユーザードキュメントのうち、**公開されるぶん**（`users/{uid}`）。
+///
+/// 表示名だけを持つ。私的な項目は [currentUserPrivateProvider] にある。
 final currentAppUserProvider = StreamProvider<AppUser?>((ref) {
   final user = ref.watch(firebaseUserProvider).value;
   if (user == null) return Stream.value(null);
   return ref.watch(listRepositoryProvider).watchUser(user.uid);
+});
+
+/// 自分の**私的な**情報（`users/{uid}/private/state`）。
+///
+/// 表示言語・通知設定・プレミアムの期限・容量はここから読む。
+/// **他人のぶんは読めない**ので、uid を引数に取る形にはしていない。
+///
+/// **AsyncValue のまま配る。** 届く前に既定値へ倒すと、まだ分からない
+/// ことを「そうでない」と断定して見せてしまう
+/// （docs/AUDIT-CHECKLIST.md 観点 2。ホームの「0件」問題と同じ形）。
+final currentUserPrivateProvider = StreamProvider<UserPrivate?>((ref) {
+  final user = ref.watch(firebaseUserProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(listRepositoryProvider).watchUserPrivate(user.uid);
 });
 
 // ---------------------------------------------------------------------------
@@ -514,10 +530,13 @@ final siteUsersProvider = FutureProvider<List<SiteUser>>((ref) async {
 /// 混ぜると、届く前に「プレミアムでない人の画面」を確定して見せてしまう
 /// （docs/AUDIT-CHECKLIST.md 観点 2。ホームの「0件」問題と同じ形）。
 /// 画面は読み込み中のあいだ、どちらのボタンも出し分けないこと。
+///
+/// **私的な情報から読む。** 期限は本人だけが読める
+/// `users/{uid}/private/state` にある（2026-08-11）。
 final isPremiumProvider = Provider<AsyncValue<bool>>((ref) {
   return ref
-      .watch(currentAppUserProvider)
-      .whenData((user) => PremiumPolicy.isActive(user?.premiumUntil));
+      .watch(currentUserPrivateProvider)
+      .whenData((private) => PremiumPolicy.isActive(private?.premiumUntil));
 });
 
 /// クーポンの一覧（サイト管理者のみ／設計 5）。

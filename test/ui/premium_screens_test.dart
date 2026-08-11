@@ -37,16 +37,21 @@ const _listId = 'list-1';
 
 const _oneGb = 1024 * 1024 * 1024;
 
-AppUser _user({DateTime? premiumUntil, UserStorage? storage}) => AppUser(
-  uid: 'u1',
-  displayName: '太郎',
-  email: 'taro@example.com',
-  locale: 'ja',
-  isWithdrawn: false,
-  notificationSettings: const NotificationSettings(),
-  premiumUntil: premiumUntil,
-  storage: storage,
-);
+/// 公開されるぶん（`users/{uid}`）。表示名しか持たない。
+AppUser _user() =>
+    const AppUser(uid: 'u1', displayName: '太郎', isWithdrawn: false);
+
+/// 本人だけが読めるぶん（`users/{uid}/private/state`）。
+///
+/// **プレミアムの期限も容量もこちら。** 他人からは読めない。
+UserPrivate _private({DateTime? premiumUntil, UserStorage? storage}) =>
+    UserPrivate(
+      email: 'taro@example.com',
+      locale: 'ja',
+      notificationSettings: const NotificationSettings(),
+      premiumUntil: premiumUntil,
+      storage: storage,
+    );
 
 MyListEntry _entry() => const MyListEntry(
   list: MusicList(
@@ -83,7 +88,7 @@ Widget _wrap(Widget child) => MaterialApp(
 
 /// ホーム。作成後の遷移先も見たいので、小さなルーターを添える。
 Widget _home({
-  required Stream<AppUser?> user,
+  required Stream<UserPrivate?> private,
   FunctionsRepository? functions,
   ListStats? stats,
 }) {
@@ -104,7 +109,7 @@ Widget _home({
 
   return ProviderScope(
     overrides: [
-      currentAppUserProvider.overrideWith((ref) => user),
+      currentUserPrivateProvider.overrideWith((ref) => private),
       myListsProvider.overrideWith((ref) => Stream.value([_entry()])),
       listStatsProvider(_listId).overrideWith((ref) => Stream.value(stats)),
       listAccessProvider(_listId).overrideWith(
@@ -128,11 +133,12 @@ Widget _home({
 }
 
 Widget _settings({
-  required AppUser user,
+  required UserPrivate private,
   FunctionsRepository? functions,
 }) => ProviderScope(
   overrides: [
-    currentAppUserProvider.overrideWith((ref) => Stream.value(user)),
+    currentAppUserProvider.overrideWith((ref) => Stream.value(_user())),
+    currentUserPrivateProvider.overrideWith((ref) => Stream.value(private)),
     if (functions != null)
       functionsRepositoryProvider.overrideWithValue(functions),
   ],
@@ -152,8 +158,8 @@ void main() {
     testWidgets('プレミアムの人にだけ出る', (tester) async {
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(premiumUntil: DateTime.now().add(const Duration(days: 30))),
+          private: Stream.value(
+            _private(premiumUntil: DateTime.now().add(const Duration(days: 30))),
           ),
         ),
       );
@@ -165,7 +171,7 @@ void main() {
     });
 
     testWidgets('プレミアムでない人には出ない（申請の導線はいままでどおり）', (tester) async {
-      await tester.pumpWidget(_home(user: Stream.value(_user())));
+      await tester.pumpWidget(_home(private: Stream.value(_private())));
       await tester.pumpAndSettle();
 
       expect(find.text('リストを作る'), findsNothing);
@@ -176,8 +182,8 @@ void main() {
     testWidgets('期限が切れた人には出ない', (tester) async {
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(
+          private: Stream.value(
+            _private(
               premiumUntil: DateTime.now().subtract(const Duration(days: 1)),
             ),
           ),
@@ -192,7 +198,7 @@ void main() {
     // **届く前に確定した見た目を出さない。** 既定を「プレミアムでない」に
     // 倒すと、押そうとしたボタンが後から別のものへ入れ替わる。
     testWidgets('プレミアムかどうかが分かるまで、どちらも出さない', (tester) async {
-      await tester.pumpWidget(_home(user: const Stream<AppUser?>.empty()));
+      await tester.pumpWidget(_home(private: const Stream<UserPrivate?>.empty()));
       await tester.pump();
 
       expect(find.text('リストを作る'), findsNothing);
@@ -208,8 +214,8 @@ void main() {
 
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(premiumUntil: DateTime.now().add(const Duration(days: 30))),
+          private: Stream.value(
+            _private(premiumUntil: DateTime.now().add(const Duration(days: 30))),
           ),
           functions: functions,
         ),
@@ -245,8 +251,8 @@ void main() {
 
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(premiumUntil: DateTime.now().add(const Duration(days: 30))),
+          private: Stream.value(
+            _private(premiumUntil: DateTime.now().add(const Duration(days: 30))),
           ),
           functions: functions,
         ),
@@ -273,8 +279,8 @@ void main() {
       final functions = _FakeFunctions();
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(premiumUntil: DateTime.now().add(const Duration(days: 30))),
+          private: Stream.value(
+            _private(premiumUntil: DateTime.now().add(const Duration(days: 30))),
           ),
           functions: functions,
         ),
@@ -300,7 +306,7 @@ void main() {
     testWidgets('ホームの容量バーは作成者の合計を出す', (tester) async {
       await tester.pumpWidget(
         _home(
-          user: Stream.value(_user()),
+          private: Stream.value(_private()),
           stats: _stats(
             // 作成者の合計 1.5GB / 2GB。このリストぶん（100MB / 1GB）とは別。
             ownerUsedBytes: _oneGb + _oneGb ~/ 2,
@@ -319,7 +325,7 @@ void main() {
 
     testWidgets('合計がまだ届いていなければ、数字を出さない', (tester) async {
       await tester.pumpWidget(
-        _home(user: Stream.value(_user()), stats: _stats()),
+        _home(private: Stream.value(_private()), stats: _stats()),
       );
       await tester.pumpAndSettle();
 
@@ -335,7 +341,7 @@ void main() {
       _tallScreen(tester);
       await tester.pumpWidget(
         _settings(
-          user: _user(premiumUntil: DateTime(2027, 3, 31, 12, 0)),
+          private: _private(premiumUntil: DateTime(2027, 3, 31, 12, 0)),
         ),
       );
       await tester.pumpAndSettle();
@@ -345,7 +351,7 @@ void main() {
 
     testWidgets('プレミアムでなければ、消えないことも書いてある（D3）', (tester) async {
       _tallScreen(tester);
-      await tester.pumpWidget(_settings(user: _user()));
+      await tester.pumpWidget(_settings(private: _private()));
       await tester.pumpAndSettle();
 
       expect(find.text('現在はプレミアムではありません。'), findsOneWidget);
@@ -360,7 +366,7 @@ void main() {
       ).thenAnswer((_) async => DateTime(2027, 3, 31, 12, 0));
 
       await tester.pumpWidget(
-        _settings(user: _user(), functions: functions),
+        _settings(private: _private(), functions: functions),
       );
       await tester.pumpAndSettle();
 
@@ -383,7 +389,7 @@ void main() {
       _tallScreen(tester);
       final functions = _FakeFunctions();
       await tester.pumpWidget(
-        _settings(user: _user(), functions: functions),
+        _settings(private: _private(), functions: functions),
       );
       await tester.pumpAndSettle();
 
@@ -411,7 +417,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          _settings(user: _user(), functions: functions),
+          _settings(private: _private(), functions: functions),
         );
         await tester.pumpAndSettle();
 
@@ -435,7 +441,7 @@ void main() {
       _tallScreen(tester);
       await tester.pumpWidget(
         _settings(
-          user: _user(
+          private: _private(
             storage: const UserStorage(
               usedBytes: _oneGb,
               quotaBytes: 2 * _oneGb,
@@ -453,7 +459,7 @@ void main() {
 
     testWidgets('まだ集計されていないときに 0 と書かない', (tester) async {
       _tallScreen(tester);
-      await tester.pumpWidget(_settings(user: _user()));
+      await tester.pumpWidget(_settings(private: _private()));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('まだ集計されていません'), findsOneWidget);
@@ -553,7 +559,7 @@ void main() {
   group('狭い画面（390px）', () {
     testWidgets('クーポンの入力欄が縦一列に潰れない', (tester) async {
       _tallScreen(tester, width: 390);
-      await tester.pumpWidget(_settings(user: _user()));
+      await tester.pumpWidget(_settings(private: _private()));
       await tester.pumpAndSettle();
 
       final field = find.widgetWithText(TextField, 'クーポンコード');
@@ -571,8 +577,8 @@ void main() {
 
       await tester.pumpWidget(
         _home(
-          user: Stream.value(
-            _user(premiumUntil: DateTime.now().add(const Duration(days: 30))),
+          private: Stream.value(
+            _private(premiumUntil: DateTime.now().add(const Duration(days: 30))),
           ),
         ),
       );
@@ -590,7 +596,7 @@ void main() {
 
       await tester.pumpWidget(
         _home(
-          user: Stream.value(_user()),
+          private: Stream.value(_private()),
           stats: _stats(
             ownerUsedBytes: _oneGb + _oneGb ~/ 2,
             ownerQuotaBytes: 2 * _oneGb,

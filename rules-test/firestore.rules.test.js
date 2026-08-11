@@ -1261,34 +1261,36 @@ describe('クーポンの使用記録：redemptions も同じ（PREMIUM-DESIGN 3
 });
 
 describe('プレミアムの状態：読み（PREMIUM-DESIGN 3.1）', () => {
-  test('本人は自分の premium / storage を読める', async () => {
+  test('本人は自分の premium / storage を読める（置き場所は private/state）', async () => {
+    // **移した先で読めることを確かめる。** 「他人に見えない」だけを並べて
+    // 本人まで読めなくなっていたら、プレミアムの表示が丸ごと壊れる。
     const superUser = db(asUser(env, UID.superUser));
     const snapshot = await allow(
-      getDoc(doc(superUser, `users/${UID.superUser}`)),
+      getDoc(doc(superUser, `users/${UID.superUser}/private/state`)),
     );
     expect(snapshot.data().premium).toBeTruthy();
     expect(snapshot.data().storage.quotaBytes).toBe(2147483648);
   });
 
-  test('（既知の食い違い）他人の premium も、同じ取得で見えてしまう', async () => {
-    // **設計（PREMIUM-DESIGN 3.1・6 の 5）は「本人が読めるだけ」と書くが、
-    // いまの置き場所では成り立たない。**
+  test('他人は premium を読めない（置き場所を分けたので閉じた）', async () => {
+    // **以前はここに「見えてしまう」という事実を書き残していた。**
+    // Firestore のルールに項目単位の読み取り制限は無く、users/{uid} は
+    // 表示名の解決のため誰でも ID 指定で取得できるため、同じ取得で
+    // premium も降りていた（BACKLOG「users ドキュメントが、ログイン済みなら
+    // 誰にでも読める」）。**置き場所を users/{uid}/private/state へ
+    // 分けたことで閉じた。** 詳しくは下の「私的な情報の置き場所」。
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(getDoc(doc(readOnly, `users/${UID.superUser}/private/state`)));
+  });
+
+  test('移行前の古い premium が親に残っていれば、それは今も他人に見える', async () => {
+    // **ルールでは隠せない。** 親の users/{uid} は表示名の解決のため
+    // 誰でも読めるので、そこに残った残骸は一緒に降りてくる。
+    // 消すのは移行の側の仕事で、ルールの仕事は「もう書けない」を保つこと
+    // （下の「プレミアムの状態：書き」）。
     //
-    // Firestore のルールに**項目単位の読み取り制限は無い**。読み取りは
-    // ドキュメント単位で、users/{uid} は表示名の解決のため
-    // 「ログイン済みなら ID 指定で誰でも取得できる」ことになっている
-    // （上の「ユーザー（3.4 / 3.5）」と
-    // lib/data/repositories/list_repository.dart の fetchUsers）。
-    // premium / storage をそのドキュメントの項目として持つ限り、
-    // **同じ取得で他人にも降りてくる。**
-    //
-    // **ここに「他人は読めない」というテストを書いてはいけない。**
-    // 実際には読めるのに緑になり、嘘の安心だけが残る。事実をそのまま
-    // 書き残し、閉じるかどうかは置き場所の判断
-    // （users/{uid}/private/... へ分ける）として担当間で決める。
-    //
-    // なお**書き込みは下のとおり完全に塞いである**ので、
-    // 見えてしまうこと自体がプレミアムの詐称には繋がらない。
+    // **ここに「他人は読めない」と書いてはいけない。**
+    // 実際には見えるのに緑になり、嘘の安心だけが残る。
     const readOnly = db(asUser(env, UID.readOnly));
     const snapshot = await allow(
       getDoc(doc(readOnly, `users/${UID.superUser}`)),
@@ -1440,5 +1442,343 @@ describe('プレミアムの状態：書き（PREMIUM-DESIGN 3.1 / 6 の 5）', 
   test('対：ユーザードキュメントは引き続き削除できない（3.5）', async () => {
     const superUser = db(asUser(env, UID.superUser));
     await deny(deleteDoc(doc(superUser, `users/${UID.superUser}`)));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 私的な情報の置き場所（users/{uid}/private/state）
+//
+// BACKLOG「users ドキュメントが、ログイン済みなら誰にでも読める」への対処。
+// 親の users/{uid} は表示名の解決のため ID 指定で誰でも読めるので、
+// **メールアドレス・プレミアムの期限・容量の使用量を子へ分けた。**
+// Firestore のルールに項目単位の読み取り制限は無いため、分ける以外に
+// 手は無い。
+//
+// **「できない」だけを並べない。** 読めなくしすぎれば、プレミアムの表示も
+// 登録も壊れる。対になる「できる」を同じ実行の中に置く
+// （docs/AUDIT-CHECKLIST.md 観点 4）。
+// ---------------------------------------------------------------------------
+
+const PRIVATE = (uid) => `users/${uid}/private/state`;
+
+describe('私的な情報の置き場所：読み（users/{uid}/private/state）', () => {
+  test('本人は読める', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    const snapshot = await allow(getDoc(doc(superUser, PRIVATE(UID.superUser))));
+    expect(snapshot.data().email).toBe('super-user@example.com');
+  });
+
+  test('メール確認前でも本人は読める（登録処理は書く前に読む）', async () => {
+    // **親の users を isSignedIn で読めるようにしてあるのと同じ理由。**
+    // 登録処理は「読んで、無ければ作る」順で動く。ここを isVerified に
+    // すると、登録直後の読みが拒否されて例外で止まり、その先の確認メールの
+    // 送信に到達しない。メールが届かないまま「エラーが発生しました」と
+    // だけ出る状態が、以前 1 度配信されている（監査 第2回）。
+    const unverified = db(asUnverified(env, UID.superUser));
+    await allow(getDoc(doc(unverified, PRIVATE(UID.superUser))));
+  });
+
+  test('他人（一般利用者）は読めない', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(getDoc(doc(readOnly, PRIVATE(UID.superUser))));
+  });
+
+  test('リスト管理者も読めない（同じリストの仲間でも）', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await deny(getDoc(doc(listAdmin, PRIVATE(UID.superUser))));
+  });
+
+  test('サイト管理者も読めない（管理画面はサーバー経由で取る）', async () => {
+    // **ここだけは他と扱いが違う。** users の一覧や lists の全件は
+    // サイト管理者に開いているが、この中身は開けない。管理画面が要る
+    // 情報は listSiteUsers などの呼び出し可能関数から取る——Admin SDK は
+    // ルールを迂回するので、それで足りる。足りるのにここを開けると、
+    // 管理者の端末が乗っ取られたときに全員のメールアドレスが降りてくる
+    // 経路を、わざわざ 1 本増やすことになる。
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(getDoc(doc(siteAdmin, PRIVATE(UID.superUser))));
+  });
+
+  test('未ログインは読めない', async () => {
+    const anon = db(asAnonymous(env));
+    await deny(getDoc(doc(anon, PRIVATE(UID.superUser))));
+  });
+
+  test('コレクショングループでも引けない（private を横断で読めない）', async () => {
+    // **ID 指定を閉じても、横断の取得が開いていれば同じこと。**
+    // 再帰ワイルドカードの match を書いていないので閉じている。
+    // 誰かが members のような match を足したら、ここが赤くなる。
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(getDocs(query(collectionGroup(siteAdmin, 'private'))));
+
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(getDocs(query(collectionGroup(superUser, 'private'))));
+  });
+
+  test('他人の private を一覧としても引けない', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(getDocs(collection(readOnly, `users/${UID.superUser}/private`)));
+  });
+});
+
+describe('私的な情報の置き場所：書き（自分の設定は書ける／サーバーのものは書けない）', () => {
+  // **中身は「本人のもの」と「サーバーのもの」が混ざっている。**
+  //
+  //   本人が書いてよい : locale, notificationSettings
+  //   サーバーだけ     : premium, storage
+  //
+  // 場所を分けたのは他人に見せないためであって、本人から取り上げるためでは
+  // ない。**「全部書けない」にすると設定画面の保存が権限拒否になる。**
+  // 拒否の確認と、対になる「保存できる」を同じ実行の中に置く。
+
+  test('本人は locale を変えられる', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), { locale: 'en' }),
+    );
+  });
+
+  test('本人は notificationSettings を変えられる', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        notificationSettings: { itemAdded: false, commentAdded: false },
+      }),
+    );
+  });
+
+  test('設定画面の保存の形（set の merge）でも通る', async () => {
+    // **画面側は最初の保存を set(merge: true) で行う。**
+    // 既にある行では update として評価される。updateDoc だけを試して
+    // 安心すると、画面が使う書き方を一度も確かめないままになる。
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      setDoc(
+        doc(superUser, PRIVATE(UID.superUser)),
+        { locale: 'en', notificationSettings: { itemAdded: false } },
+        { merge: true },
+      ),
+    );
+  });
+
+  test('まだドキュメントが無い人でも、自分の private/state を作れる', async () => {
+    // **set(merge: true) は、行が無ければ create として評価される。**
+    // update だけを許していると、ここで初回の保存が落ちる。
+    const newcomer = 'u-newcomer-private-state';
+    const context = db(asUser(env, newcomer));
+    await allow(
+      setDoc(
+        doc(context, PRIVATE(newcomer)),
+        { locale: 'ja', notificationSettings: { itemAdded: true } },
+        { merge: true },
+      ),
+    );
+  });
+
+  test('メール確認前でも、自分の設定は保存できる（読みと揃えている）', async () => {
+    const unverified = db(asUnverified(env, UID.superUser));
+    await allow(
+      updateDoc(doc(unverified, PRIVATE(UID.superUser)), { locale: 'en' }),
+    );
+  });
+
+  test('本人でも premium は書けない', async () => {
+    // **ここが開くと、誰でも自分を無期限のプレミアムにできる。**
+    // 親で塞いだものが子で開いたら、場所を分けた意味が消える。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+    await deny(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        'premium.until': new Date('2099-01-01T00:00:00Z'),
+      }),
+    );
+  });
+
+  test('本人でも storage は書けない（上限も使用量も）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        storage: { usedBytes: 0, quotaBytes: 10737418240 },
+      }),
+    );
+    await deny(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        'storage.quotaBytes': 10737418240,
+      }),
+    );
+  });
+
+  test('書いてよい項目に混ぜても通らない（1 回の更新にまとめる形）', async () => {
+    // **いちばん素直な抜け道。** 許された項目と一緒なら通る、に
+    // なっていないことを確かめる（親の users/{uid} で「表示名に混ぜても
+    // 通らない」を確かめているのと同じ形）。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        locale: 'en',
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+    await deny(
+      setDoc(
+        doc(superUser, PRIVATE(UID.superUser)),
+        { locale: 'en', storage: { usedBytes: 0, quotaBytes: 10737418240 } },
+        { merge: true },
+      ),
+    );
+  });
+
+  test('最初の 1 回（create）にも premium / storage を仕込めない', async () => {
+    // **update だけ塞いでも足りない。** 行がまだ無い人は create で
+    // 書けてしまう（親の users/{uid} と同じ経緯）。
+    const newcomer = 'u-newcomer-private-premium';
+    const context = db(asUser(env, newcomer));
+    await deny(
+      setDoc(doc(context, PRIVATE(newcomer)), {
+        locale: 'ja',
+        premium: { until: new Date('2099-01-01T00:00:00Z') },
+      }),
+    );
+
+    const other = 'u-newcomer-private-storage';
+    const otherContext = db(asUser(env, other));
+    await deny(
+      setDoc(doc(otherContext, PRIVATE(other)), {
+        locale: 'ja',
+        storage: { usedBytes: 0, quotaBytes: 10737418240 },
+      }),
+    );
+  });
+
+  test('丸ごとの上書きで premium を消せない（消す形の書き換え）', async () => {
+    // merge を付けない set は、既にある premium / storage を落とす。
+    // **項目が変わることに変わりはない**ので、ここも塞がっている。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      setDoc(doc(superUser, PRIVATE(UID.superUser)), {
+        email: 'super-user@example.com',
+        locale: 'en',
+      }),
+    );
+  });
+
+  test('本人でも削除できない（消す形で premium を捨てられない）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(deleteDoc(doc(superUser, PRIVATE(UID.superUser))));
+  });
+
+  test('別の docId は生やせない（この下は state だけ）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      setDoc(doc(superUser, `users/${UID.superUser}/private/injected`), {
+        locale: 'ja',
+      }),
+    );
+  });
+
+  test('サイト管理者も書けない（管理画面は関数経由）', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(
+      updateDoc(doc(siteAdmin, PRIVATE(UID.superUser)), {
+        'premium.until': new Date('2099-01-01T00:00:00Z'),
+      }),
+    );
+    // **書いてよいはずの項目でも、他人のぶんは書けない。**
+    await deny(
+      updateDoc(doc(siteAdmin, PRIVATE(UID.superUser)), { locale: 'en' }),
+    );
+  });
+
+  test('他人の private には書けない（自分が書ける項目でも）', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(
+      updateDoc(doc(readOnly, PRIVATE(UID.superUser)), { locale: 'en' }),
+    );
+    await deny(
+      updateDoc(doc(readOnly, PRIVATE(UID.superUser)), {
+        email: 'attacker@example.com',
+      }),
+    );
+  });
+
+  test('他人の private は、まだ無い状態でも作れない', async () => {
+    // 行が無い相手なら create として評価される。uid の突き合わせは
+    // create 側にも要る。
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(
+      setDoc(doc(readOnly, PRIVATE(UID.outsider)), { locale: 'en' }),
+    );
+  });
+});
+
+describe('私的な情報の置き場所：対になる「できる」（塞ぎすぎていない）', () => {
+  // **拒否だけを並べると、users が丸ごと壊れていても緑になる。**
+  // 表示名まわりが今までどおり動くことを、同じ実行の中で示す。
+
+  test('対：表示名の解決（users/{uid} の ID 指定の取得）は引き続きできる', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    const snapshot = await allow(
+      getDoc(doc(readOnly, `users/${UID.superUser}`)),
+    );
+    expect(snapshot.data().displayName).toBe('投稿者');
+  });
+
+  test('対：表示名の更新は引き続きできる', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        displayName: '新しい名前',
+      }),
+    );
+  });
+
+  test('対：users の一覧は引き続き禁じられている（監査 S2）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(getDocs(collection(superUser, 'users')));
+  });
+
+  test('対：登録の create は引き続きできる（private が無くても通る）', async () => {
+    // 新規登録は親の users を作るところから始まる。private は Functions が
+    // 作るので、クライアントは触らない。
+    const newcomer = 'u-newcomer-private';
+    const context = db(asUser(env, newcomer));
+    await allow(
+      setDoc(doc(context, `users/${newcomer}`), {
+        displayName: '新入り',
+        isWithdrawn: false,
+      }),
+    );
+  });
+
+  test('対：退会フラグは引き続き本人でも立てられない', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        isWithdrawn: true,
+      }),
+    );
+  });
+
+  test('対：自分の通知は引き続き読める（private の禁止を巻き込んでいない）', async () => {
+    await mutateAsAdmin(env, async (ctx) => {
+      await setDoc(
+        doc(ctx.firestore(), `users/${UID.superUser}/notifications/n-private`),
+        { type: 'itemAdded', listId: LIST_ID, isRead: false },
+      );
+    });
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      getDoc(doc(superUser, `users/${UID.superUser}/notifications/n-private`)),
+    );
   });
 });

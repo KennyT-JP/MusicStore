@@ -304,10 +304,12 @@ class _MemberTile extends ConsumerWidget {
       withdrawnLabel: l10n.withdrawnUser,
     );
 
+    // **メールアドレスは出さない**（2026-08-11 の判断）。
+    // 同じリストにいるだけで全員の連絡先が分かる状態だった。
+    // 誰なのかは表示名で足りる。
     return ListTile(
       leading: const Icon(Icons.person_outline),
       title: Text(resolved.text),
-      subtitle: user?.email.isNotEmpty == true ? Text(user!.email) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -480,12 +482,12 @@ class _JoinRequestCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // **メールアドレスは出さない**（2026-08-11 の判断）。
+            // 誰からの申請かは表示名で分かる。
             Text(
               user?.displayName ?? request.uid,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            if (user?.email.isNotEmpty == true)
-              Text(user!.email, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),
             // 承認時に役割を決める。申請者は選べない（仕様書 5.2）。
             Text(
@@ -864,7 +866,7 @@ class _ViewerTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 表示名は ID 指定で 1 件ずつ引く。一覧としての取得は禁じてある
-    // （全会員のメールアドレスを一括収集できてしまうため／監査 S2）。
+    // （全会員の情報を一括収集できてしまうため／監査 S2）。
     final users =
         ref.watch(userDirectoryProvider(userDirectoryKey({uid}))).value ??
         const {};

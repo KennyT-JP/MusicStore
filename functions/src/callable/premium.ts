@@ -39,11 +39,14 @@ export const extendPremium = onCall({ region: REGION }, async (request) => {
   }
 
   const db = getFirestore();
-  const userRef = db.doc(paths.user(uid));
+  // **期限は本人だけの場所に置く（config.ts の userPrivate）。**
+  // `users/{uid}` は誰でも ID 指定で読めるので、そこに置くと
+  // 「誰がいつまでプレミアムか」が他の利用者にも見える。
+  const privateRef = db.doc(paths.userPrivate(uid));
   const nowMs = Date.now();
 
   const untilMs = await db.runTransaction(async (tx) => {
-    const snapshot = await tx.get(userRef);
+    const snapshot = await tx.get(privateRef);
     const current = snapshot.data()?.premium?.until;
     const until = extendedPremiumUntil({
       currentUntilMs: current instanceof Timestamp ? current.toMillis() : null,
@@ -52,7 +55,7 @@ export const extendPremium = onCall({ region: REGION }, async (request) => {
     });
 
     tx.set(
-      userRef,
+      privateRef,
       {
         premium: {
           until: Timestamp.fromMillis(until),

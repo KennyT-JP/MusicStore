@@ -157,8 +157,12 @@ async function applyDelta(
 
     const list = await tx.get(listRef);
     const ownerUid = String(list.data()?.createdBy ?? '') || null;
-    const userRef = ownerUid ? db.doc(paths.user(ownerUid)) : null;
-    const owner = userRef ? await tx.get(userRef) : null;
+    // **合計とプレミアムは本人だけの場所にある（config.ts の userPrivate）。**
+    // `users/{uid}` は誰でも ID 指定で読めるため、そこに置いていた頃は
+    // 「誰がどれだけ使っているか」「誰がプレミアムか」が他の利用者にも
+    // 見えていた。判定に使う数字はどちらもこちらから読む。
+    const privateRef = ownerUid ? db.doc(paths.userPrivate(ownerUid)) : null;
+    const owner = privateRef ? await tx.get(privateRef) : null;
 
     const before = Number(data.usedBytes ?? 0);
     // 減算が行き過ぎて負にならないようにする。
@@ -246,9 +250,9 @@ async function applyDelta(
       ...(resetWarning ? { notifiedWarning90: false } : {}),
     });
 
-    if (userRef && owner) {
+    if (privateRef && owner) {
       tx.set(
-        userRef,
+        privateRef,
         { storage: { usedBytes: ownerUsedAfter, quotaBytes: ownerQuotaAfter } },
         { merge: true }
       );

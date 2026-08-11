@@ -49,11 +49,34 @@
  * stats が無いと項目追加のトランザクションが NOT_FOUND で失敗し、
  * **そのリストには曲を 1 曲も追加できない**。以前は「無い」ことを
  * 報告するだけで直していなかった。
+ *
+ * ### 6. 私的な項目を users/{uid}/private/state へ移す（2026-08-11）
+ *
+ * `users/{uid}` は「表示名を解決するため、ログイン済みなら誰でも ID 指定で
+ * 読める」設計で、**Firestore のルールに項目単位の読み取り制限は無い**。
+ * その取得はドキュメント全体を返すので、**メールアドレス・プレミアムの
+ * 期限・容量の使用量が他の利用者にも見えていた**。
+ *
+ * 置き場所を分けるしか塞ぐ道が無いので、次の 5 つを本人だけが読める
+ * `users/{uid}/private/state` へ移し、**写し終えたら親から消す**。
+ *
+ *   email, locale, notificationSettings, premium, storage
+ *
+ * `isWithdrawn` は移さない。退会した人の表示に要る（仕様書 3.5）。
+ *
+ * **何度実行しても同じ結果になる。** すでに `private/state` にある項目は
+ * 上書きしない（移行済みの人を壊さない）。親に残った古い写しは、
+ * 上書きしない場合でも消す——**残っている限り見えている**ため。
+ *
+ * **5 より先に実行する。** 5 は容量の合計を書き込む先が同じ場所なので、
+ * 移し替える前に走らせると、サイト管理者が決めた上限（quotaBytesBase）を
+ * 見失って既定値へ戻してしまう。
  */
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 const args = process.argv.slice(2);
 const option = (name) => {
@@ -73,11 +96,31 @@ if (keyPath) {
   process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 }
 
+
+// gcloud で用意した資格情報（ADC）があれば、鍵のファイルは要らない。
+// firebase-admin の applicationDefault() が、この場所を自動で見る。
+const adcPath = process.platform === 'win32'
+  ? join(process.env.APPDATA ?? '', 'gcloud', 'application_default_credentials.json')
+  : join(process.env.HOME ?? '', '.config', 'gcloud', 'application_default_credentials.json');
+const hasAdc = existsSync(adcPath);
 const usingEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
 if (!usingEmulator) {
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    console.error('サービスアカウント鍵が指定されていません。--key <鍵のパス> を付けてください。');
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !hasAdc) {
+    // **鍵のファイルを作らなくてもよい。**
+    // `gcloud auth application-default login` を一度実行しておけば、
+    // その資格情報を firebase-admin が自動で拾う（applicationDefault）。
+    // 長く残る鍵をパソコンに置かずに済むので、こちらを先に案内する。
+    console.error('この操作には、プロジェクトを操作できる資格情報が要ります。');
+    console.error('');
+    console.error('  【おすすめ】鍵のファイルを作らない方法');
+    console.error('    gcloud auth application-default login');
+    console.error('    （ブラウザが開くので、プロジェクトを操作できる Google アカウントで許可します）');
+    console.error('');
+    console.error('  【別の方法】サービスアカウントの鍵を使う');
+    console.error('    Firebase コンソール → プロジェクトの設定 → サービス アカウント');
+    console.error('    → 「新しい秘密鍵の生成」で JSON を保存し、--key <保存先> を付けます');
+    console.error('    **その JSON は誰にも渡さず、リポジトリにも置かないでください。**');
     process.exit(1);
   }
   if (!projectId) {
@@ -113,6 +156,8 @@ async function main() {
   let storageOk = 0;
   let ownerless = 0;
   let missingUser = 0;
+  let privateMoved = 0;
+  let privateAlready = 0;
 
   for (const list of lists.docs) {
     // --- 1. members に uid を足す ---
@@ -178,6 +223,66 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------
+  // 6. 私的な項目を users/{uid}/private/state へ移す（2026-08-11）
+  //
+  // **5 より先に行う。** 5 が書く先も同じ private/state で、移す前に
+  // 走らせると、そこにある quotaBytesBase（サイト管理者が決めた土台）を
+  // 見失って既定値へ戻してしまう。
+  //
+  // **項目ごとに見る。** 「private/state があるなら丸ごと飛ばす」に
+  // すると、アプリが locale だけ書いた人の email が親に残り続ける。
+  // すでに移してある項目は上書きせず、親からは必ず消す——
+  // **親に残っている限り、他の利用者から見えている**ため。
+  // ---------------------------------------------------------------------
+
+  /** 本人だけが読むもの（functions/src/config.ts の userPrivate と揃える）。 */
+  const PRIVATE_FIELDS = [
+    'email',
+    'locale',
+    'notificationSettings',
+    'premium',
+    'storage',
+  ];
+
+  const userDocs = await db.collection('users').get();
+  console.log(`利用者: ${userDocs.size} 人`);
+
+  for (const user of userDocs.docs) {
+    const data = user.data();
+    const present = PRIVATE_FIELDS.filter((field) => data[field] !== undefined);
+    if (present.length === 0) {
+      // 移行済み、または最初から持っていない人。
+      privateAlready++;
+      continue;
+    }
+
+    const stateRef = user.ref.collection('private').doc('state');
+    const state = await stateRef.get();
+    const already = state.exists ? (state.data() ?? {}) : {};
+
+    // 移し先に無い項目だけ写す（あるほうが新しいので、そちらを残す）。
+    const patch = {};
+    for (const field of present) {
+      if (already[field] === undefined) patch[field] = data[field];
+    }
+    const strip = Object.fromEntries(
+      present.map((field) => [field, FieldValue.delete()]),
+    );
+
+    const copied = Object.keys(patch);
+    console.log(
+      `  私的な項目を移動: ${user.id}`
+        + `（写す: ${copied.length ? copied.join(', ') : 'なし'}`
+        + ` / 親から消す: ${present.join(', ')}）`,
+    );
+    if (!dryRun) {
+      if (copied.length > 0) await stateRef.set(patch, { merge: true });
+      await user.ref.update(strip);
+    }
+    privateMoved++;
+  }
+
+  // ---------------------------------------------------------------------
   // 5. users に容量の合計を入れる（プレミアム対応）
   //
   // **毎回ゼロから数え直す。** 差分を足す作りにすると、途中で失敗した
@@ -202,15 +307,17 @@ async function main() {
   }
 
   for (const [uid, used] of usedByOwner) {
-    const userRef = db.doc(`users/${uid}`);
-    const user = await userRef.get();
+    const user = await db.doc(`users/${uid}`).get();
     if (!user.exists) {
       // リストは作ったが users が無い人。触らずに報告だけする。
       missingUser++;
       continue;
     }
 
-    const storage = user.get('storage') ?? {};
+    // **書く先は本人だけの場所**（6 で移した先／functions の userPrivate）。
+    const stateRef = db.doc(`users/${uid}/private/state`);
+    const state = await stateRef.get();
+    const storage = state.get('storage') ?? {};
     const base = Number(storage.quotaBytesBase ?? USER_DEFAULT_QUOTA_BYTES);
     // 実効値は、すでに自動拡張されていればそれを尊重する。
     const quota = Number(storage.quotaBytes ?? base);
@@ -224,7 +331,7 @@ async function main() {
 
     console.log(`  合計容量を設定: ${uid} → ${(used / 1024 / 1024).toFixed(1)} MB`);
     if (!dryRun) {
-      await userRef.set(
+      await stateRef.set(
         { storage: { usedBytes: used, quotaBytes: quota, quotaBytesBase: base } },
         { merge: true },
       );
@@ -239,6 +346,7 @@ async function main() {
   console.log(`  stats の itemCount         : ${statsFixed} 件`);
   console.log(`  stats を新しく作成         : ${statsCreated} 件`);
   console.log(`  users の合計容量           : ${storageFixed} 件（すでに正しい: ${storageOk} 人）`);
+  console.log(`  private/state へ移動       : ${privateMoved} 人（移すものが無い: ${privateAlready} 人）`);
   if (ownerless > 0) console.log(`  ** 作った人が不明のリスト  : ${ownerless} 件（合計に入れていません）**`);
   if (missingUser > 0) console.log(`  ** users が無い作成者      : ${missingUser} 人（触っていません）**`);
   if (dryRun) console.log('\n下見のみでした。実行するには --dry-run を外してください。');

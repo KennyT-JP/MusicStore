@@ -171,13 +171,12 @@ export async function seed(env) {
       displayName: '管理者',
       isWithdrawn: false,
     });
-    // **プレミアムの状態は users/{uid} の項目として持つ**
-    // （PREMIUM-DESIGN 3.1。クレームは使わない）。
-    // 書くのは Functions だけ。ここでは前提として直接入れる。
-    //
-    // **premium を持たない人もそのまま置く**（listAdmin など）。
-    // 「項目が無い＝プレミアムでない」と読む決まりなので、
-    // 移行の作業は無い（同 7）。
+    // **premium / storage は users/{uid}/private/state へ移した**
+    // （下を参照）。ここに残っているのは**移行前の古いデータ**の想定で、
+    // わざと置いている——残骸が残った行でも、本人にもサイト管理者にも
+    // 書き換えられないことを確かめるため（firestore.rules の
+    // serverOwnedUserFields）。消すのは移行の側の仕事で、ルールの仕事は
+    // 「もう書けない」を保つことだけ。
     put(`users/${UID.superUser}`, {
       displayName: '投稿者',
       isWithdrawn: false,
@@ -198,6 +197,32 @@ export async function seed(env) {
     put(`users/${UID.viewer}`, {
       displayName: '見るだけの人',
       isWithdrawn: false,
+    });
+
+    // **本人しか見なくてよい情報（BACKLOG「users ドキュメントが、
+    // ログイン済みなら誰にでも読める」）。**
+    // 親の users/{uid} は表示名の解決のため誰でも読めるので、
+    // メールアドレス・プレミアムの期限・容量の使用量は子へ分けてある。
+    // 書くのは Functions だけ。ここでは前提として直接入れる。
+    //
+    // **2 人ぶん置く。** 1 件しか無いと、コレクショングループの横断取得を
+    // 拒否したのか、たまたま自分の 1 件しか無いのかが見分けにくい
+    // （coupons を実データで置いているのと同じ理由）。
+    put(`users/${UID.superUser}/private/state`, {
+      email: 'super-user@example.com',
+      locale: 'ja',
+      notificationSettings: { itemAdded: true, commentAdded: false },
+      premium: {
+        until: new Date('2027-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-08-11T00:00:00Z'),
+      },
+      storage: { usedBytes: 100, quotaBytes: 2147483648 },
+    });
+    put(`users/${UID.readOnly}/private/state`, {
+      email: 'read-only@example.com',
+      locale: 'ja',
+      notificationSettings: { itemAdded: true, commentAdded: true },
+      storage: { usedBytes: 0, quotaBytes: 1073741824 },
     });
 
     // 公開してよい情報のみ（仕様書 13.2）

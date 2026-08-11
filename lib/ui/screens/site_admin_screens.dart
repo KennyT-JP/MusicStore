@@ -1022,7 +1022,7 @@ class _SiteUserTile extends ConsumerWidget {
       body: l10n.setUserQuotaBody(_name(l10n)),
       label: l10n.defaultQuotaLabel,
       suffix: 'MB',
-      // **いまの値は出せない。** `users/{uid}.storage` は本人しか
+      // **いまの値は出せない。** `users/{uid}/private/state` は本人しか
       // 読めない（設計 3）。空欄から始めるより、既定の値を置く。
       initial: '${kDefaultQuotaBytes ~/ (1024 * 1024)}',
     );

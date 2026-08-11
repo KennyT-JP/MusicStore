@@ -113,18 +113,28 @@ export async function notifySafely(
  *
  * マスタースイッチがオフなら、種別の設定にかかわらず送らない。
  * 設定が読めない場合は「オン」として扱う（初期状態は全てオン）。
+ *
+ * **2 か所を読む（2026-08-11）。** 退会したかどうかは誰でも読める
+ * `users/{uid}` に残っており（表示名の切り替えに要る／仕様書 3.5）、
+ * 通知設定は本人だけの `users/{uid}/private/state` へ移した。
+ * 他人が読む理由の無いものを、誰でも読める側に置かないため
+ * （config.ts の userPrivate）。**同時に読む。** 順に読むと、宛先の
+ * 人数ぶんだけ往復が倍になる。
  */
 async function inAppEnabled(
   uid: string,
   type: NotificationType
 ): Promise<boolean> {
-  const snapshot = await getFirestore().doc(paths.user(uid)).get();
-  const data = snapshot.data();
+  const db = getFirestore();
+  const [profile, state] = await Promise.all([
+    db.doc(paths.user(uid)).get(),
+    db.doc(paths.userPrivate(uid)).get(),
+  ]);
 
   // 退会した人には送らない（仕様書 3.5）。
-  if (data?.isWithdrawn === true) return false;
+  if (profile.data()?.isWithdrawn === true) return false;
 
-  const settings = data?.notificationSettings;
+  const settings = state.data()?.notificationSettings;
   if (!settings) return true;
   if (settings.master === false) return false;
 

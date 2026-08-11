@@ -686,6 +686,18 @@ if (!listId) {
   check('追加したユーザーの表示名が入る', sv(madeUser, 'displayName') === `作られた人${stamp}`,
         sv(madeUser, 'displayName'));
 
+  // **メールアドレスを誰でも読める側に置かない（2026-08-11）。**
+  // `users/{uid}` はログイン済みなら誰でも ID 指定で読め、その取得は
+  // ドキュメント全体を返す。ここに残っていると、**全会員のメールアドレスが
+  // 他の利用者から引ける**。
+  check('追加したユーザーの users にメールアドレスが入らない',
+        sv(madeUser, 'email') === undefined, String(sv(madeUser, 'email')));
+
+  const madePrivate = await doc(`users/${madeUid}/private/state`);
+  check('メールアドレスは本人だけの場所（private/state）に入る',
+        sv(madePrivate, 'email') === `made-${stamp}@example.com`,
+        String(sv(madePrivate, 'email')));
+
   r = await call('createSiteUser', {
     email: `made-${stamp}@example.com`,
     password: 'password',
@@ -743,6 +755,14 @@ if (!listId) {
   const deletedUser = await doc(`users/${madeUid}`);
   check('削除すると users も消える', deletedUser === null || deletedUser.fields === undefined,
         deletedUser === null ? '消えている' : '残っている');
+
+  // **本人だけの控えも消えること。** サブコレクションは親を消しても
+  // 残るため、明示的に消さないと**削除したはずの人のメールアドレスが
+  // 親の無い孤児として残り続ける**。
+  const deletedPrivate = await doc(`users/${madeUid}/private/state`);
+  check('削除すると本人だけの控え（private/state）も消える',
+        deletedPrivate === null || deletedPrivate.fields === undefined,
+        deletedPrivate === null ? '消えている' : '残っている');
 
   // --- 管理者不在リストへの指名（5.6） ---
   r = await call('assignListAdmin', { listId, uid: joiner.localId }, siteAdmin.idToken);
@@ -825,8 +845,24 @@ if (!listId) {
   check('退会する人がメンバーに居る（次の確認の土台）',
         sv(joinedMember, 'uid') === leaver.localId, String(sv(joinedMember, 'uid')));
 
+  // **本人だけの控えを作っておく。** 無ければ「消えた」の確認が、
+  // 最初から無かっただけで空振り合格する（監査 第4回と同じ罠）。
+  const leaverPrivateWritten = await setDoc(
+    `users/${leaver.localId}/private/state`,
+    { email: { stringValue: `lv-${stamp}@example.com` } });
+  check('退会する人の private/state を作れる（次の確認の土台）',
+        leaverPrivateWritten);
+
   r = await call('withdrawAccount', {}, leaver.idToken);
   check('退会できる（3.5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  // **退会したら本人だけの控えは消す（2026-08-11）。** Auth のアカウントごと
+  // 消えるので、本人を含めて誰も二度と読まない。読まれないメールアドレスを
+  // 持ち続ける理由が無い。
+  const leftPrivate = await doc(`users/${leaver.localId}/private/state`);
+  check('退会で private/state が消える（メールアドレスを残さない）',
+        leftPrivate === null || leftPrivate.fields === undefined,
+        leftPrivate === null ? '消えている' : '残っている');
 
   // **退会したらメンバーから消えること。** collectionGroup のクエリが
   // 成立しておらず、失敗も握り潰されていた（監査 S14）。
@@ -903,6 +939,47 @@ if (!listId) {
   // 曲まで通知されると雑音になるため、役割だけを理由には送らない。
   check('サイト管理者でも参加していなければ届かない',
         !(await itemAdded(siteAdmin.localId)));
+
+  // --- 通知設定は本人だけの場所から読む（10.3 / 2026-08-11） ---
+  //
+  // 通知設定を `users/{uid}` から `users/{uid}/private/state` へ移した。
+  // **繋ぎ違えても「届く」ほうへ倒れる**ので（設定が読めなければ
+  // 全部オンとして扱う仕様）、実物で「オフにしたら届かない」を確かめる。
+  const muted = await signUp('mute');
+  r = await call('acceptShareLink', { linkId: viewerLink, mode: 'join' }, muted.idToken);
+  check('通知を止める人を参加させられる（次の確認の土台）',
+        r.body?.result?.listId === listId, JSON.stringify(r.body?.result));
+
+  const settingsWritten = await setDoc(`users/${muted.localId}/private/state`, {
+    notificationSettings: {
+      mapValue: { fields: { master: { booleanValue: false } } },
+    },
+  });
+  check('通知設定を本人だけの場所へ書ける（次の確認の土台）', settingsWritten);
+
+  const itemId2 = `song2-${stamp}`;
+  const wrote2 = await setDoc(`lists/${listId}/items/${itemId2}`, {
+    seq: { integerValue: '2' },
+    date: { stringValue: '2026-08-11' },
+    kind: { stringValue: 'url' },
+    url: { stringValue: 'https://example.com/song2' },
+    title: { stringValue: `テスト曲2${stamp}` },
+    createdBy: { stringValue: applicant.localId },
+    status: { stringValue: 'active' },
+  });
+  check('2 曲目を追加できる（通知設定の検証用）', wrote2);
+
+  const item2Added = async (uid) =>
+    (await list(`users/${uid}/notifications`))
+      .some((n) => sv(n, 'type') === 'itemAdded' && sv(n, 'itemId') === itemId2);
+
+  // **オンの人に届くまで待ってから、オフの人を見る。** 届いていない
+  // だけの状態を「オフが効いた」と読み違えないため。
+  await waitUntil(async () => await item2Added(invitee.localId));
+  check('通知設定を切っていない人には届く（次の確認の土台）',
+        await item2Added(invitee.localId));
+  check('通知をオフにした人には届かない（10.3・新しい置き場所）',
+        !(await item2Added(muted.localId)));
 }
 
 // ---------------------------------------------------------------------------
@@ -923,6 +1000,21 @@ if (!listId) {
 
   const premiumUser = await signUp('prem');
   const freeUser = await signUp('free');
+
+  // **users/{uid} を実際に作っておく。** 本来はクライアントが登録時に作る
+  // （lib/data/repositories/auth_repository.dart の _ensureUserDocument）。
+  // 作らないまま「users/{uid} に premium / storage が入っていない」を
+  // 確かめると、**ドキュメントごと無いだけで緑になる**（前提が崩れると
+  // 自動的に通る形／docs/AUDIT-CHECKLIST.md 観点 4）。
+  for (const person of [premiumUser, freeUser]) {
+    await setDoc(`users/${person.localId}`, {
+      displayName: { stringValue: `p-${person.localId}` },
+      isWithdrawn: { booleanValue: false },
+    });
+  }
+  check('users/{uid} を用意できる（以降の「入っていない」の土台）',
+        sv(await doc(`users/${premiumUser.localId}`), 'displayName')
+          === `p-${premiumUser.localId}`);
 
   // --- 発行（D1 / D2 / D8） ---
   let r = await call('createCoupon', { months: 1, maxUses: 1 }, siteAdmin.idToken);
@@ -1009,10 +1101,18 @@ if (!listId) {
   check('使用済みの人数より小さい上限にもできる（D1）', r.status === 200,
         JSON.stringify(r.body).slice(0, 80));
 
-  const afterLower = await doc(`users/${premiumUser.localId}`);
+  // **プレミアムは本人だけの場所（private/state）にある（2026-08-11）。**
+  const afterLower = await doc(`users/${premiumUser.localId}/private/state`);
   check('上限を下げても、使った人のプレミアムは消えない（D1）',
         !!nested(afterLower, 'premium', 'until')?.timestampValue,
         String(nested(afterLower, 'premium', 'until')?.timestampValue));
+
+  // **誰でも読める側には残さない。** ここに premium があると、
+  // 「誰がいつまでプレミアムか」が他の利用者に見える。
+  const premiumProfile = await doc(`users/${premiumUser.localId}`);
+  check('users/{uid} にプレミアムの期限が入っていない（移行後の形）',
+        premiumProfile?.fields?.premium === undefined,
+        JSON.stringify(premiumProfile?.fields?.premium ?? null).slice(0, 60));
 
   const late = await signUp('late');
   r = await call('redeemCoupon', { code: second.code }, late.idToken);
@@ -1153,10 +1253,17 @@ if (!listId) {
   check('サイト管理者は人ごとの上限を変えられる', r.status === 200,
         JSON.stringify(r.body).slice(0, 80));
 
-  const quotaDoc = await doc(`users/${premiumUser.localId}`);
+  const quotaDoc = await doc(`users/${premiumUser.localId}/private/state`);
   check('人ごとの上限が反映される',
         nested(quotaDoc, 'storage', 'quotaBytes')?.integerValue === String(4 * GB),
         String(nested(quotaDoc, 'storage', 'quotaBytes')?.integerValue));
+
+  // **容量も誰でも読める側には残さない。** 使用量が見えると、
+  // 「誰がどれだけ溜め込んでいるか」が他の利用者に分かる。
+  const quotaProfile = await doc(`users/${premiumUser.localId}`);
+  check('users/{uid} に容量が入っていない（移行後の形）',
+        quotaProfile?.fields?.storage === undefined,
+        JSON.stringify(quotaProfile?.fields?.storage ?? null).slice(0, 60));
 
   r = await call('setUserQuota', { uid: premiumUser.localId, quotaBytes: 4 * GB },
                  freeUser.idToken);
@@ -1207,8 +1314,10 @@ if (!listId) {
       ).catch(() => null);
       return res?.ok === true;
     };
+    // 容量は本人だけの場所（private/state）にある（2026-08-11）。
     const storageOf = async (uid, key) =>
-      Number(nested(await doc(`users/${uid}`), 'storage', key)?.integerValue ?? 0);
+      Number(nested(await doc(`users/${uid}/private/state`), 'storage', key)
+        ?.integerValue ?? 0);
 
     r = await call('setUserQuota', { uid: freeUser.localId, quotaBytes: 1000 },
                    siteAdmin.idToken);
@@ -1243,6 +1352,13 @@ if (!listId) {
     );
     check('アップロードが「人ごとの合計」に足される（容量の数字）', counted,
           `${await storageOf(freeUser.localId, 'usedBytes')} / ${SIZE}`);
+
+    // **集計の書き戻し先も本人だけの場所であること。** ここが誰でも
+    // 読める側へ戻ると、ファイルが増減するたびに使用量が漏れ直す。
+    const freeProfile = await doc(`users/${freeUser.localId}`);
+    check('集計しても users/{uid} に容量が入らない（移行後の形）',
+          freeProfile?.fields?.storage === undefined,
+          JSON.stringify(freeProfile?.fields?.storage ?? null).slice(0, 60));
 
     if (bucket) {
       const stats = await doc(`lists/${freeListId}/meta/stats`);

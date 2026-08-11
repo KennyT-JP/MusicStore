@@ -22,6 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentAppUserProvider);
+    final private = ref.watch(currentUserPrivateProvider);
 
     return Scaffold(
       body: AsyncView(
@@ -35,21 +36,61 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               _DisplayNameSection(user: appUser),
               const Divider(height: 32),
-              _LanguageSection(user: appUser),
-              const Divider(height: 32),
-              _NotificationSection(user: appUser),
-              const Divider(height: 32),
-              // **通知の下に置く。** 上に挟むと、通知の設定が画面の外へ
-              // 押し出される。よく触る設定ほど上に残す。
-              _PremiumSection(user: appUser),
-              const Divider(height: 32),
-              _StorageSection(user: appUser),
+              // 表示言語・通知・プレミアム・容量は、本人だけが読める
+              // `users/{uid}/private/state` にある（2026-08-11）。
+              // **届く前に既定値で描かない。** 「日本語」「通知はすべてオン」
+              // 「プレミアムではありません」を先に出すと、直後に別の値へ
+              // 入れ替わり、その間に触った操作が消える
+              // （docs/AUDIT-CHECKLIST.md 観点 2）。
+              _PrivateSections(uid: appUser.uid, value: private),
               const Divider(height: 32),
               const _AccountSection(),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+/// 本人だけが読める設定のまとまり。
+///
+/// 届くまでは読み込み中のまま待たせる。1 つの購読なので、届くのは
+/// 全部同時であり、section ごとに別々の読み込み表示を出す意味がない。
+class _PrivateSections extends StatelessWidget {
+  const _PrivateSections({required this.uid, required this.value});
+
+  final String uid;
+  final AsyncValue<UserPrivate?> value;
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncView(
+      value: value,
+      builder: (private) {
+        if (private == null) {
+          // まだサーバーが作っていない。既定値を「その人の設定」として
+          // 出すと、保存していないものが保存済みに見える。
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _LanguageSection(uid: uid, private: private),
+            const Divider(height: 32),
+            _NotificationSection(uid: uid, private: private),
+            const Divider(height: 32),
+            // **通知の下に置く。** 上に挟むと、通知の設定が画面の外へ
+            // 押し出される。よく触る設定ほど上に残す。
+            _PremiumSection(private: private),
+            const Divider(height: 32),
+            _StorageSection(private: private),
+          ],
+        );
+      },
     );
   }
 }
@@ -126,9 +167,10 @@ class _DisplayNameSectionState extends ConsumerState<_DisplayNameSection> {
 
 /// 表示言語（仕様書 2 章）。
 class _LanguageSection extends ConsumerWidget {
-  const _LanguageSection({required this.user});
+  const _LanguageSection({required this.uid, required this.private});
 
-  final AppUser user;
+  final String uid;
+  final UserPrivate private;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,10 +186,18 @@ class _LanguageSection extends ConsumerWidget {
             ButtonSegment(value: 'ja', label: Text('日本語')),
             ButtonSegment(value: 'en', label: Text('English')),
           ],
-          selected: {user.locale},
-          onSelectionChanged: (selection) => ref
-              .read(listRepositoryProvider)
-              .updateLocale(user.uid, selection.first),
+          selected: {private.locale},
+          // 保存できなかったときに黙って戻らないようにする（監査 第4回）。
+          // 切り替えたのに元へ戻る動きは、押し損ねたようにしか見えない。
+          onSelectionChanged: (selection) async {
+            try {
+              await ref
+                  .read(listRepositoryProvider)
+                  .updateLocale(uid, selection.first);
+            } catch (error) {
+              if (context.mounted) showWriteFailure(context, error);
+            }
+          },
         ),
       ],
     );
@@ -163,9 +213,9 @@ class _LanguageSection extends ConsumerWidget {
 /// 打ち直せば直るのか、配布元に聞くしかないのかが、利用者にとって別物
 /// だからである。
 class _PremiumSection extends ConsumerStatefulWidget {
-  const _PremiumSection({required this.user});
+  const _PremiumSection({required this.private});
 
-  final AppUser user;
+  final UserPrivate private;
 
   @override
   ConsumerState<_PremiumSection> createState() => _PremiumSectionState();
@@ -193,7 +243,7 @@ class _PremiumSectionState extends ConsumerState<_PremiumSection> {
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
     final theme = Theme.of(context);
-    final until = widget.user.premiumUntil;
+    final until = widget.private.premiumUntil;
     final isPremium = PremiumPolicy.isActive(until);
 
     return Column(
@@ -299,15 +349,15 @@ class _PremiumSectionState extends ConsumerState<_PremiumSection> {
 /// **上限は人ごとの合計に対してかかる。** リストごとではないことを
 /// 書き添えないと、リストを増やせば増えると誤解される。
 class _StorageSection extends StatelessWidget {
-  const _StorageSection({required this.user});
+  const _StorageSection({required this.private});
 
-  final AppUser user;
+  final UserPrivate private;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppL10n.of(context);
     final theme = Theme.of(context);
-    final storage = user.storage;
+    final storage = private.storage;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,18 +416,26 @@ class _StorageSection extends StatelessWidget {
 /// プッシュ通知は初期リリースでは画面に出さない（仕様書 12.7）。
 /// データとしては保持しているので、ここでは触らずそのまま残す。
 class _NotificationSection extends ConsumerWidget {
-  const _NotificationSection({required this.user});
+  const _NotificationSection({required this.uid, required this.private});
 
-  final AppUser user;
+  final String uid;
+  final UserPrivate private;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    final settings = user.notificationSettings;
+    final settings = private.notificationSettings;
 
-    Future<void> save(NotificationSettings next) => ref
-        .read(listRepositoryProvider)
-        .updateNotificationSettings(user.uid, next);
+    // 切り替えたのに保存できていない、を黙って見逃さない（監査 第4回）。
+    Future<void> save(NotificationSettings next) async {
+      try {
+        await ref
+            .read(listRepositoryProvider)
+            .updateNotificationSettings(uid, next);
+      } catch (error) {
+        if (context.mounted) showWriteFailure(context, error);
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
