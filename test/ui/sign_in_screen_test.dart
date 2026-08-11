@@ -72,6 +72,26 @@ void main() {
     expect(separator, lessThan(google));
   });
 
+  // **ヘルプは「置いてある」だけでは足りない。押せること。**
+  // 認証画面は Stack で組んでおり、本文が上に重なると、見えていても
+  // 反応しない状態になり得る（2026-08-11）。
+  testWidgets('ヘルプボタンが出ていて、押せる（スマホ幅）', (tester) async {
+    // **狭い画面で確かめる。** 本文が広がって重なるとしたら、こちら。
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+
+    final help = find.byTooltip('使い方');
+    expect(help, findsOneWidget);
+
+    // 覆われていれば、ここで hit test の警告つきで失敗する。
+    await tester.tap(help);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('パスワードは伏せてあり、押すと見える', (tester) async {
     await tester.pumpWidget(wrap(const SignInScreen()));
     await tester.pumpAndSettle();
