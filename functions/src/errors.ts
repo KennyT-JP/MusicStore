@@ -53,6 +53,16 @@ export const ERROR_CODES = [
   'emailAlreadyInUse',
   'userDisabled',
   'userWithdrawn',
+  // --- プレミアム（docs/PREMIUM-DESIGN.md） ---
+  'premiumRequired',
+  'couponNotFound',
+  'couponDisabled',
+  'couponExpired',
+  'couponUsedUp',
+  'couponAlreadyUsed',
+  'couponCodeTaken',
+  'monthsInvalid',
+  'maxUsesInvalid',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -94,6 +104,16 @@ const FALLBACK: Record<ErrorCode, string> = {
   emailAlreadyInUse: 'このメールアドレスはすでに使われています。',
   userDisabled: 'この利用者は無効にされています。先に有効に戻してください。',
   userWithdrawn: 'この利用者は退会しています。',
+  premiumRequired:
+    'この操作にはプレミアムのご契約が必要です。有効期限が切れている場合も同じです。',
+  couponNotFound: 'そのクーポンコードは見つかりません。',
+  couponDisabled: 'このクーポンは停止されています。',
+  couponExpired: 'このクーポンは有効期限を過ぎています。',
+  couponUsedUp: 'このクーポンは使用できる人数に達しました。',
+  couponAlreadyUsed: 'このクーポンはすでにお使いいただいています。',
+  couponCodeTaken: 'そのコードはすでに使われています。',
+  monthsInvalid: '月数を正しく入力してください。',
+  maxUsesInvalid: '使用できる人数は 1 以上で指定してください。',
 };
 
 /**

@@ -46,6 +46,20 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
+    // **users/{uid} のうち、サーバーだけが書いてよい項目**
+    // （docs/PREMIUM-DESIGN.md 3.1・6 の 5）。
+    //
+    // - premium: クーポンの引き換えと、管理画面からの延長で Functions が書く
+    // - storage: アップロードの後始末で Functions が集計する
+    //
+    // **ここが開いていると、誰でも自分を無期限のプレミアムにでき、
+    // 容量の上限も自分で広げられる。** 作成と更新の両方で塞ぐ——
+    // 登録直後の create はまだドキュメントが無いので、更新だけ塞いでも
+    // 最初の 1 回で書き込めてしまう。
+    function serverOwnedUserFields() {
+      return ['premium', 'storage'];
+    }
+
     function memberPath(listId) {
       return /databases/$(database)/documents/lists/$(listId)/members/$(uid());
     }
@@ -134,6 +148,13 @@ service cloud.firestore {
       // 下の create が isSignedIn なのと対になっている。作れるのに読めない、
       // という食い違いが原因だった。読めるのは自分の行だけなので、
       // 他人の情報が未確認の状態で漏れることはない。
+      // **この取得はドキュメント全体を返す。項目を選んで隠せない。**
+      // Firestore のルールに項目単位の読み取り制限は無いので、
+      // premium / storage を users/{uid} の項目として持つ限り、
+      // **他人にも同じ取得で見える**（PREMIUM-DESIGN 3.1 は「本人が
+      // 読めるだけ」と書いているが、この置き場所では成り立たない）。
+      // 書き込みは下で塞いである。読みを本当に閉じるなら置き場所を
+      // 分けるしかなく、それは Functions・画面と揃えて決める話になる。
       allow get: if isVerified() || (isSignedIn() && uid() == userId);
 
       // **一覧としての取得は禁じる。** 許すと全会員のメールアドレスと表示名を
@@ -143,11 +164,16 @@ service cloud.firestore {
 
       // 登録直後はまだメール確認が済んでいないため、ここだけ isSignedIn で許す。
       // 作れるのは自分のドキュメントだけ。
-      allow create: if isSignedIn() && uid() == userId;
+      //
+      // **最初の 1 回で premium を仕込めないようにする。** 下の update だけを
+      // 塞いでも、まだドキュメントが無い状態なら create が通ってしまう。
+      allow create: if isSignedIn() && uid() == userId
+        && !request.resource.data.keys().hasAny(serverOwnedUserFields());
+
       allow update: if isVerified() && uid() == userId
         && !request.resource.data.diff(resource.data)
              .affectedKeys()
-             .hasAny(['isWithdrawn', 'withdrawnAt']);
+             .hasAny(['isWithdrawn', 'withdrawnAt'].concat(serverOwnedUserFields()));
 
       // 退会しても users ドキュメントは残す（3.5）。削除は許可しない。
       allow delete: if false;
@@ -438,6 +464,32 @@ service cloud.firestore {
         && docId != 'internal'
         && !request.resource.data.diff(resource.data)
              .affectedKeys().hasAny(['siteAdminCount']);
+    }
+
+    // -----------------------------------------------------------------
+    // coupons（プレミアムのクーポン／PREMIUM-DESIGN 3.2・5）
+    // -----------------------------------------------------------------
+    //
+    // **クライアントからは読みも書きも一切できない。**
+    // 読めるとコードの一覧がそのまま漏れ、誰でもプレミアムになれる
+    // （PREMIUM-DESIGN 9 の 3）。
+    //
+    // **サイト管理者も例外にしない。** 発行・一覧・上限の変更・停止・
+    // 引き換えは、すべて呼び出し可能関数を通す。サーバー（Admin SDK）は
+    // ルールを迂回するので、管理画面はそちらで動く。
+    //
+    // 下の {document=**} でも拒否されるが、**ここに明示して書く。**
+    // 「書き忘れて拒否されている」のと「意図して禁じた」のは、あとから
+    // 読んで区別が付かない。区別が付かないと、次の人が気軽に開ける。
+    match /coupons/{couponId} {
+      allow read, write: if false;
+
+      // **使用記録（redemptions）も同じ。** 誰がいつ使ったかは追跡用で、
+      // 見えると「まだ空きのあるコード」の当たりが付く。
+      // 二重取りの判定は Functions のトランザクションの中だけで行う。
+      match /{couponSubPath=**} {
+        allow read, write: if false;
+      }
     }
 
     // -----------------------------------------------------------------

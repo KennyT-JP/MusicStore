@@ -73,6 +73,9 @@ class AppRoutes {
   static const String siteAdminUsers = '/admin/users';
   static const String siteAdminSettings = '/admin/settings';
 
+  /// クーポン管理（docs/PREMIUM-DESIGN.md 5）。
+  static const String siteAdminCoupons = '/admin/coupons';
+
   // --- パスのパターン（go_router 用） ---
 
   static const String listPattern = '/lists/:listId';

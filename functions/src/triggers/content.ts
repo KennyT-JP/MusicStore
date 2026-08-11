@@ -189,6 +189,19 @@ export const onListDeleted = onDocumentDeleted(
     const db = getFirestore();
     const data = event.data?.data();
 
+    // **作った人の合計から、このリストのぶんを先に引く**
+    // （PREMIUM-DESIGN「容量の数字」）。
+    //
+    // 引かないと、リストを消しても合計が減らず、**その人は二度と
+    // アップロードできなくなる**。ファイル 1 つずつの減算
+    // （onFileDeleted）には頼れない——先に stats を消してしまうため、
+    // どの人の枠から引くのかが分からなくなる。
+    //
+    // **先に印を付けてから引く。** 印（deleting）が付いた stats は
+    // triggers/storage.ts が触らないので、ここでの一括の減算と
+    // ファイルごとの減算が二重にかからない。
+    await releaseOwnerUsage(listId, String(data?.createdBy ?? ''));
+
     // 名前の予約を解放する（仕様書 13.3）。
     const nameLower = data?.nameLower;
     if (typeof nameLower === 'string' && nameLower) {
@@ -206,3 +219,48 @@ export const onListDeleted = onDocumentDeleted(
       .catch(() => undefined);
   }
 );
+
+/**
+ * 消したリストのぶんを、作った人の合計使用量から引く。
+ *
+ * 失敗しても削除そのものは進める（合計はずれるが、リストが中途半端に
+ * 残るほうが困る）。ずれたときは使用量が実際より多く見えるだけで、
+ * 既存のファイルには影響しない。
+ */
+async function releaseOwnerUsage(
+  listId: string,
+  ownerUid: string
+): Promise<void> {
+  const db = getFirestore();
+  const statsRef = db.doc(paths.listStats(listId));
+
+  try {
+    const stats = await statsRef.get();
+    if (!stats.exists) return;
+
+    const listUsed = Number(stats.data()?.usedBytes ?? 0);
+    // 印は使用量が 0 でも付ける。削除中のリストに集計が走ると、
+    // 消えたはずの stats を書き戻してしまう。
+    await statsRef.set({ deleting: true }, { merge: true });
+
+    if (!ownerUid || !Number.isFinite(listUsed) || listUsed <= 0) return;
+
+    const userRef = db.doc(paths.user(ownerUid));
+    await db.runTransaction(async (tx) => {
+      const owner = await tx.get(userRef);
+      if (!owner.exists) return;
+      const used = Number(owner.data()?.storage?.usedBytes ?? 0);
+      tx.set(
+        userRef,
+        { storage: { usedBytes: Math.max(0, used - listUsed) } },
+        { merge: true }
+      );
+    });
+  } catch (error) {
+    logger.error('リスト削除時に合計使用量を戻せませんでした', {
+      listId,
+      ownerUid,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}

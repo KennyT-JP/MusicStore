@@ -272,7 +272,7 @@ Cloud Build の失敗などで途中まで進んだ場合、作成後の設定�
 > 配信ログの `create` / `update` を見れば予測できます。
 > 失敗した直後の再実行が `update` になっていたら、この症状を疑ってください。
 
-**対象は `onCall` の 20 件だけです。** トリガー（`onFileUploaded` など）と
+**対象は `onCall` の 28 件だけです。** トリガー（`onFileUploaded` など）と
 定期実行は利用者が直接呼ばないので、呼び出しの許可とは無関係です。
 消す必要はありません。
 
@@ -290,7 +290,9 @@ for f in submitListRequest approveListRequest rejectListRequest \
          createShareLink acceptShareLink revokeShareLink \
          grantSiteAdmin revokeSiteAdmin withdrawAccount \
          listSiteUsers setListQuota assignListAdmin addListMember \
-         createSiteUser disableSiteUser enableSiteUser deleteSiteUser; do
+         createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
+         createListDirectly setUserQuota extendPremium \
+         createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon; do
   gcloud functions add-invoker-policy-binding "$f" \
     --region="$REGION" --member=allUsers --project="$PROJECT"
 done
@@ -309,6 +311,8 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin addListMember \
   createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
+  createListDirectly setUserQuota extendPremium \
+  createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon \
   --region asia-northeast1 --project music-storage-d79b2 --force
 
 ./scripts/deploy.sh prod --no-build --only=functions
@@ -1003,10 +1007,10 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 329 件
+flutter test      # 379 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
-cd functions && npm test   # 85 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）
 ```
 
 権限判定・容量上限・連番・共有リンク・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
@@ -1023,7 +1027,7 @@ cd functions && npm test   # 85 件（サーバー側のドメインロジック
 ```sh
 cd rules-test
 npm install
-npm test          # 130 件（Firestore 114 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
+npm test          # 161 件（Firestore 145 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
 ```
 
 Firestore ルールは全件エミュレータで検証できます。
@@ -1064,7 +1068,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（96 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（164 件）。
 
 ```sh
 cd functions && npm run test:integration
@@ -1132,25 +1136,15 @@ cd functions && npm run test:integration
 
 ### 手動確認
 
-ステージング環境で行います（仕様書 12.6）。
+**[TEST-CASES.md](TEST-CASES.md) が正本です。**
 
-**Storage ルールは自動テストで検証済みになりました**（上記の経緯を参照）。
-本番の Cloud Storage とエミュレータで挙動が違う可能性は残るため、
-初回の配信時に一度だけ次を確かめておくと安心です。
+以前ここにチェックボックスを 12 個並べていましたが、ID も事前条件も
+期待結果も実施記録も無く、**4 回の監査で「手動側の網羅性を測定できない」
+と書かれ続けました。** 台帳へ移し、`test/domain/manual_test_cases_test.dart`
+が空欄や壊れた参照を見張る形にしてあります。
 
-- [ ] Read Only のユーザーが音源をダウンロード・再生できる
-- [ ] Read Only のユーザーがアップロードできない
-- [ ] リストに参加していないユーザーが、そのリストの音源にアクセスできない
-- [ ] **同じパスへの上書きができない**（監査 S4 で一度破れていた箇所）
-
-**その他**
-
-- [ ] 画面のレイアウト・レスポンシブ表示（PC／スマートフォン）
-- [ ] 認証フロー（Google 連携・メール＋パスワード・パスワード再設定・メール確認）
-- [ ] 未ログインで共有 URL を開き、ログイン後に元の URL へ戻る
-- [ ] ファイルのアップロード／ダウンロード／外部アプリでの再生
-- [ ] 通知の到達
-- [ ] 日本語・英語の表示切り替え
+検証環境で行います（仕様書 12.2）。**同じ内容を 2 か所に置かないでください**
+——片方だけ古くなります。
 
 ### ブラウザで実機を見る（2026-08-11 に手順を確立）
 

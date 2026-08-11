@@ -11,11 +11,15 @@
  * | メンバーの追加・削除 | onMemberWritten |
  * | リストの削除 | onListDeleted |
  * | リスト作成の申請・承認・却下 | submitListRequest / approveListRequest / rejectListRequest |
+ * | 申請なしのリスト作成（プレミアム） | createListDirectly |
  * | 参加申請の提出・承認・却下 | submitJoinRequest / approveJoinRequest / rejectJoinRequest |
  * | 共有リンクの発行・受け入れ・取消 | createShareLink / acceptShareLink / revokeShareLink |
  * | サイト管理者の昇格・降格 | grantSiteAdmin / revokeSiteAdmin |
- * | ユーザー一覧・容量上限・管理者の指名 | listSiteUsers / setListQuota / assignListAdmin |
+ * | ユーザー一覧・容量上限・管理者の指名 | listSiteUsers / setListQuota / setUserQuota / assignListAdmin |
  * | ユーザーの追加・無効化・有効化・削除 | createSiteUser / disableSiteUser / enableSiteUser / deleteSiteUser |
+ * | クーポンの発行・変更・一覧・使用者 | createCoupon / updateCoupon / listCoupons / listCouponRedemptions |
+ * | クーポンの引き換え | redeemCoupon |
+ * | プレミアム期限の延長・短縮 | extendPremium |
  * | 退会 | withdrawAccount |
  * | 定期実行（1 日 1 回） | purgeDeletedFiles |
  *
@@ -44,6 +48,7 @@ export {
   submitListRequest,
   approveListRequest,
   rejectListRequest,
+  createListDirectly,
 } from './callable/list_requests';
 export {
   submitJoinRequest,
@@ -61,9 +66,18 @@ export {
 export {
   listSiteUsers,
   setListQuota,
+  setUserQuota,
   assignListAdmin,
   addListMember,
 } from './callable/site_management';
+export {
+  createCoupon,
+  updateCoupon,
+  listCoupons,
+  listCouponRedemptions,
+  redeemCoupon,
+} from './callable/coupons';
+export { extendPremium } from './callable/premium';
 export {
   createSiteUser,
   disableSiteUser,

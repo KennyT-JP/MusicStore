@@ -905,6 +905,436 @@ if (!listId) {
         !(await itemAdded(siteAdmin.localId)));
 }
 
+// ---------------------------------------------------------------------------
+// プレミアム（docs/PREMIUM-DESIGN.md）
+//
+// **課金が絡むので、境界は実物で確かめる。** 判断そのものは
+// functions/test/premium.test.ts が持っているが、トランザクションで
+// 守っているもの——二重取り・人数の上限・名前の予約——は、実際に
+// Firestore を動かさないと確かめられない。
+// ---------------------------------------------------------------------------
+
+{
+  const GB = 1073741824;
+  /** 入れ子の map の中身を取り出す（premium.until や storage.quotaBytes）。 */
+  const nested = (d, outer, inner) =>
+    d?.fields?.[outer]?.mapValue?.fields?.[inner];
+  const codeOf = (r) => r.body?.error?.details?.code;
+
+  const premiumUser = await signUp('prem');
+  const freeUser = await signUp('free');
+
+  // --- 発行（D1 / D2 / D8） ---
+  let r = await call('createCoupon', { months: 1, maxUses: 1 }, siteAdmin.idToken);
+  const first = r.body?.result;
+  check('サイト管理者はクーポンを発行できる（5）',
+        !!first?.couponId && typeof first?.code === 'string',
+        JSON.stringify(r.body).slice(0, 120));
+
+  // **土台が無ければ以降は意味を持たない。**
+  if (!first?.couponId) {
+    console.error('\nクーポンを発行できなかったため、プレミアムの確認は行えません。\n');
+    process.exit(1);
+  }
+
+  check('自動生成は 24 文字で、読み違えやすい文字を使わない（D8）',
+        /^[A-HJ-NP-Z2-9]{24}$/.test(first.code ?? ''), first.code);
+
+  r = await call('createCoupon', { months: 1, maxUses: 1 }, freeUser.idToken);
+  check('サイト管理者でなければ発行できない', codeOf(r) === 'siteAdminOnly',
+        JSON.stringify(r.body?.error?.details ?? r.body).slice(0, 80));
+
+  r = await call('createCoupon', { months: 0, maxUses: 1 }, siteAdmin.idToken);
+  check('月数 0 のクーポンは作れない', codeOf(r) === 'monthsInvalid', codeOf(r));
+
+  r = await call('createCoupon', { months: 1, maxUses: 0 }, siteAdmin.idToken);
+  check('使える人数 0 のクーポンは作れない', codeOf(r) === 'maxUsesInvalid', codeOf(r));
+
+  r = await call('createCoupon', { code: `Spring${stamp}`, months: 1, maxUses: 3 },
+                 siteAdmin.idToken);
+  check('コードを指定して発行できる（D8）',
+        r.body?.result?.code === `SPRING${stamp}`, r.body?.result?.code);
+
+  r = await call('createCoupon', { code: `spring${stamp}`, months: 1, maxUses: 3 },
+                 siteAdmin.idToken);
+  check('同じコードは二度発行できない（大小・空白は同じ扱い）',
+        codeOf(r) === 'couponCodeTaken', codeOf(r));
+
+  // --- 引き換え（3 / 9-1） ---
+  r = await call('redeemCoupon', { code: 'NOSUCHCODEXXXXXXXXXXXXXX' }, freeUser.idToken);
+  check('無いコードは断る', codeOf(r) === 'couponNotFound', codeOf(r));
+
+  const unverified = await signUpUnverified('unv2');
+  r = await call('redeemCoupon', { code: first.code }, unverified.idToken);
+  check('メール未確認では引き換えられない（3.1）',
+        codeOf(r) === 'emailNotVerified', codeOf(r));
+
+  r = await call('redeemCoupon', { code: first.code }, premiumUser.idToken);
+  const until1 = r.body?.result?.premiumUntil;
+  check('クーポンを引き換えるとプレミアムになる',
+        typeof until1 === 'number' && until1 > Date.now(),
+        JSON.stringify(r.body).slice(0, 120));
+
+  // **二重取りができないこと（9-1）。**
+  r = await call('redeemCoupon', { code: first.code }, premiumUser.idToken);
+  check('同じ人は同じクーポンを二度使えない（9-1）',
+        codeOf(r) === 'couponAlreadyUsed', codeOf(r));
+
+  // **人数の上限を超えないこと（D1）。**
+  r = await call('redeemCoupon', { code: first.code }, freeUser.idToken);
+  check('使える人数を超えて引き換えられない（D1）',
+        codeOf(r) === 'couponUsedUp', codeOf(r));
+
+  // --- 2 枚目は月数が足される（D4） ---
+  r = await call('createCoupon', { months: 2, maxUses: 5 }, siteAdmin.idToken);
+  const second = r.body?.result;
+  check('2 枚目のクーポンを発行できる（次の確認の土台）', !!second?.couponId);
+
+  r = await call('redeemCoupon', { code: `  ${second.code.toLowerCase()}  ` },
+                 premiumUser.idToken);
+  const until2 = r.body?.result?.premiumUntil;
+  check('小文字・前後の空白でも引き換えられる', typeof until2 === 'number',
+        JSON.stringify(r.body).slice(0, 120));
+  check('2 枚目は上書きではなく足される（D4）', until2 > until1,
+        `${until1} -> ${until2}`);
+  {
+    // 1 か月 + 2 か月 = 3 か月先。差はおよそ 2 か月（59〜62 日）になる。
+    const days = (until2 - until1) / 86400000;
+    check('足されたのはおよそ 2 か月ぶん', days > 55 && days < 65, `${days.toFixed(1)} 日`);
+  }
+
+  // --- 上限を使用済みより下げる（D1 の補足） ---
+  r = await call('updateCoupon', { couponId: second.couponId, maxUses: 1 },
+                 siteAdmin.idToken);
+  check('使用済みの人数より小さい上限にもできる（D1）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  const afterLower = await doc(`users/${premiumUser.localId}`);
+  check('上限を下げても、使った人のプレミアムは消えない（D1）',
+        !!nested(afterLower, 'premium', 'until')?.timestampValue,
+        String(nested(afterLower, 'premium', 'until')?.timestampValue));
+
+  const late = await signUp('late');
+  r = await call('redeemCoupon', { code: second.code }, late.idToken);
+  check('上限を下げたあとは、それ以上使えない（D1）',
+        codeOf(r) === 'couponUsedUp', codeOf(r));
+
+  // --- 停止（5：消さずに止める） ---
+  r = await call('updateCoupon', { couponId: second.couponId, disabled: true },
+                 siteAdmin.idToken);
+  check('クーポンを止められる（5）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('redeemCoupon', { code: second.code }, late.idToken);
+  check('止めたクーポンは使えない', codeOf(r) === 'couponDisabled', codeOf(r));
+
+  // --- 一覧と、使った人（5） ---
+  r = await call('listCoupons', {}, siteAdmin.idToken);
+  const listed = r.body?.result?.coupons ?? [];
+  const firstRow = listed.find((c) => c.couponId === first.couponId);
+  check('クーポンを一覧できる（5）', !!firstRow, `件数=${listed.length}`);
+  check('使われた数と上限が分かる（5）',
+        firstRow?.usedCount === 1 && firstRow?.maxUses === 1,
+        JSON.stringify(firstRow));
+
+  r = await call('listCoupons', {}, freeUser.idToken);
+  check('一般利用者はクーポンを一覧できない（9-3）',
+        codeOf(r) === 'siteAdminOnly', codeOf(r));
+
+  r = await call('listCouponRedemptions', { couponId: first.couponId }, siteAdmin.idToken);
+  check('誰が使ったかを見られる（5）',
+        r.body?.result?.redemptions?.[0]?.uid === premiumUser.localId,
+        JSON.stringify(r.body?.result).slice(0, 120));
+
+  r = await call('listCouponRedemptions', { couponId: first.couponId }, freeUser.idToken);
+  check('一般利用者は使った人を見られない', codeOf(r) === 'siteAdminOnly', codeOf(r));
+
+  // --- 申請なしのリスト作成（4.2） ---
+  const directName = `直接作成${stamp}`;
+  r = await call('createListDirectly', { listName: directName }, premiumUser.idToken);
+  const directId = r.body?.result?.listId;
+  check('プレミアムなら申請なしでリストを作れる（4.2）', !!directId,
+        JSON.stringify(r.body).slice(0, 120));
+
+  if (!directId) {
+    console.error('\n直接作成に失敗したため、以降の確認は土台がありません。\n');
+    process.exit(1);
+  }
+
+  {
+    const l = await doc(`lists/${directId}`);
+    check('作った人が createdBy になる', sv(l, 'createdBy') === premiumUser.localId,
+          String(sv(l, 'createdBy')));
+
+    const member = await doc(`lists/${directId}/members/${premiumUser.localId}`);
+    check('作った人がリスト管理者になる（承認と同じ）',
+          sv(member, 'role') === 'listAdmin' && sv(member, 'uid') === premiumUser.localId,
+          `${sv(member, 'role')} / ${sv(member, 'uid')}`);
+
+    const stats = await doc(`lists/${directId}/meta/stats`);
+    check('stats が初期化される（nextSeq=1）', sv(stats, 'nextSeq') === '1',
+          String(sv(stats, 'nextSeq')));
+
+    // **作った人の合計の写し。** 画面はメンバーとして stats しか読めない。
+    check('作った人の合計の写しが入る（ownerQuotaBytes は既定 2GB）',
+          sv(stats, 'ownerQuotaBytes') === String(2 * GB) &&
+            sv(stats, 'ownerUsedBytes') === '0',
+          `${sv(stats, 'ownerQuotaBytes')} / ${sv(stats, 'ownerUsedBytes')}`);
+
+    // **名前の予約を飛ばしていないこと（9-2）。**
+    const reserved = await doc(`listNames/${directName.toLowerCase()}`);
+    check('名前が予約される（承認と同じ道を通る／9-2）',
+          sv(reserved, 'listId') === directId, String(sv(reserved, 'listId')));
+  }
+
+  // **プレミアムでない人は呼べない。符号まで確かめる。**
+  r = await call('createListDirectly', { listName: `無償${stamp}` }, freeUser.idToken);
+  check('プレミアムでない人は直接作成できない（PERMISSION_DENIED / premiumRequired）',
+        r.body?.error?.status === 'PERMISSION_DENIED' && codeOf(r) === 'premiumRequired',
+        `${r.body?.error?.status} / ${codeOf(r)}`);
+
+  // **未ログインと取り違えていないこと。** 上と下で符号が違う。
+  r = await call('createListDirectly', { listName: `未ログイン${stamp}` });
+  check('未ログインのときは signInRequired（premiumRequired と区別する）',
+        codeOf(r) === 'signInRequired', codeOf(r));
+
+  // --- 期限が切れた人は作れない（D3） ---
+  r = await call('extendPremium', { uid: premiumUser.localId, months: -12 },
+                 siteAdmin.idToken);
+  check('サイト管理者は期限を縮められる（D4）',
+        r.status === 200 && r.body?.result?.premiumUntil < Date.now(),
+        JSON.stringify(r.body).slice(0, 100));
+
+  r = await call('createListDirectly', { listName: `期限切れ${stamp}` },
+                 premiumUser.idToken);
+  check('期限が切れた人は作れない（D3）', codeOf(r) === 'premiumRequired', codeOf(r));
+
+  {
+    // **既存のリストは残る。** 「追加だけ止める」であって、消さない（D3）。
+    const l = await doc(`lists/${directId}`);
+    check('期限が切れても、作ったリストは残る（D3）',
+          !!l && sv(l, 'name') === directName, String(sv(l, 'name')));
+  }
+
+  r = await call('extendPremium', { uid: premiumUser.localId, months: 12 },
+                 siteAdmin.idToken);
+  check('期限を延ばし直せる（次の確認の土台）',
+        r.body?.result?.premiumUntil > Date.now(),
+        JSON.stringify(r.body).slice(0, 100));
+
+  r = await call('extendPremium', { uid: premiumUser.localId, months: 1 },
+                 freeUser.idToken);
+  check('一般利用者は期限を延ばせない', codeOf(r) === 'siteAdminOnly', codeOf(r));
+
+  // --- 同じ名前のリストが 2 つ作れない（申請経由と直接作成を混ぜる／9-2） ---
+  r = await call('createListDirectly', { listName: directName }, premiumUser.idToken);
+  check('同じ名前で二度は作れない（9-2）', codeOf(r) === 'listNameTaken', codeOf(r));
+
+  r = await call('submitListRequest',
+                 { listName: directName, purpose: 'x', estimatedTrackCount: 1, expectedUserCount: 1 },
+                 freeUser.idToken);
+  check('直接作成した名前は、申請でも取れない（9-2）',
+        codeOf(r) === 'listNameTaken', codeOf(r));
+
+  const pendingName = `申請中${stamp}`;
+  r = await call('submitListRequest',
+                 { listName: pendingName, purpose: 'x', estimatedTrackCount: 1, expectedUserCount: 1 },
+                 freeUser.idToken);
+  const pendingRequestId = r.body?.result?.requestId;
+  check('申請できる（次の確認の土台）', !!pendingRequestId,
+        JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('createListDirectly', { listName: pendingName }, premiumUser.idToken);
+  check('申請中の名前は、直接作成でも取れない（9-2）',
+        codeOf(r) === 'listNameTaken', codeOf(r));
+
+  // --- 人ごとの容量上限（「容量の数字」） ---
+  r = await call('setUserQuota', { uid: premiumUser.localId, quotaBytes: 4 * GB },
+                 siteAdmin.idToken);
+  check('サイト管理者は人ごとの上限を変えられる', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  const quotaDoc = await doc(`users/${premiumUser.localId}`);
+  check('人ごとの上限が反映される',
+        nested(quotaDoc, 'storage', 'quotaBytes')?.integerValue === String(4 * GB),
+        String(nested(quotaDoc, 'storage', 'quotaBytes')?.integerValue));
+
+  r = await call('setUserQuota', { uid: premiumUser.localId, quotaBytes: 4 * GB },
+                 freeUser.idToken);
+  check('一般利用者は人ごとの上限を変えられない',
+        codeOf(r) === 'siteAdminOnly', codeOf(r));
+
+  r = await call('setUserQuota', { uid: premiumUser.localId, quotaBytes: 0 },
+                 siteAdmin.idToken);
+  check('0 以下の上限は受け付けない', codeOf(r) === 'invalidQuota', codeOf(r));
+
+  // -------------------------------------------------------------------------
+  // 実際にファイルを置いて、人ごとの合計で止まることを確かめる
+  //
+  // **ここだけは実物で動かす。** 上限の強制は Storage のトリガーでしか
+  // 行えず（ルールからは人ごとの合計を参照できない）、その判定を
+  // 「リストごと」から「人ごと」へ移したのがこの版で一番大きな変更である。
+  // 純関数の境界は functions/test/premium.test.ts が持っているが、
+  // **繋ぎ違えていても単体テストは緑のまま**になる。
+  //
+  // 2GB を実際に埋めるわけにはいかないので、上限のほうを小さくして
+  // 同じ境界を作る（`setUserQuota` で 1000 バイトにする）。
+  // -------------------------------------------------------------------------
+  {
+    const SIZE = 1024;
+    const STORAGE = 'http://127.0.0.1:9199';
+
+    // 申請中だったリストを承認して、**無償の人が作ったリスト**を用意する。
+    r = await call('approveListRequest', { requestId: pendingRequestId }, siteAdmin.idToken);
+    const freeListId = r.body?.result?.listId;
+    check('無償の人のリストを用意できる（次の確認の土台）', !!freeListId,
+          JSON.stringify(r.body).slice(0, 80));
+
+    const upload = async (bucket, path) => {
+      const res = await fetchRetry(
+        `${STORAGE}/v0/b/${bucket}/o?name=${encodeURIComponent(path)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/mpeg', Authorization: 'Bearer owner' },
+          body: Buffer.alloc(SIZE, 7),
+        }
+      ).catch(() => null);
+      return res?.ok === true;
+    };
+    const exists = async (bucket, path) => {
+      const res = await fetchRetry(
+        `${STORAGE}/v0/b/${bucket}/o/${encodeURIComponent(path)}`,
+        { headers: { Authorization: 'Bearer owner' } }
+      ).catch(() => null);
+      return res?.ok === true;
+    };
+    const storageOf = async (uid, key) =>
+      Number(nested(await doc(`users/${uid}`), 'storage', key)?.integerValue ?? 0);
+
+    r = await call('setUserQuota', { uid: freeUser.localId, quotaBytes: 1000 },
+                   siteAdmin.idToken);
+    check('無償の人の上限を小さくできる（次の確認の土台）', r.status === 200,
+          JSON.stringify(r.body).slice(0, 80));
+
+    // **バケット名は決め打ちにしない。** firebase-tools の版で既定が
+    // 変わる（appspot.com / firebasestorage.app）。
+    //
+    // **置けたバケットが正解。** 集計が動いたかどうかで選ばない。
+    // 以前は「30 秒待って集計されたほう」を採っていたが、混んでいる
+    // ときは正しいバケットでも 30 秒に間に合わず、**そのあと存在しない
+    // ほうを試して失敗**していた（並列で検証したときに実際に落ちた）。
+    // **時間制限は歯止めであって、速さの基準ではない**
+    // （docs/AUDIT-CHECKLIST.md 観点 2・4）。
+    let bucket = null;
+    for (const candidate of [
+      'demo-musiclist.appspot.com',
+      'demo-musiclist.firebasestorage.app',
+    ]) {
+      if (await upload(candidate, `lists/${freeListId}/items/probe/take.mp3`)) {
+        bucket = candidate;
+        break;
+      }
+    }
+    check('音源を置けるバケットがある（次の確認の土台）', bucket !== null,
+          bucket ?? 'どのバケットにも置けなかった');
+
+    // 集計は保存のあとに走る。**待ち時間は既定（長め）に任せる。**
+    const counted = bucket !== null && await waitUntil(
+      async () => (await storageOf(freeUser.localId, 'usedBytes')) === SIZE,
+    );
+    check('アップロードが「人ごとの合計」に足される（容量の数字）', counted,
+          `${await storageOf(freeUser.localId, 'usedBytes')} / ${SIZE}`);
+
+    if (bucket) {
+      const stats = await doc(`lists/${freeListId}/meta/stats`);
+      check('リストごとの使用量も引き続き数える（表示に要る）',
+            sv(stats, 'usedBytes') === String(SIZE), String(sv(stats, 'usedBytes')));
+      check('作った人の合計が stats に写る（ownerUsedBytes / ownerQuotaBytes）',
+            sv(stats, 'ownerUsedBytes') === String(SIZE) &&
+              sv(stats, 'ownerQuotaBytes') === '1000',
+            `${sv(stats, 'ownerUsedBytes')} / ${sv(stats, 'ownerQuotaBytes')}`);
+
+      // **無償の人は拡張されない。** 上限（1000）を超えて使っていても、
+      // 上限は動かない。
+      check('プレミアムでない人は自動拡張されない（容量の数字）',
+            (await storageOf(freeUser.localId, 'quotaBytes')) === 1000,
+            String(await storageOf(freeUser.localId, 'quotaBytes')));
+
+      // **サイト管理から足した上限（土台）が、集計のたびに消えないこと。**
+      // 戻す先を既定の 2GB に決め打ちすると、移行の手当てが黙って消える
+      // （PREMIUM-DESIGN「既存の利用者への影響」）。
+      check('無償の人の土台は、容量が増減しても保たれる',
+            (await storageOf(freeUser.localId, 'quotaBytesBase')) === 1000,
+            String(await storageOf(freeUser.localId, 'quotaBytesBase')));
+
+      // すでに超えている状態からの追加は取り消される（7.5 / 監査 S5）。
+      // **判定の材料は人ごとの合計**で、リストごとの上限（1GB）ではない。
+      const blocked = `lists/${freeListId}/items/blocked/take.mp3`;
+      check('超過後のアップロードを行える（次の確認の土台）',
+            await upload(bucket, blocked));
+      const removed = await waitUntil(
+        async () => !(await exists(bucket, blocked)),
+        { timeoutMs: 60000 }
+      );
+      check('上限を超えた状態からのアップロードは取り消される（7.5 / S5）',
+            removed, removed ? '取り消された' : '残ったまま');
+
+      // --- プレミアムは自動で増える（「自動拡張の作り」） ---
+      r = await call('setUserQuota', { uid: premiumUser.localId, quotaBytes: 1000 },
+                     siteAdmin.idToken);
+      check('プレミアムの人の上限を小さくできる（次の確認の土台）', r.status === 200,
+            JSON.stringify(r.body).slice(0, 80));
+
+      const kept = `lists/${directId}/items/expand/take.mp3`;
+      check('プレミアムの人がアップロードできる（次の確認の土台）',
+            await upload(bucket, kept));
+
+      const grew = await waitUntil(
+        async () => (await storageOf(premiumUser.localId, 'quotaBytes')) > 1000,
+        { timeoutMs: 60000 }
+      );
+      check('プレミアムは 90% を超えると上限が自動で増える', grew,
+            String(await storageOf(premiumUser.localId, 'quotaBytes')));
+      check('増える幅は 2GB（2→4→6→8→10 の 1 段）',
+            (await storageOf(premiumUser.localId, 'quotaBytes')) === 1000 + 2 * GB,
+            String(await storageOf(premiumUser.localId, 'quotaBytes')));
+
+      // **黙って増やさない。** 増えた理由が分からないと、請求が増えたときに
+      // 利用者にも運営にも説明できない。
+      const expandNotified = async () =>
+        (await list(`users/${premiumUser.localId}/notifications`))
+          .some((n) => sv(n, 'type') === 'quotaExpanded');
+      await waitUntil(expandNotified);
+      check('増やしたことを通知する（自動拡張の作り）', await expandNotified());
+
+      check('自動で増えたので、ファイルは取り消されない', await exists(bucket, kept));
+
+      check('自動拡張は土台を書き換えない',
+            (await storageOf(premiumUser.localId, 'quotaBytesBase')) === 1000,
+            String(await storageOf(premiumUser.localId, 'quotaBytesBase')));
+
+      // --- 期限が切れたら、上限は「土台」に戻る（既定の 2GB ではない） ---
+      r = await call('extendPremium', { uid: premiumUser.localId, months: -120 },
+                     siteAdmin.idToken);
+      check('期限を切らせる（次の確認の土台）',
+            r.body?.result?.premiumUntil < Date.now(),
+            JSON.stringify(r.body).slice(0, 100));
+
+      // 集計が動く機会を作る。上限を超えるのでこのファイルは取り消されるが、
+      // 上限の計算はその前に行われる。
+      check('切れたあともアップロードは試せる（次の確認の土台）',
+            await upload(bucket, `lists/${directId}/items/expired/take.mp3`));
+
+      const returned = await waitUntil(
+        async () => (await storageOf(premiumUser.localId, 'quotaBytes')) === 1000,
+        { timeoutMs: 60000 }
+      );
+      check('期限が切れたら上限は土台へ戻る（既定の 2GB ではない）', returned,
+            String(await storageOf(premiumUser.localId, 'quotaBytes')));
+      check('戻っても既存のファイルは消えない（D3）', await exists(bucket, kept));
+    }
+  }
+}
+
 // どこで時間を使ったかの内訳（調べるときの手がかり。判定には使わない）。
 {
   const sec = (ms) => `${Math.round(ms / 1000)}s`;

@@ -673,12 +673,6 @@ abstract class AppL10n {
   /// **'「{name}」を削除します。\n\nバックアップは取っていないため、削除した内容は元に戻せません。'**
   String deleteListBody(String name);
 
-  /// No description provided for @usedCapacity.
-  ///
-  /// In ja, this message translates to:
-  /// **'使用容量'**
-  String get usedCapacity;
-
   /// No description provided for @quotaOver90.
   ///
   /// In ja, this message translates to:
@@ -1716,6 +1710,384 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'この利用者は退会しています。'**
   String get functionErrorUserWithdrawn;
+
+  /// 設定画面のプレミアム欄（docs/PREMIUM-DESIGN.md 5）
+  ///
+  /// In ja, this message translates to:
+  /// **'プレミアム'**
+  String get premiumSection;
+
+  /// No description provided for @premiumActiveUntil.
+  ///
+  /// In ja, this message translates to:
+  /// **'{date} までプレミアムをご利用いただけます。'**
+  String premiumActiveUntil(String date);
+
+  /// No description provided for @premiumInactive.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在はプレミアムではありません。'**
+  String get premiumInactive;
+
+  /// No description provided for @premiumInactiveNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレミアムでない間も、これまでに保存した音源やリストはそのまま残ります。新しいリストを申請なしで作れないだけです。'**
+  String get premiumInactiveNote;
+
+  /// No description provided for @couponCodeLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンコード'**
+  String get couponCodeLabel;
+
+  /// No description provided for @couponCodeRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンコードを入力してください'**
+  String get couponCodeRequired;
+
+  /// No description provided for @couponRedeem.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンを適用'**
+  String get couponRedeem;
+
+  /// No description provided for @couponRedeemed.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンを適用しました。{date} までプレミアムをご利用いただけます。'**
+  String couponRedeemed(String date);
+
+  /// No description provided for @createList.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを作る'**
+  String get createList;
+
+  /// No description provided for @createListNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレミアムの方は、申請せずにその場でリストを作成できます。'**
+  String get createListNote;
+
+  /// No description provided for @listCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'リストを作成しました。'**
+  String get listCreated;
+
+  /// No description provided for @myStorageTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用中の容量（あなたの合計）'**
+  String get myStorageTitle;
+
+  /// No description provided for @myStorageNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'あなたが作成したすべてのリストの合計です。上限はリストごとではなく、この合計に対してかかります。'**
+  String get myStorageNote;
+
+  /// No description provided for @myStorageUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用量はまだ集計されていません。音源を追加すると表示されます。'**
+  String get myStorageUnknown;
+
+  /// No description provided for @ownerQuotaTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'使用中の容量（作成者の合計）'**
+  String get ownerQuotaTitle;
+
+  /// No description provided for @ownerQuotaCaption.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成者の合計'**
+  String get ownerQuotaCaption;
+
+  /// No description provided for @ownerQuotaNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストを作成した方が持つ、すべてのリストの合計です。このリスト 1 つ分の量ではありません。どなたが音源を追加しても、作成した方の容量から引かれます。'**
+  String get ownerQuotaNote;
+
+  /// No description provided for @ownerQuotaUnknown.
+  ///
+  /// In ja, this message translates to:
+  /// **'作成者の合計容量は、まだ集計されていません。しばらくしてからご確認ください。'**
+  String get ownerQuotaUnknown;
+
+  /// No description provided for @siteAdminCoupons.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポン'**
+  String get siteAdminCoupons;
+
+  /// No description provided for @couponListEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだクーポンはありません。'**
+  String get couponListEmpty;
+
+  /// No description provided for @couponCreate.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンを発行'**
+  String get couponCreate;
+
+  /// No description provided for @couponMonthsLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'付与する月数'**
+  String get couponMonthsLabel;
+
+  /// No description provided for @couponMaxUsesLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'使える人数'**
+  String get couponMaxUsesLabel;
+
+  /// No description provided for @couponExpiresLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンの有効期限'**
+  String get couponExpiresLabel;
+
+  /// No description provided for @couponNoExpiry.
+  ///
+  /// In ja, this message translates to:
+  /// **'期限なし'**
+  String get couponNoExpiry;
+
+  /// No description provided for @couponChooseExpiry.
+  ///
+  /// In ja, this message translates to:
+  /// **'期限を決める'**
+  String get couponChooseExpiry;
+
+  /// No description provided for @couponClearExpiry.
+  ///
+  /// In ja, this message translates to:
+  /// **'期限を外す'**
+  String get couponClearExpiry;
+
+  /// No description provided for @couponCodeAuto.
+  ///
+  /// In ja, this message translates to:
+  /// **'自動で作る'**
+  String get couponCodeAuto;
+
+  /// No description provided for @couponCodeManual.
+  ///
+  /// In ja, this message translates to:
+  /// **'文字列を指定'**
+  String get couponCodeManual;
+
+  /// No description provided for @couponCodeManualLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'指定するコード'**
+  String get couponCodeManualLabel;
+
+  /// No description provided for @couponCodeManualWarning.
+  ///
+  /// In ja, this message translates to:
+  /// **'指定した文字列は覚えやすいぶん、推測もされやすくなります。使える人数と有効期限を必ず決めてください。'**
+  String get couponCodeManualWarning;
+
+  /// No description provided for @couponMonthsValue.
+  ///
+  /// In ja, this message translates to:
+  /// **'{months} か月'**
+  String couponMonthsValue(int months);
+
+  /// No description provided for @couponUsesValue.
+  ///
+  /// In ja, this message translates to:
+  /// **'{used} / {max} 人'**
+  String couponUsesValue(int used, int max);
+
+  /// No description provided for @couponExpiresOn.
+  ///
+  /// In ja, this message translates to:
+  /// **'期限 {date}'**
+  String couponExpiresOn(String date);
+
+  /// No description provided for @couponDisabledLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止中'**
+  String get couponDisabledLabel;
+
+  /// No description provided for @couponUsedUpLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'上限に達しました'**
+  String get couponUsedUpLabel;
+
+  /// No description provided for @couponExpiredLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'期限切れ'**
+  String get couponExpiredLabel;
+
+  /// No description provided for @couponDisable.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止する'**
+  String get couponDisable;
+
+  /// No description provided for @couponEnable.
+  ///
+  /// In ja, this message translates to:
+  /// **'停止を解除'**
+  String get couponEnable;
+
+  /// No description provided for @couponChangeMaxUses.
+  ///
+  /// In ja, this message translates to:
+  /// **'人数を変える'**
+  String get couponChangeMaxUses;
+
+  /// No description provided for @couponChangeMaxUsesBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{code}」を使える人数を入力してください。すでに使った方より少ない人数にもできます。その場合、これ以上は使えなくなるだけで、すでに使った方のプレミアムは取り消されません。'**
+  String couponChangeMaxUsesBody(String code);
+
+  /// No description provided for @couponViewRedemptions.
+  ///
+  /// In ja, this message translates to:
+  /// **'使った人を見る'**
+  String get couponViewRedemptions;
+
+  /// No description provided for @couponRedemptionsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{code}」を使った方'**
+  String couponRedemptionsTitle(String code);
+
+  /// No description provided for @couponRedemptionsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'まだどなたも使っていません。'**
+  String get couponRedemptionsEmpty;
+
+  /// No description provided for @couponCreated.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンを発行しました：{code}'**
+  String couponCreated(String code);
+
+  /// No description provided for @couponCopyCode.
+  ///
+  /// In ja, this message translates to:
+  /// **'コードをコピー'**
+  String get couponCopyCode;
+
+  /// No description provided for @couponCodeCopied.
+  ///
+  /// In ja, this message translates to:
+  /// **'コードをコピーしました。'**
+  String get couponCodeCopied;
+
+  /// No description provided for @extendPremium.
+  ///
+  /// In ja, this message translates to:
+  /// **'プレミアムを延長'**
+  String get extendPremium;
+
+  /// No description provided for @extendPremiumBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} のプレミアムを延長します。すでに期限がある場合は、その後ろに足されます。'**
+  String extendPremiumBody(String name);
+
+  /// No description provided for @extendPremiumMonthsLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'延長する月数'**
+  String get extendPremiumMonthsLabel;
+
+  /// No description provided for @extendPremiumDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{date} まで延長しました。'**
+  String extendPremiumDone(String date);
+
+  /// No description provided for @setUserQuotaTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用者の容量上限を変更'**
+  String get setUserQuotaTitle;
+
+  /// No description provided for @setUserQuotaBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の容量上限を MB 単位で入力してください。リストごとではなく、その方が作成したすべてのリストの合計に効きます。'**
+  String setUserQuotaBody(String name);
+
+  /// No description provided for @setUserQuotaDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'容量上限を変更しました。'**
+  String get setUserQuotaDone;
+
+  /// No description provided for @functionErrorPremiumRequired.
+  ///
+  /// In ja, this message translates to:
+  /// **'この操作にはプレミアムが必要です。設定画面でクーポンコードを入力してください。'**
+  String get functionErrorPremiumRequired;
+
+  /// No description provided for @functionErrorCouponNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'そのクーポンコードは見つかりません。入力した文字をご確認ください。'**
+  String get functionErrorCouponNotFound;
+
+  /// No description provided for @functionErrorCouponDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'このクーポンは停止されています。配布元にお問い合わせください。'**
+  String get functionErrorCouponDisabled;
+
+  /// No description provided for @functionErrorCouponExpired.
+  ///
+  /// In ja, this message translates to:
+  /// **'このクーポンは有効期限が切れています。'**
+  String get functionErrorCouponExpired;
+
+  /// No description provided for @functionErrorCouponUsedUp.
+  ///
+  /// In ja, this message translates to:
+  /// **'このクーポンは、使える人数の上限に達しています。'**
+  String get functionErrorCouponUsedUp;
+
+  /// No description provided for @functionErrorCouponAlreadyUsed.
+  ///
+  /// In ja, this message translates to:
+  /// **'このクーポンはすでにお使いです。同じクーポンは一度だけ使えます。'**
+  String get functionErrorCouponAlreadyUsed;
+
+  /// No description provided for @functionErrorCouponCodeTaken.
+  ///
+  /// In ja, this message translates to:
+  /// **'そのコードはすでに使われています。別の文字列を指定してください。'**
+  String get functionErrorCouponCodeTaken;
+
+  /// No description provided for @functionErrorMonthsInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'月数は 1 以上の整数で指定してください。'**
+  String get functionErrorMonthsInvalid;
+
+  /// No description provided for @functionErrorMaxUsesInvalid.
+  ///
+  /// In ja, this message translates to:
+  /// **'使える人数は 1 以上の整数で指定してください。'**
+  String get functionErrorMaxUsesInvalid;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -1,6 +1,6 @@
 /// 設定（仕様書 3.4 / 3.5 / 10.3 / 14.2）
 ///
-/// 表示名の変更、表示言語、通知設定、退会。
+/// 表示名の変更、表示言語、通知設定、クーポンの入力、容量、退会。
 library;
 
 import 'package:flutter/material.dart';
@@ -8,8 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/app_user.dart';
 import '../../data/repositories/functions_repository.dart';
+import '../../domain/premium.dart';
+import '../../domain/quota.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
 
@@ -35,6 +38,12 @@ class SettingsScreen extends ConsumerWidget {
               _LanguageSection(user: appUser),
               const Divider(height: 32),
               _NotificationSection(user: appUser),
+              const Divider(height: 32),
+              // **通知の下に置く。** 上に挟むと、通知の設定が画面の外へ
+              // 押し出される。よく触る設定ほど上に残す。
+              _PremiumSection(user: appUser),
+              const Divider(height: 32),
+              _StorageSection(user: appUser),
               const Divider(height: 32),
               const _AccountSection(),
             ],
@@ -140,6 +149,213 @@ class _LanguageSection extends ConsumerWidget {
               .read(listRepositoryProvider)
               .updateLocale(user.uid, selection.first),
         ),
+      ],
+    );
+  }
+}
+
+/// プレミアムとクーポン（docs/PREMIUM-DESIGN.md 5）。
+///
+/// **いつまでプレミアムかを、必ず出す。** 「プレミアムです」とだけ書くと、
+/// 切れる日が分からず、切れたあとに「勝手に解約された」と読まれる。
+///
+/// クーポンの失敗は**原因ごとに文言を変える**（error_message.dart）。
+/// 打ち直せば直るのか、配布元に聞くしかないのかが、利用者にとって別物
+/// だからである。
+class _PremiumSection extends ConsumerStatefulWidget {
+  const _PremiumSection({required this.user});
+
+  final AppUser user;
+
+  @override
+  ConsumerState<_PremiumSection> createState() => _PremiumSectionState();
+}
+
+class _PremiumSectionState extends ConsumerState<_PremiumSection> {
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  /// 引き換えに成功したときの期限。
+  ///
+  /// **ユーザー文書の更新を待たずに出す。** サーバーが書いた値が
+  /// Firestore の購読で降りてくるまでには間があり、その間に
+  /// 「適用できたのかどうか分からない」時間が生まれる。
+  DateTime? _redeemedUntil;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final until = widget.user.premiumUntil;
+    final isPremium = PremiumPolicy.isActive(until);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.premiumSection, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+
+        if (isPremium && until != null)
+          Text(l10n.premiumActiveUntil(formatDateTime(until)))
+        else ...[
+          Text(l10n.premiumInactive),
+          const SizedBox(height: 4),
+          // 期限が切れても消えないことを、ここで書いておく（設計 D3）。
+          Text(l10n.premiumInactiveNote, style: theme.textTheme.bodySmall),
+        ],
+
+        if (_redeemedUntil case final redeemed?) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              l10n.couponRedeemed(formatDateTime(redeemed)),
+              style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+            ),
+          ),
+        ],
+
+        if (_error case final error?) ...[
+          const SizedBox(height: 12),
+          ErrorMessage(error),
+        ],
+
+        const SizedBox(height: 12),
+        // **縦に積む。** コードは 24 文字あり、狭い画面で入力欄とボタンを
+        // 横に並べると入力欄がほとんど残らない（サイト管理の一覧で
+        // 同じ形の崩れが起きた／2026-08-10）。
+        TextField(
+          controller: _code,
+          decoration: InputDecoration(
+            labelText: l10n.couponCodeLabel,
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
+          onSubmitted: _busy ? null : (_) => _redeem(),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(
+            onPressed: _busy ? null : _redeem,
+            child: Text(l10n.couponRedeem),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _redeem() async {
+    final l10n = AppL10n.of(context);
+    final code = PremiumPolicy.normalizeCouponCode(_code.text);
+    if (code.isEmpty) {
+      setState(() {
+        _error = l10n.couponCodeRequired;
+        _redeemedUntil = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+      _redeemedUntil = null;
+    });
+    try {
+      final until = await ref
+          .read(functionsRepositoryProvider)
+          .redeemCoupon(code);
+      if (!mounted) return;
+      setState(() {
+        _redeemedUntil = until;
+        _code.clear();
+      });
+    } on FunctionsCallException catch (e) {
+      // **原因が分かる文言に変える。** 汎用の文言に落とすと、
+      // 打ち間違いなのか止められたクーポンなのか区別できない。
+      if (mounted) setState(() => _error = describeFunctionsError(context, e));
+    } catch (_) {
+      // 通信の失敗など。黙って何も起きないようにはしない（監査 第4回）。
+      if (mounted) setState(() => _error = AppL10n.of(context).errorGeneric);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+}
+
+/// 自分の合計の容量（設計 D5 の補足）。
+///
+/// **上限は人ごとの合計に対してかかる。** リストごとではないことを
+/// 書き添えないと、リストを増やせば増えると誤解される。
+class _StorageSection extends StatelessWidget {
+  const _StorageSection({required this.user});
+
+  final AppUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final storage = user.storage;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.myStorageTitle, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+
+        // **届く前に 0 と書かない。** まだ集計されていないことと、
+        // 使っていないことは別（docs/AUDIT-CHECKLIST.md 観点 2）。
+        if (storage == null)
+          Text(l10n.myStorageUnknown, style: theme.textTheme.bodySmall)
+        else ...[
+          Builder(
+            builder: (context) {
+              final quota = storage.quota;
+              final color = switch (quota.level) {
+                QuotaLevel.warning => theme.colorScheme.error,
+                QuotaLevel.notice => Colors.orange,
+                QuotaLevel.normal => theme.colorScheme.primary,
+              };
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: quota.ratio.clamp(0.0, 1.0),
+                    color: color,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.quotaUsage(
+                      formatBytes(quota.usedBytes),
+                      formatBytes(quota.quotaBytes),
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: color),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.quotaRemaining(formatBytes(quota.remainingBytes)),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(l10n.myStorageNote, style: theme.textTheme.bodySmall),
       ],
     );
   }

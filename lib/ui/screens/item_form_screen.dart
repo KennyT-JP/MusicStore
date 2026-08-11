@@ -190,7 +190,15 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
                 height: 150,
                 child: TabBarView(
                   controller: _tabs,
-                  children: [_filePane(l10n, stats?.quota), _urlPane(l10n)],
+                  children: [
+                    // **残りは「リストを作った人の合計」で見る**
+                    // （docs/PREMIUM-DESIGN.md D5 の補足）。上限が効くのは
+                    // 人ごとの合計なので、リストぶんの残りを出すと
+                    // 「まだ空いている」と読めて、上げた瞬間に断られる。
+                    // 合計がまだ届いていない間だけ、従来どおりリストぶんに倒す。
+                    _filePane(l10n, stats?.ownerQuota ?? stats?.quota),
+                    _urlPane(l10n),
+                  ],
                 ),
               ),
 
@@ -492,7 +500,11 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
         fileName: picked.name,
         contentType: _guessContentType(picked.name),
         date: _date,
+        // 送る前の判定も、人ごとの合計で行う（設計 D5 の補足）。
+        // **サーバーが断る条件と揃えておく。** リストぶんで判定すると、
+        // 通ると思って全部送ってから断られる（通信も課金も無駄になる）。
         quota:
+            stats?.ownerQuota ??
             stats?.quota ??
             const QuotaStatus(usedBytes: 0, quotaBytes: kDefaultQuotaBytes),
         title: _title.text,

@@ -119,6 +119,65 @@ export const setListQuota = onCall({ region: REGION }, async (request) => {
 });
 
 /**
+ * 人ごとの容量上限の**土台**を設定する（PREMIUM-DESIGN「容量の数字」）。
+ *
+ * **アップロードを止めるかどうかを決めるのはこちらの数字。**
+ * [setListQuota] のリストごとの上限は表示のために残してあるが、
+ * リストが無制限に作れる以上、費用の上限はここでしか押さえられない。
+ *
+ * **書くのは土台（`quotaBytesBase`）。** プレミアムが切れたときに戻る先が
+ * ここになる（`resolveUserQuota`）。既定の 2GB へ決め打ちで戻すと、
+ * 移行の手当て——リストを 3 つ以上持つ無償の方に個別に足す
+ * （PREMIUM-DESIGN「既存の利用者への影響」）——が、次にファイルが
+ * 増減した瞬間に黙って消える。**契約の有無にかかわらず保つ。**
+ *
+ * **実効値も同じ値に戻す。** 自動拡張で増えていた分は、いったん土台まで
+ * 下げる。まだ 90% を超えていれば、次にファイルが増減したときに
+ * 同じ規則でもう一度増える（判定は 1 か所しかない）。
+ *
+ * **他のリストの stats に写した値（ownerQuotaBytes）はここでは直さない。**
+ * 直すには、その人が作ったリストを全部引く必要がある。写しは表示用で、
+ * 次にそのリストのファイルが増減したときに更新される。
+ */
+export const setUserQuota = onCall({ region: REGION }, async (request) => {
+  requireSiteAdmin(request);
+  const uid = requireString(request.data, 'uid', { maxLength: 200 });
+
+  const quotaBytes = Number(
+    (request.data as Record<string, unknown>)?.quotaBytes
+  );
+  if (!Number.isFinite(quotaBytes) || quotaBytes <= 0) {
+    throw fail('invalid-argument', 'invalidQuota');
+  }
+
+  const user = await getAuth().getUser(uid).catch(() => null);
+  if (!user) {
+    throw fail('not-found', 'userNotFound');
+  }
+
+  const ref = getFirestore().doc(paths.user(uid));
+
+  // **使用量も一緒に埋める。** 画面は `usedBytes` と `quotaBytes` の
+  // 両方が揃って初めて容量を出す（片方だけでは「まだ集計されていない」と
+  // 「使っていない」を区別できないため）。上限だけ入れると、
+  // 一度もアップロードしていない人の容量表示が出ないままになる。
+  const used = Number((await ref.get()).data()?.storage?.usedBytes ?? 0);
+
+  await ref.set(
+    {
+      storage: {
+        usedBytes: Number.isFinite(used) ? used : 0,
+        quotaBytesBase: Math.trunc(quotaBytes),
+        quotaBytes: Math.trunc(quotaBytes),
+      },
+    },
+    { merge: true }
+  );
+
+  return { ok: true };
+});
+
+/**
  * 管理者不在のリストにリスト管理者を指名する（仕様書 5.6）。
  *
  * すでにメンバーであれば役割を上げ、そうでなければ新たに登録する。

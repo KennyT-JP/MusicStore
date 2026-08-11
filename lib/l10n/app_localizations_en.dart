@@ -325,9 +325,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get usedCapacity => 'Storage used';
-
-  @override
   String get quotaOver90 =>
       'Over 90% of the limit. Ask a site administrator to raise it.';
 
@@ -955,4 +952,230 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get functionErrorUserWithdrawn => 'That user has withdrawn.';
+
+  @override
+  String get premiumSection => 'Premium';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium is active until $date.';
+  }
+
+  @override
+  String get premiumInactive => 'You are not on Premium at the moment.';
+
+  @override
+  String get premiumInactiveNote =>
+      'Without Premium, everything you have already saved stays as it is. You simply cannot create a new list without submitting a request.';
+
+  @override
+  String get couponCodeLabel => 'Coupon code';
+
+  @override
+  String get couponCodeRequired => 'Please enter a coupon code';
+
+  @override
+  String get couponRedeem => 'Redeem coupon';
+
+  @override
+  String couponRedeemed(String date) {
+    return 'Coupon redeemed. Premium is active until $date.';
+  }
+
+  @override
+  String get createList => 'Create a list';
+
+  @override
+  String get createListNote =>
+      'With Premium you can create a list right away, without a request.';
+
+  @override
+  String get listCreated => 'The list has been created.';
+
+  @override
+  String get myStorageTitle => 'Storage in use (your total)';
+
+  @override
+  String get myStorageNote =>
+      'This is the total across every list you created. The limit applies to that total, not to each list.';
+
+  @override
+  String get myStorageUnknown =>
+      'Usage has not been calculated yet. It appears once tracks are added.';
+
+  @override
+  String get ownerQuotaTitle => 'Storage in use (creator\'s total)';
+
+  @override
+  String get ownerQuotaCaption => 'creator\'s total';
+
+  @override
+  String get ownerQuotaNote =>
+      'This is the total across every list created by the person who created this list. It is not the amount used by this list alone. Whoever uploads a track, it counts against the creator\'s storage.';
+
+  @override
+  String get ownerQuotaUnknown =>
+      'The creator\'s total has not been calculated yet. Please check again later.';
+
+  @override
+  String get siteAdminCoupons => 'Coupons';
+
+  @override
+  String get couponListEmpty => 'There are no coupons yet.';
+
+  @override
+  String get couponCreate => 'Issue a coupon';
+
+  @override
+  String get couponMonthsLabel => 'Months granted';
+
+  @override
+  String get couponMaxUsesLabel => 'Number of people';
+
+  @override
+  String get couponExpiresLabel => 'Coupon expiry';
+
+  @override
+  String get couponNoExpiry => 'No expiry';
+
+  @override
+  String get couponChooseExpiry => 'Set an expiry';
+
+  @override
+  String get couponClearExpiry => 'Remove the expiry';
+
+  @override
+  String get couponCodeAuto => 'Generate automatically';
+
+  @override
+  String get couponCodeManual => 'Specify the text';
+
+  @override
+  String get couponCodeManualLabel => 'Code to use';
+
+  @override
+  String get couponCodeManualWarning =>
+      'A code you choose is easy to remember, and just as easy to guess. Always set the number of people and an expiry.';
+
+  @override
+  String couponMonthsValue(int months) {
+    return '$months months';
+  }
+
+  @override
+  String couponUsesValue(int used, int max) {
+    return '$used / $max people';
+  }
+
+  @override
+  String couponExpiresOn(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String get couponDisabledLabel => 'Disabled';
+
+  @override
+  String get couponUsedUpLabel => 'Fully used';
+
+  @override
+  String get couponExpiredLabel => 'Expired';
+
+  @override
+  String get couponDisable => 'Disable';
+
+  @override
+  String get couponEnable => 'Re-enable';
+
+  @override
+  String get couponChangeMaxUses => 'Change the number of people';
+
+  @override
+  String couponChangeMaxUsesBody(String code) {
+    return 'Enter how many people may use \"$code\". You may set a number lower than the people who already used it: no one else can use it, and the Premium already granted is not taken away.';
+  }
+
+  @override
+  String get couponViewRedemptions => 'See who used it';
+
+  @override
+  String couponRedemptionsTitle(String code) {
+    return 'People who used \"$code\"';
+  }
+
+  @override
+  String get couponRedemptionsEmpty => 'No one has used it yet.';
+
+  @override
+  String couponCreated(String code) {
+    return 'Coupon issued: $code';
+  }
+
+  @override
+  String get couponCopyCode => 'Copy the code';
+
+  @override
+  String get couponCodeCopied => 'The code has been copied.';
+
+  @override
+  String get extendPremium => 'Extend Premium';
+
+  @override
+  String extendPremiumBody(String name) {
+    return 'Extend Premium for $name. If they already have an expiry date, the months are added to it.';
+  }
+
+  @override
+  String get extendPremiumMonthsLabel => 'Months to add';
+
+  @override
+  String extendPremiumDone(String date) {
+    return 'Extended until $date.';
+  }
+
+  @override
+  String get setUserQuotaTitle => 'Change a user\'s storage limit';
+
+  @override
+  String setUserQuotaBody(String name) {
+    return 'Enter the storage limit for $name in MB. It applies to the total across every list they created, not to each list.';
+  }
+
+  @override
+  String get setUserQuotaDone => 'The storage limit has been changed.';
+
+  @override
+  String get functionErrorPremiumRequired =>
+      'This action requires Premium. Enter a coupon code on the settings screen.';
+
+  @override
+  String get functionErrorCouponNotFound =>
+      'That coupon code was not found. Please check what you entered.';
+
+  @override
+  String get functionErrorCouponDisabled =>
+      'This coupon has been disabled. Please contact whoever gave it to you.';
+
+  @override
+  String get functionErrorCouponExpired => 'This coupon has expired.';
+
+  @override
+  String get functionErrorCouponUsedUp =>
+      'This coupon has reached the number of people who may use it.';
+
+  @override
+  String get functionErrorCouponAlreadyUsed =>
+      'You have already used this coupon. Each coupon can be used once per person.';
+
+  @override
+  String get functionErrorCouponCodeTaken =>
+      'That code is already in use. Please choose different text.';
+
+  @override
+  String get functionErrorMonthsInvalid =>
+      'Months must be a whole number of 1 or more.';
+
+  @override
+  String get functionErrorMaxUsesInvalid =>
+      'The number of people must be a whole number of 1 or more.';
 }

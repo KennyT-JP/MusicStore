@@ -20,6 +20,7 @@ import {
 
 import {
   COMMENT_ID,
+  COUPON_ID,
   ITEM_ID,
   LIST_ID,
   UID,
@@ -1103,5 +1104,341 @@ describe('共有リンク（3.3）', () => {
     await deny(
       updateDoc(doc(listAdmin, 'shareLinks/link-1'), { revoked: true }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// プレミアム（docs/PREMIUM-DESIGN.md）
+//
+// **「〜できない」だけを並べない。** 拒否の確認は、前提が全部壊れていても
+// 緑になる（AUDIT-CHECKLIST 観点 4）。クーポンが 1 件も無ければ、
+// ルールが全開でも「読めない」は通ってしまう。だから
+//
+//   1. 前提そのもの（クーポンが実在すること）を最初に確かめる
+//   2. 「できる」側（表示名の更新・premium 無しの登録）を同じ実行に置く
+//
+// の 2 つを必ず添える。
+// ---------------------------------------------------------------------------
+
+describe('クーポン：クライアントからは読めない（PREMIUM-DESIGN 3.2 / 5 / 9 の 3）', () => {
+  test('前提：クーポンと使用記録が実在する', async () => {
+    // **これが無いと、以下の拒否はすべて空振りでも緑になる。**
+    await mutateAsAdmin(env, async (ctx) => {
+      const coupon = await getDoc(doc(ctx.firestore(), `coupons/${COUPON_ID}`));
+      expect(coupon.exists()).toBe(true);
+      expect(coupon.data().code).toBe('CAMPAIGN2026');
+
+      const redemption = await getDoc(
+        doc(
+          ctx.firestore(),
+          `coupons/${COUPON_ID}/redemptions/${UID.superUser}`,
+        ),
+      );
+      expect(redemption.exists()).toBe(true);
+    });
+  });
+
+  test('未ログインでは読めない', async () => {
+    const anon = db(asAnonymous(env));
+    await deny(getDoc(doc(anon, `coupons/${COUPON_ID}`)));
+    await deny(getDocs(collection(anon, 'coupons')));
+  });
+
+  test('一般の利用者は読めない', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(getDoc(doc(readOnly, `coupons/${COUPON_ID}`)));
+    await deny(getDocs(collection(readOnly, 'coupons')));
+  });
+
+  test('リスト管理者も読めない', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await deny(getDoc(doc(listAdmin, `coupons/${COUPON_ID}`)));
+    await deny(getDocs(collection(listAdmin, 'coupons')));
+  });
+
+  test('サイト管理者も読めない（管理画面は呼び出し可能関数を通す）', async () => {
+    // **ここが要。** 一覧を許すと、管理画面の便利さと引き換えに
+    // クライアントへコードの全量が降りてくる。管理画面は Functions 経由
+    // （サーバーはルールを迂回する）にして、ルールは全面禁止のままにする。
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(getDoc(doc(siteAdmin, `coupons/${COUPON_ID}`)));
+    await deny(getDocs(collection(siteAdmin, 'coupons')));
+  });
+
+  test('対：サイト管理者は他のものを読める（拒否が「全部落ちている」わけではない）', async () => {
+    // クーポンの拒否が、認証の壊れや接続不良で起きていないことを示す。
+    const siteAdmin = db(asSiteAdmin(env));
+    await allow(getDocs(collection(siteAdmin, 'users')));
+  });
+});
+
+describe('クーポン：クライアントからは書けない（PREMIUM-DESIGN 5）', () => {
+  test('未ログインでは作れない', async () => {
+    const anon = db(asAnonymous(env));
+    await deny(
+      setDoc(doc(anon, 'coupons/forged'), { code: 'FREE', months: 12 }),
+    );
+  });
+
+  test('一般の利用者は作れない・書き換えられない・消せない', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(
+      setDoc(doc(readOnly, 'coupons/forged'), { code: 'FREE', months: 12 }),
+    );
+    await deny(
+      updateDoc(doc(readOnly, `coupons/${COUPON_ID}`), { maxUses: 9999 }),
+    );
+    await deny(deleteDoc(doc(readOnly, `coupons/${COUPON_ID}`)));
+  });
+
+  test('リスト管理者も書けない', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await deny(
+      setDoc(doc(listAdmin, 'coupons/forged'), { code: 'FREE', months: 12 }),
+    );
+    await deny(
+      updateDoc(doc(listAdmin, `coupons/${COUPON_ID}`), { disabled: true }),
+    );
+  });
+
+  test('サイト管理者も書けない（発行・停止は呼び出し可能関数を通す）', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(
+      setDoc(doc(siteAdmin, 'coupons/forged'), { code: 'FREE', months: 12 }),
+    );
+    await deny(
+      updateDoc(doc(siteAdmin, `coupons/${COUPON_ID}`), { disabled: true }),
+    );
+    await deny(deleteDoc(doc(siteAdmin, `coupons/${COUPON_ID}`)));
+  });
+
+  test('使用回数を戻せない（戻せると上限が無意味になる）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `coupons/${COUPON_ID}`), { usedCount: 0 }),
+    );
+  });
+});
+
+describe('クーポンの使用記録：redemptions も同じ（PREMIUM-DESIGN 3.2）', () => {
+  const redemption = `coupons/${COUPON_ID}/redemptions/${UID.superUser}`;
+
+  test('本人でも自分の使用記録を読めない', async () => {
+    // 記録は追跡と問い合わせ回答のためのもので、クライアントには要らない。
+    // 見えると「まだ空きのあるコード」の当たりが付く。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(getDoc(doc(superUser, redemption)));
+  });
+
+  test('サイト管理者も読めない・一覧できない', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(getDoc(doc(siteAdmin, redemption)));
+    await deny(
+      getDocs(collection(siteAdmin, `coupons/${COUPON_ID}/redemptions`)),
+    );
+  });
+
+  test('自分で使用記録を作れない（二重取りの判定はサーバーだけ）', async () => {
+    // ここが書けると、引き換えを通さずに「使った」ことにできる。
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(
+      setDoc(
+        doc(readOnly, `coupons/${COUPON_ID}/redemptions/${UID.readOnly}`),
+        { redeemedAt: new Date() },
+      ),
+    );
+  });
+
+  test('自分の使用記録を消せない（消せると同じコードを二度使える）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(deleteDoc(doc(superUser, redemption)));
+  });
+
+  test('コレクショングループでも引けない', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(getDocs(query(collectionGroup(siteAdmin, 'redemptions'))));
+  });
+});
+
+describe('プレミアムの状態：読み（PREMIUM-DESIGN 3.1）', () => {
+  test('本人は自分の premium / storage を読める', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    const snapshot = await allow(
+      getDoc(doc(superUser, `users/${UID.superUser}`)),
+    );
+    expect(snapshot.data().premium).toBeTruthy();
+    expect(snapshot.data().storage.quotaBytes).toBe(2147483648);
+  });
+
+  test('（既知の食い違い）他人の premium も、同じ取得で見えてしまう', async () => {
+    // **設計（PREMIUM-DESIGN 3.1・6 の 5）は「本人が読めるだけ」と書くが、
+    // いまの置き場所では成り立たない。**
+    //
+    // Firestore のルールに**項目単位の読み取り制限は無い**。読み取りは
+    // ドキュメント単位で、users/{uid} は表示名の解決のため
+    // 「ログイン済みなら ID 指定で誰でも取得できる」ことになっている
+    // （上の「ユーザー（3.4 / 3.5）」と
+    // lib/data/repositories/list_repository.dart の fetchUsers）。
+    // premium / storage をそのドキュメントの項目として持つ限り、
+    // **同じ取得で他人にも降りてくる。**
+    //
+    // **ここに「他人は読めない」というテストを書いてはいけない。**
+    // 実際には読めるのに緑になり、嘘の安心だけが残る。事実をそのまま
+    // 書き残し、閉じるかどうかは置き場所の判断
+    // （users/{uid}/private/... へ分ける）として担当間で決める。
+    //
+    // なお**書き込みは下のとおり完全に塞いである**ので、
+    // 見えてしまうこと自体がプレミアムの詐称には繋がらない。
+    const readOnly = db(asUser(env, UID.readOnly));
+    const snapshot = await allow(
+      getDoc(doc(readOnly, `users/${UID.superUser}`)),
+    );
+    expect(snapshot.data().premium).toBeTruthy();
+  });
+
+  test('未ログインでは、そもそも他人のユーザー情報を読めない', async () => {
+    const anon = db(asAnonymous(env));
+    await deny(getDoc(doc(anon, `users/${UID.superUser}`)));
+  });
+});
+
+describe('プレミアムの状態：書き（PREMIUM-DESIGN 3.1 / 6 の 5）', () => {
+  test('本人でも premium を書けない', async () => {
+    // ここが開いていると、誰でも自分を無期限のプレミアムにできる。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+  });
+
+  test('本人でも premium の一部（until だけ）を伸ばせない', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        'premium.until': new Date('2099-01-01T00:00:00Z'),
+      }),
+    );
+  });
+
+  test('本人でも storage を書けない（上限も使用量も）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        storage: { usedBytes: 0, quotaBytes: 10737418240 },
+      }),
+    );
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        'storage.quotaBytes': 10737418240,
+      }),
+    );
+  });
+
+  test('他人の premium はもちろん書けない', async () => {
+    const readOnly = db(asUser(env, UID.readOnly));
+    await deny(
+      updateDoc(doc(readOnly, `users/${UID.superUser}`), {
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+  });
+
+  test('サイト管理者も、クライアントからは premium を書けない（管理画面は関数経由）', async () => {
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(
+      updateDoc(doc(siteAdmin, `users/${UID.superUser}`), {
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+  });
+
+  test('表示名に混ぜても通らない（許可された項目と一緒なら通る、になっていない）', async () => {
+    // **1 回の更新でまとめて書く**のが、いちばん素直な抜け道。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        displayName: '新しい名前',
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+  });
+
+  test('対：表示名だけの更新は引き続きできる（塞ぎすぎていない）', async () => {
+    // 上の拒否が「users の更新が丸ごと壊れている」ために起きていないことを、
+    // 同じ実行の中で示す（AUDIT-CHECKLIST 観点 4）。
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        displayName: '新しい名前',
+      }),
+    );
+  });
+
+  test('登録の 1 回目に premium を仕込めない', async () => {
+    // **更新だけを塞いでも足りない。** ドキュメントがまだ無い人は
+    // create で書けてしまう。
+    const newcomer = 'u-newcomer';
+    const context = db(asUser(env, newcomer));
+    await deny(
+      setDoc(doc(context, `users/${newcomer}`), {
+        displayName: '新入り',
+        isWithdrawn: false,
+        premium: {
+          until: new Date('2099-01-01T00:00:00Z'),
+          updatedAt: new Date(),
+        },
+      }),
+    );
+  });
+
+  test('登録の 1 回目に storage を仕込めない', async () => {
+    const newcomer = 'u-newcomer-2';
+    const context = db(asUser(env, newcomer));
+    await deny(
+      setDoc(doc(context, `users/${newcomer}`), {
+        displayName: '新入り',
+        storage: { usedBytes: 0, quotaBytes: 10737418240 },
+      }),
+    );
+  });
+
+  test('対：premium を含まなければ、登録は引き続きできる', async () => {
+    // create を塞ぎすぎると、新規登録そのものが通らなくなる（3.1 の経緯）。
+    const newcomer = 'u-newcomer-3';
+    const context = db(asUser(env, newcomer));
+    await allow(
+      setDoc(doc(context, `users/${newcomer}`), {
+        displayName: '新入り',
+        isWithdrawn: false,
+      }),
+    );
+  });
+
+  test('対：退会フラグの扱いは変えていない（引き続き本人でも立てられない）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, `users/${UID.superUser}`), {
+        isWithdrawn: true,
+      }),
+    );
+  });
+
+  test('対：ユーザードキュメントは引き続き削除できない（3.5）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(deleteDoc(doc(superUser, `users/${UID.superUser}`)));
   });
 });
