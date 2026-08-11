@@ -183,18 +183,26 @@ export const createSiteUser = onCall({ region: REGION }, async (request) => {
   // 表示名は users ドキュメントが正（仕様書 3.4）。
   // **表示言語は決め打ちにしない。** 作った管理者の言語で固定すると、
   // 英語の利用者に日本語の画面が出る（監査 第 3 回）。
-  await getFirestore()
+  const db = getFirestore();
+  await db
     .doc(paths.user(created.uid))
     .set(
       {
         displayName,
-        email,
         isWithdrawn: false,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
+
+  // **メールアドレスは本人だけの場所へ（2026-08-11）。**
+  // `users/{uid}` はログイン済みなら誰でも ID 指定で読めるので、
+  // ここに置いていた頃は**全会員のメールアドレスが他の利用者に見えていた**。
+  // サイト管理者には `listSiteUsers` が Auth から取って返す。
+  await db
+    .doc(paths.userPrivate(created.uid))
+    .set({ email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
   return { ok: true, uid: created.uid };
 });
@@ -352,6 +360,13 @@ export const deleteSiteUser = onCall({ region: REGION }, async (request) => {
   // --- 本体 ---
   //
   // **コメントには触れない。** 残す判断（上の説明）。
+  //
+  // **本人だけの控え（private/state）も消す。** サブコレクションは
+  // 親を消しても残る——Firestore の削除は親 1 件だけで、下に付いた
+  // ドキュメントには届かない。**消したはずの人のメールアドレス・
+  // プレミアム・容量が、親の無い孤児として残り続ける。**
+  // 消す順は private が先。親だけ消えて下が残る状態を作らない。
+  await db.doc(paths.userPrivate(uid)).delete().catch(() => undefined);
   await db.doc(paths.user(uid)).delete().catch(() => undefined);
 
   await getAuth().deleteUser(uid);

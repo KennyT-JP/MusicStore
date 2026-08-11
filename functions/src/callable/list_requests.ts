@@ -267,8 +267,9 @@ export const createListDirectly = onCall({ region: REGION }, async (request) => 
   const listId = await db.runTransaction(async (tx) => {
     // **プレミアムの確認もトランザクションの中で行う。** 外で読むと、
     // 読んでから作るまでの間に期限が切れた場合に通ってしまう。
-    const user = await tx.get(db.doc(paths.user(uid)));
-    const until = user.data()?.premium?.until;
+    // プレミアムの状態は本人だけの場所にある（config.ts の userPrivate）。
+    const state = await tx.get(db.doc(paths.userPrivate(uid)));
+    const until = state.data()?.premium?.until;
     if (
       !isPremiumActive(
         until instanceof Timestamp ? until.toMillis() : null,
@@ -337,7 +338,9 @@ async function readOwnerStorage(
   tx: Transaction,
   ownerUid: string
 ): Promise<{ usedBytes: number; quotaBytes: number }> {
-  const snapshot = await tx.get(getFirestore().doc(paths.user(ownerUid)));
+  // 容量は本人だけの場所にある（config.ts の userPrivate）。**写す先の
+  // stats はメンバーが読める**ので、写すのは合計と上限の 2 つだけにする。
+  const snapshot = await tx.get(getFirestore().doc(paths.userPrivate(ownerUid)));
   const storage = snapshot.data()?.storage;
   // 写すのは**実効値**（画面が出すのはこちら）。まだ何も無ければ土台、
   // 土台も無ければ既定（domain/quota.ts）へ倒す。

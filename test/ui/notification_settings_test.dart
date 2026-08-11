@@ -29,25 +29,27 @@ Widget _app(Widget child, {Locale locale = const Locale('ja')}) => MaterialApp(
   home: child,
 );
 
-AppUser _user({NotificationSettings? settings}) => AppUser(
-  uid: 'u1',
-  displayName: '太郎',
+AppUser _user() =>
+    const AppUser(uid: 'u1', displayName: '太郎', isWithdrawn: false);
+
+/// **通知設定は本人だけが読める側にある**（`users/{uid}/private/state`）。
+UserPrivate _private({NotificationSettings? settings}) => UserPrivate(
   email: 'taro@example.com',
   locale: 'ja',
-  isWithdrawn: false,
   notificationSettings: settings ?? const NotificationSettings(),
 );
 
 Future<void> _pumpSettings(
   WidgetTester tester, {
-  AppUser? user,
+  UserPrivate? private,
   Locale locale = const Locale('ja'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        currentAppUserProvider.overrideWith(
-          (ref) => Stream.value(user ?? _user()),
+        currentAppUserProvider.overrideWith((ref) => Stream.value(_user())),
+        currentUserPrivateProvider.overrideWith(
+          (ref) => Stream.value(private ?? _private()),
         ),
       ],
       child: _app(const SettingsScreen(), locale: locale),
@@ -109,7 +111,7 @@ void main() {
   testWidgets('マスタースイッチがオフなら種別の切り替えは無効になる', (tester) async {
     await _pumpSettings(
       tester,
-      user: _user(settings: const NotificationSettings(master: false)),
+      private: _private(settings: const NotificationSettings(master: false)),
     );
 
     final tiles = tester
@@ -133,7 +135,7 @@ void main() {
     expect(off.settingFor(NotificationType.itemAdded).inApp, isFalse);
     expect(off.settingFor(NotificationType.commentAdded).inApp, isTrue);
 
-    await _pumpSettings(tester, user: _user(settings: off));
+    await _pumpSettings(tester, private: _private(settings: off));
 
     final l10n = await AppL10n.delegate.load(const Locale('ja'));
     final tile = tester.widget<SwitchListTile>(

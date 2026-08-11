@@ -116,7 +116,8 @@ class MusicListApp extends ConsumerWidget {
 
     // 表示言語はユーザー設定に従う（仕様書 2 章）。
     // 未設定のうちは端末の言語に任せる。
-    final locale = ref.watch(currentAppUserProvider).value?.locale;
+    // **本人だけが読める側にある**（`users/{uid}/private/state`）。
+    final locale = ref.watch(currentUserPrivateProvider).value?.locale;
 
     return MaterialApp.router(
       onGenerateTitle: (context) => AppL10n.of(context).appTitle,

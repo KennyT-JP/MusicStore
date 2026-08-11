@@ -1007,7 +1007,7 @@ flutter run -d chrome --dart-define=APP_ENV=prod  # 本番環境
 ### 単体テスト
 
 ```sh
-flutter test      # 379 件
+flutter test      # 394 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
 cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）
@@ -1027,7 +1027,7 @@ cd functions && npm test   # 122 件（サーバー側のドメインロジッ�
 ```sh
 cd rules-test
 npm install
-npm test          # 161 件（Firestore 145 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
+npm test          # 191 件（Firestore 175 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
 ```
 
 Firestore ルールは全件エミュレータで検証できます。
@@ -1068,7 +1068,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（164 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（178 件）。
 
 ```sh
 cd functions && npm run test:integration

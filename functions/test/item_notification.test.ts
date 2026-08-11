@@ -13,8 +13,15 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-/** users/{uid} の中身。テストごとに差し替える。 */
+/**
+ * `users/{uid}` の中身。テストごとに差し替える。
+ *
+ * **ここに置けるのは、誰が読んでもよいものだけ**（表示名・isWithdrawn）。
+ * 通知設定は下の privateStates（本人だけの場所）へ移した／2026-08-11。
+ */
 let users: Record<string, unknown> = {};
+/** `users/{uid}/private/state` の中身（通知設定など、本人だけのもの）。 */
+let privateStates: Record<string, unknown> = {};
 /** lists/{listId}/members の顔ぶれ。 */
 let members: Record<string, string[]> = {};
 /** 実際に作られた通知（宛先 uid → 中身の配列）。 */
@@ -25,8 +32,15 @@ vi.mock('firebase-admin/firestore', () => ({
   getFirestore: () => ({
     doc: (path: string) => ({
       get: async () => {
-        const uid = path.replace('users/', '');
-        return { data: () => users[uid] };
+        // **どちらを読んだのかを見分ける。** 一括で users として扱うと、
+        // 通知設定を誰でも読める側から読んでいても緑のままになる。
+        const privateMatch = /^users\/(.+)\/private\/state$/.exec(path);
+        if (privateMatch) {
+          return { data: () => privateStates[privateMatch[1]!] };
+        }
+        const userMatch = /^users\/(.+)$/.exec(path);
+        if (userMatch) return { data: () => users[userMatch[1]!] };
+        throw new Error(`想定していないパス: ${path}`);
       },
     }),
     collection: (path: string) => {
@@ -62,6 +76,7 @@ const recipients = () => written.map((w) => w.uid).sort();
 beforeEach(() => {
   written = [];
   users = {};
+  privateStates = {};
   members = {};
 });
 
@@ -121,7 +136,7 @@ describe('曲が追加されたときの通知', () => {
 
   it('種別をオフにしている人には届かない（10.3）', async () => {
     members.l1 = ['on', 'off'];
-    users.off = {
+    privateStates.off = {
       notificationSettings: {
         master: true,
         types: { itemAdded: { inApp: false } },
@@ -139,7 +154,7 @@ describe('曲が追加されたときの通知', () => {
 
   it('別の種別をオフにしていても曲の通知は届く', async () => {
     members.l1 = ['u1'];
-    users.u1 = {
+    privateStates.u1 = {
       notificationSettings: {
         master: true,
         types: { commentAdded: { inApp: false } },
@@ -157,7 +172,7 @@ describe('曲が追加されたときの通知', () => {
 
   it('すべての通知をオフにしている人には届かない（マスタースイッチ）', async () => {
     members.l1 = ['on', 'off'];
-    users.off = { notificationSettings: { master: false } };
+    privateStates.off = { notificationSettings: { master: false } };
 
     await notifyUsers(await listMemberUids('l1'), {
       type: 'itemAdded',
@@ -179,6 +194,25 @@ describe('曲が追加されたときの通知', () => {
     });
 
     expect(recipients()).toEqual(['active']);
+  });
+
+  it('通知設定は本人だけの場所から読む（2026-08-11 の移動）', async () => {
+    // **誰でも読める `users/{uid}` に残った古い設定は見ない。**
+    // 両方を見る作りにすると、移行が済んだかどうかで振る舞いが変わり、
+    // 「どちらが正か」が決まらなくなる。移し替えは
+    // scripts/backfill.mjs の 6 番が行う。
+    members.l1 = ['stale'];
+    users.stale = {
+      notificationSettings: { master: false },
+    };
+
+    await notifyUsers(await listMemberUids('l1'), {
+      type: 'itemAdded',
+      listId: 'l1',
+      itemId: 'i1',
+    });
+
+    expect(recipients()).toEqual(['stale']);
   });
 
   it('設定が無い人には届く（初期状態は全てオン）', async () => {

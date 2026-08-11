@@ -1,7 +1,8 @@
 /// Firestore のコレクション・ドキュメントのパス（仕様書 13.2）
 ///
 /// ```
-/// users/{uid}
+/// users/{uid}                          ← 誰でも読める（表示名の解決のため）
+///   ├ private/state                    ← **本人だけ**読める私的な情報
 ///   └ notifications/{notificationId}
 ///
 /// lists/{listId}                       ← 公開可能な最小情報のみ
@@ -38,6 +39,14 @@ class FirestorePaths {
   // --- サブコレクション名 ---
 
   static const String notifications = 'notifications';
+
+  /// 本人だけが読める私的な情報を入れる下位コレクション。
+  ///
+  /// **`users/{uid}` 本体には置かない。** 本体は表示名を解決するために
+  /// ログイン済みなら誰でも読める設計で、メールアドレス・プレミアムの
+  /// 期限・容量の使用量まで他の利用者に見えていた（2026-08-11）。
+  static const String private = 'private';
+
   static const String meta = 'meta';
   static const String members = 'members';
   static const String joinRequests = 'joinRequests';
@@ -52,11 +61,22 @@ class FirestorePaths {
   /// `siteConfig/global`
   static const String globalConfigDoc = 'global';
 
+  /// `users/{uid}/private/state`
+  static const String privateStateDoc = 'state';
+
   // --- パスの組み立て ---
 
   static String user(String uid) => '$users/$uid';
 
   static String userNotifications(String uid) => '${user(uid)}/$notifications';
+
+  /// 本人だけが読める私的な情報（メールアドレス・表示言語・通知設定・
+  /// プレミアムの期限・容量）。
+  ///
+  /// **他人のぶんは読めない。** 読もうとすると権限で断られるので、
+  /// 自分の uid でしか呼ばないこと。
+  static String userPrivate(String uid) =>
+      '${user(uid)}/$private/$privateStateDoc';
 
   static String list(String listId) => '$lists/$listId';
 

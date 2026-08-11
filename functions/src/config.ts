@@ -50,6 +50,36 @@ export const STORAGE_REGION = defineString('STORAGE_REGION', {
 export const paths = {
   users: 'users',
   user: (uid: string) => `users/${uid}`,
+
+  /**
+   * **本人だけのもの（2026-08-11）。**
+   *
+   * `users/{uid}` は「表示名を解決するため、ログイン済みなら誰でも ID 指定で
+   * 読める」設計になっている（firestore.rules の users の節）。**Firestore の
+   * ルールに項目単位の読み取り制限は無い**ので、その取得はドキュメント全体を
+   * 返す。つまり `users/{uid}` に置いた項目は、置いた時点で他の利用者にも
+   * 見えている——メールアドレス・プレミアムの期限・容量の使用量が実際に
+   * そうなっていた。
+   *
+   * 塞ぐ道は置き場所を分けることしかない。ここへ移すのは次の 5 つ。
+   *
+   *   email, locale, notificationSettings,
+   *   premium{until,grantedBy,updatedAt},
+   *   storage{usedBytes,quotaBytes,quotaBytesBase}
+   *
+   * **`locale` と `notificationSettings` も一緒に移す。** 他人が読む理由が
+   * 無く、分けるなら一度に分けたほうがよい。**片方だけ塞ぐと、もう片方で
+   * 同じことが起きる**（docs/AUDIT-CHECKLIST.md 観点 4）。
+   *
+   * **`isWithdrawn` は移さない。** 退会した人の表示（「退会したユーザー」）に
+   * 要るので、`users/{uid}` に残す（仕様書 3.5）。
+   *
+   * **メールアドレスはリスト管理者にも見せない**（2026-08-11 の依頼者の判断）。
+   * 本人と、サーバー経由のサイト管理者（`listSiteUsers`）だけが見る。
+   * サーバーは Auth からも取れるので、そちらを使う。
+   */
+  userPrivate: (uid: string) => `users/${uid}/private/state`,
+
   userNotifications: (uid: string) => `users/${uid}/notifications`,
 
   lists: 'lists',

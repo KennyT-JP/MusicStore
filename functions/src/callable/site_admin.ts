@@ -112,6 +112,9 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
 
   // **users ドキュメントが無い場合に update は失敗する。**
   // その先の Auth 削除まで到達できなくなるため set(merge) にする。
+  //
+  // **`isWithdrawn` はここ（誰でも読める側）に残す。** この 1 か所で
+  // 過去の全投稿の表示が「退会したユーザー」に切り替わる（仕様書 13.3）。
   await db.doc(paths.user(uid)).set(
     {
       isWithdrawn: true,
@@ -120,6 +123,13 @@ export const withdrawAccount = onCall({ region: REGION }, async (request) => {
     },
     { merge: true }
   );
+
+  // **本人だけの控えは消す（2026-08-11）。** ここにはメールアドレス・
+  // 表示言語・通知設定・プレミアムの期限・容量が入っている。すぐ下で
+  // Auth のアカウントごと消すので、**本人も含めて誰も二度と読まない**。
+  // 読まれないものを残すのは、個人情報を持ち続けるだけになる。
+  // 無効化（disableSiteUser）は戻せる操作なので、あちらでは消さない。
+  await db.doc(paths.userPrivate(uid)).delete().catch(() => undefined);
 
   // Auth のアカウントを消す。以後このメールアドレスで再登録できる。
   await getAuth().deleteUser(uid);

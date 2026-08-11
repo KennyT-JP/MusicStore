@@ -33,10 +33,10 @@ scripts\check.cmd        （Windows）
 | 並列で実行されるもの | 件数 |
 | --- | --- |
 | `dart analyze --fatal-infos` | **指摘 0 件が基準**（info も失敗扱い） |
-| `flutter test` | 379 |
-| `functions` の単体テスト | 122 |
+| `flutter test` | 394 |
+| `functions` の単体テスト | 123 |
 | `functions` の統合テスト | 96 |
-| セキュリティルール | 161（Firestore 145・Storage 13・見張り 3） |
+| セキュリティルール | 191（Firestore 175・Storage 13・見張り 3） |
 
 （件数は 2026-08-10 時点）
 

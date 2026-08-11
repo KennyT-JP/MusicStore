@@ -245,13 +245,14 @@ async function releaseOwnerUsage(
 
     if (!ownerUid || !Number.isFinite(listUsed) || listUsed <= 0) return;
 
-    const userRef = db.doc(paths.user(ownerUid));
+    // 合計は本人だけの場所にある（config.ts の userPrivate）。
+    const privateRef = db.doc(paths.userPrivate(ownerUid));
     await db.runTransaction(async (tx) => {
-      const owner = await tx.get(userRef);
+      const owner = await tx.get(privateRef);
       if (!owner.exists) return;
       const used = Number(owner.data()?.storage?.usedBytes ?? 0);
       tx.set(
-        userRef,
+        privateRef,
         { storage: { usedBytes: Math.max(0, used - listUsed) } },
         { merge: true }
       );

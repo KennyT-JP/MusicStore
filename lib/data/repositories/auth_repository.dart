@@ -142,6 +142,10 @@ class AuthRepository {
   /// クライアント側でも用意する。すでにあれば何もしない。
   /// [displayName] は登録画面で入力された名前。
   /// 指定がなければ Auth 側の表示名を使う（Google 連携のとき）。
+  ///
+  /// **公開されるぶんと私的なぶんの 2 つを作る**（2026-08-11）。
+  /// 片方だけ書くと、表示名はあるのに表示言語が無い（またはその逆）に
+  /// なるため、まとめて 1 回で書く。
   Future<void> _ensureUserDocument(
     User? user, {
     String? displayName,
@@ -164,8 +168,12 @@ class AuthRepository {
         // 英語で使っている人に日本語の名前が付くのを避ける。
         fallback: languageCode == 'ja' ? 'ユーザー' : 'User',
       ),
-      email: user.email ?? '',
       photoUrl: user.photoURL,
+      isWithdrawn: false,
+    );
+    // メールアドレスはサーバーが書く（ルールで本人には書かせない）。
+    // ここで作るのは、本人が持つべき設定だけ。
+    final private = UserPrivate(
       // **表示言語は、いま使っている言語で作る（仕様書 2 章）。**
       // ここを 'ja' 固定にしていたため、英語で登録した人も
       // 登録し終えた瞬間に日本語へ切り替わっていた（監査 第3回）。
@@ -173,9 +181,15 @@ class AuthRepository {
       // メールは英語・画面は日本語という食い違いになっていた。
       // 規則は domain/signup_locale.dart に置き、回帰テストが本物を見る。
       locale: SignupLocalePolicy.localeFor(languageCode),
-      isWithdrawn: false,
       notificationSettings: NotificationSettings.defaults(),
     );
-    await ref.set(appUser.toCreateMap());
+
+    await (_db.batch()
+          ..set(ref, appUser.toCreateMap())
+          ..set(
+            _db.doc(FirestorePaths.userPrivate(user.uid)),
+            private.toCreateMap(),
+          ))
+        .commit();
   }
 }
