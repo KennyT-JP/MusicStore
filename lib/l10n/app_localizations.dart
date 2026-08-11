@@ -673,12 +673,6 @@ abstract class AppL10n {
   /// **'「{name}」を削除します。\n\nバックアップは取っていないため、削除した内容は元に戻せません。'**
   String deleteListBody(String name);
 
-  /// No description provided for @usedCapacity.
-  ///
-  /// In ja, this message translates to:
-  /// **'使用容量'**
-  String get usedCapacity;
-
   /// No description provided for @quotaOver90.
   ///
   /// In ja, this message translates to:

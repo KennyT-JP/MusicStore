@@ -315,9 +315,6 @@ class AppL10nJa extends AppL10n {
   }
 
   @override
-  String get usedCapacity => '使用容量';
-
-  @override
   String get quotaOver90 => '上限の 90% を超えています。上限の引き上げはサイト管理者に依頼してください。';
 
   @override

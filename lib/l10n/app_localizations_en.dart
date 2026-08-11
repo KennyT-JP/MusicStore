@@ -325,9 +325,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get usedCapacity => 'Storage used';
-
-  @override
   String get quotaOver90 =>
       'Over 90% of the limit. Ask a site administrator to raise it.';
 
