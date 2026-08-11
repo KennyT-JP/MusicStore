@@ -10,14 +10,31 @@ import '../../data/repositories/item_repository.dart';
 import '../../l10n/app_localizations.dart';
 
 /// 画面上部に出すエラー。
-class ErrorMessage extends StatelessWidget {
-  const ErrorMessage(this.message, {super.key});
+///
+/// [detail] を渡すと「詳細」で開ける欄が付く。**原因が 1 つに絞れない
+/// 文言を出すときは、必ず添えること。**「エラーが発生しました」だけでは、
+/// 利用者も直す側も次の一手が決められない（監査 2026-08-07・2026-08-11）。
+class ErrorMessage extends StatefulWidget {
+  const ErrorMessage(this.message, {this.detail, super.key});
 
   final String message;
+
+  /// 技術的な内容（例外の符号など）。利用者向けの文言とは別に持つ。
+  final String? detail;
+
+  @override
+  State<ErrorMessage> createState() => _ErrorMessageState();
+}
+
+class _ErrorMessageState extends State<ErrorMessage> {
+  bool _showDetail = false;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppL10n.of(context);
+    final message = widget.message;
+    final detail = widget.detail;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -30,9 +47,55 @@ class ErrorMessage extends StatelessWidget {
           Icon(Icons.error_outline, color: scheme.onErrorContainer, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: scheme.onErrorContainer),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  message,
+                  style: TextStyle(color: scheme.onErrorContainer),
+                ),
+                if (detail case final d?) ...[
+                  // **畳んでおく。** 利用者向けの文言を技術的な内容で
+                  // 埋めない。必要な人だけが開ける。
+                  InkWell(
+                    onTap: () => setState(() => _showDetail = !_showDetail),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            // 再生の失敗と同じ言い回しに揃える。
+                            l10n.showDetails,
+                            style: TextStyle(
+                              color: scheme.onErrorContainer,
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                              decorationColor: scheme.onErrorContainer,
+                            ),
+                          ),
+                          Icon(
+                            _showDetail
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            size: 16,
+                            color: scheme.onErrorContainer,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_showDetail)
+                    SelectableText(
+                      d,
+                      style: TextStyle(
+                        color: scheme.onErrorContainer,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ],
             ),
           ),
         ],
@@ -118,12 +181,47 @@ String describeAuthError(BuildContext context, FirebaseAuthException e) {
     case 'popup-closed-by-user':
     case 'cancelled-popup-request':
       return l10n.authPopupClosed;
+    // **ブロックは「閉じた」とは別に扱う（2026-08-11）。**
+    // 以前は汎用の文言に落ちており、**押しても何も起きないのに
+    // 「しばらくしてからお試しください」**と出た。待っても直らない。
+    // 何をすれば直るかを、その場で書く。
+    case 'popup-blocked':
+      return l10n.authPopupBlocked;
+    case 'operation-not-allowed':
+      return l10n.authProviderDisabled;
+    case 'unauthorized-domain':
+      return l10n.authUnauthorizedDomain;
     case 'network-request-failed':
       return l10n.authNetworkFailed;
     default:
       return l10n.errorGeneric;
   }
 }
+
+/// 利用者向けの文言に添える、技術的な内容。
+///
+/// **原因が 1 つに絞れた符号には付けない。** 文言だけで足りるうえ、
+/// 符号を並べると読み手が身構える。**汎用の文言に落ちたときだけ**、
+/// 何が起きたのかを追える手がかりを残す（監査 2026-08-11。
+/// Google ログインが失敗したとき、画面にも開発者ツールにも符号が
+/// 出ず、原因を絞るのに設定の照会まで必要になった）。
+String? authErrorDetail(FirebaseAuthException e) => switch (e.code) {
+  'invalid-email' ||
+  'user-disabled' ||
+  'user-not-found' ||
+  'wrong-password' ||
+  'invalid-credential' ||
+  'email-already-in-use' ||
+  'weak-password' ||
+  'too-many-requests' ||
+  'popup-closed-by-user' ||
+  'cancelled-popup-request' ||
+  'popup-blocked' ||
+  'operation-not-allowed' ||
+  'unauthorized-domain' ||
+  'network-request-failed' => null,
+  _ => [e.code, ?e.message].join(': '),
+};
 
 /// Cloud Functions のエラーを、利用者に伝わる文言に変換する。
 ///

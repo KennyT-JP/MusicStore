@@ -36,9 +36,6 @@ class AppL10nEn extends AppL10n {
   String get signOut => 'Sign out';
 
   @override
-  String get signInWithGoogle => 'Sign in with Google';
-
-  @override
   String get emailLabel => 'Email address';
 
   @override
@@ -225,6 +222,33 @@ class AppL10nEn extends AppL10n {
   @override
   String get authNetworkFailed =>
       'Could not reach the network. Please check your connection.';
+
+  @override
+  String get signUpPrompt => 'New here? Create an account';
+
+  @override
+  String get orSeparator => 'or';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get authPopupBlocked =>
+      'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+
+  @override
+  String get authProviderDisabled =>
+      'This sign-in method is not available right now. Please contact an administrator.';
+
+  @override
+  String get authUnauthorizedDomain =>
+      'Sign-in is not allowed from this address. Please contact an administrator.';
 
   @override
   String get requestSubmitted => 'Request submitted.';
