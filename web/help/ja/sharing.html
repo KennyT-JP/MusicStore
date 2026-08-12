@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>人を招く（共有リンクと参加申請） | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/sharing.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>人を招く（共有リンクと参加申請）</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/sharing.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+<nav class="toc">
+  <h2>このページの内容</h2>
+  <ol>
+    <li><a href="#share-link">共有リンク</a></li>
+    <li><a href="#join-request">参加を申請する</a></li>
+  </ol>
+</nav>
+
+<h2 id="share-link">共有リンク</h2>
+
+<p>共有リンクは、リストや曲を人に見せるための URL です。リスト管理者以上が作れます。</p>
+
+<h3>渡す側</h3>
+
+<p>作れる場所は 3 か所あり、どれを使っても同じ 1 本のリンクになります。</p>
+
+<ul>
+  <li>ホームのリストの行のメニューの <span class="ui">リンクをコピー</span> — 押すとその場でクリップボードに入り、<span class="ui">リンクをコピーしました。</span> と出ます。</li>
+  <li><span class="ui">メンバー管理</span> の <span class="ui">共有リンクを作る</span> — 作った URL が画面に出ます。取り消しもここから行います。</li>
+  <li>曲の詳細の <span class="ui">この曲のリンクをコピー</span> — その曲を指すリンクです。開くとその曲が出ます。</li>
+</ul>
+
+<p>作ったリンクには、必ず次の但し書きが添えられています。</p>
+
+<div class="msg">有効期限はありません。何人でも、何度でも使えます。止めるときは取り消してください。</div>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>共有リンクには期限がありません。何人でも、何度でも使えます。</strong> 一度配ったリンクは、渡した相手からさらに転送されれば、そのまま広がります。<strong>止める手段は取り消しだけです。</strong> 渡す相手は、その前提で選んでください。</p>
+  <p>取り消すには <span class="ui">メンバー管理</span> の <span class="ui">リンクを取り消す</span> を使います。取り消すと、そのリンクからは参加も閲覧もできなくなります。ただし<strong>すでに入った方・見ている方はそのまま残ります。</strong> その方を外すには、メンバー管理から行ってください（<a href="members.html#members">メンバー管理</a>）。</p>
+</div>
+
+<h3>受け取る側</h3>
+
+<p>リンクを開くと <span class="ui">リンクが共有されました</span> の画面が出て、<span class="ui">どちらかを選んでください。あとから変えられます。</span> と案内されます。選べるのは次の 2 つです。</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>選ぶもの</th><th>何が起きるか</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="ui">リストのメンバーになる</span></td>
+      <td>メンバーになります。曲やコメントを追加できます。メンバー一覧に名前が出て、曲が追加されると通知が届きます。</td>
+    </tr>
+    <tr>
+      <td><span class="ui">リストのメンバーにならずに見る</span></td>
+      <td>メンバーにはなりません。曲の一覧を見て、音を聴くことはできます。メンバー一覧には出ず、通知も届きません。書き込みもできません。</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong><span class="ui">リストのメンバーになる</span> を選ぶと Super User になります。</strong> その場で曲もコメントも足せる状態です。見るだけでよい方のために、もう一方の選択肢があります。</p>
+  <p><strong>どちらを選んでも、ログインとメールアドレスの確認は必要です。</strong> 誰が中身を見ているか分からない状態にしないためです。ログインしていなければ、先にログイン画面が出て、済ませるとこの選択画面へ自動で戻ります。</p>
+  <p><span class="ui">リストのメンバーにならずに見る</span> を選んだあとでメンバーになりたくなったときは、<strong>同じリンクをもう一度開いてください。</strong> この選択画面がまた出ます。</p>
+</div>
+
+<p>リンクが使えないときは、理由によって出る文言が違います。次に取るべき行動が変わるためです。</p>
+
+<div class="msg">このリンクは取り消されています。共有した方に新しいリンクを依頼してください。</div>
+<div class="msg">リンクが見つかりません。URL をご確認ください。</div>
+
+<h2 id="join-request">参加を申請する</h2>
+
+<p>共有リンクを持っていなくても、リストの <span class="ui">共有 URL</span> があれば参加を申請できます。共有 URL は、そのリストに参加している方から教えてもらいます。</p>
+
+<p>まだ入っていないリストの共有 URL を開くと、リスト名など最低限の情報と <span class="ui">参加を申請</span> のボタンだけが出ます。</p>
+
+<div class="msg">このリストの中身は、参加が承認されるまで表示されません。</div>
+
+<p>押すと申請が送られます。</p>
+
+<div class="msg">参加を申請しました。承認されるまでお待ちください。</div>
+
+<p><strong>申請する側は役割を選べません。</strong> リスト管理者が承認するときに <span class="ui">承認する役割を選んでください</span> と出て、<span class="ui">Super User</span> か <span class="ui">Read Only</span> のどちらで受け入れるかを決めます。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>却下されても通知は届きません。</strong> <span class="ui">自分の申請</span> を見れば <span class="ui">却下済み</span> と分かります（<a href="lists.html#my-requests">自分の申請を確認する</a>）。却下されたあとは、何度でも出し直せます。</p>
+  <p>共有 URL（参加を申請するもの）と、共有リンク（開いてその場で入るもの）は別のものです。共有リンクは <code>/s/</code> から始まる URL で、開くと <span class="ui">リンクが共有されました</span> の選択画面が出ます。</p>
+</div>
+
+<p>一度リストを抜けた方や、外された方も、あらためて申請できます。外された方と自分から抜けた方を区別する仕組みはありません。</p>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="privacy.html">プライバシーポリシー</a> ／ <a href="../en/sharing.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

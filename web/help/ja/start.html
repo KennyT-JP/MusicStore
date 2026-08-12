@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>はじめる（できること・登録・ログイン） | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/start.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>はじめる（できること・登録・ログイン）</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/start.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+<nav class="toc">
+  <h2>このページの内容</h2>
+  <ol>
+    <li><a href="#getting-started">このアプリでできること</a></li>
+    <li><a href="#account">アカウントを作る</a></li>
+    <li><a href="#sign-in">ログインとパスワードの再設定</a></li>
+  </ol>
+</nav>
+
+<h2 id="getting-started">このアプリでできること</h2>
+
+<p>メンバーが個々に録音した音源や、動画サイトなどで見つけた曲の URL を、ひとつのリストに集めて共有できます。リストはいくつでも作れて、リストごとにメンバーと、その人にできることが決まります。</p>
+
+<p>はじめて使うときの流れは、おおむね次のとおりです。</p>
+
+<ol>
+  <li>アカウントを作り、メールアドレスの確認を済ませます（<a href="#account">アカウントを作る</a>）。</li>
+  <li>リストに入ります。入り方は 2 とおりで、<strong>自分でリストの作成を申請する</strong>か、<strong>すでにあるリストに入れてもらう</strong>かのどちらかです。</li>
+  <li>リストの中で、曲やコメントを足したり、その場で再生したりします。</li>
+</ol>
+
+<p>どのリストにも自動では入れません。すでにあるリストに入るには、参加している方から <span class="ui">共有 URL</span> をもらって参加を申請する（<a href="sharing.html#join-request">参加を申請する</a>）か、リスト管理者から共有リンクを渡してもらいます（<a href="sharing.html#share-link">共有リンク</a>）。新しくリストを作る場合は、サイト管理者の承認が要ります（<a href="lists.html#list-request">リスト作成を申請する</a>）。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p>全リストの一覧を見られる画面はありません。誰かに教えてもらわないと、リストは見つけられない作りになっています。中身を勝手に覗かれないようにするためです。</p>
+</div>
+
+<p>画面の左側（スマートフォンでは下側）に、<span class="ui">ホーム</span>・<span class="ui">通知</span>・<span class="ui">設定</span> の行き先があります。<span class="ui">サイト管理</span> は、サイト管理者にだけ出ます。</p>
+
+<h2 id="account">アカウントを作る</h2>
+
+<p>ログイン画面の <span class="ui">はじめての方はこちら（新規登録）</span> から、アカウントを作れます。作り方は 2 とおりです。</p>
+
+<ul>
+  <li><strong>メールアドレスとパスワード</strong>：<span class="ui">メールアドレス</span>・<span class="ui">パスワード</span>・<span class="ui">表示名</span> を入れて <span class="ui">アカウントを作成</span> を押します。パスワードは <span class="ui">6 文字以上</span> です。表示名は <span class="ui">後から変更できます</span>。</li>
+  <li><strong>Google のアカウント</strong>：<span class="ui">Google で続ける</span> を押します。</li>
+</ul>
+
+<p>メールアドレスとパスワードで登録した場合は、<strong>メールアドレスの確認が必須</strong>です。登録すると <span class="ui">確認メールを送りました</span> の画面になり、届いたメールのリンクを開くまで先へ進めません。</p>
+
+<div class="msg">リンクを開くと、この画面も自動で次に進みます。</div>
+
+<p>リンクは別のタブや別の端末で開いてもかまいません。開いたことがアプリ側に伝わると、待っている画面はひとりでに次へ進みます。うまく進まないときは <span class="ui">確認を済ませたら次へ</span> を押してください。メールが見当たらないときは <span class="ui">確認メールを再送する</span> を押します。確認メールは、いま画面に出している言語で届きます。</p>
+
+<p>Google のアカウントで登録した場合、この確認は要りません。Google 側で確認済みのためです。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p>共有リンクを受け取っていても、メールアドレスの確認が済むまでは、リストを見る／メンバーになるのどちらも選べません。先に確認を済ませてください。</p>
+</div>
+
+<h2 id="sign-in">ログインとパスワードの再設定</h2>
+
+<p>ログイン画面では、上に <span class="ui">メールアドレス</span> と <span class="ui">パスワード</span> の欄があり、<span class="ui">または</span> の区切りをはさんで下に <span class="ui">Google で続ける</span> があります。登録したときと同じ方法でログインしてください。パスワード欄の右端では <span class="ui">パスワードを表示</span> と <span class="ui">パスワードを隠す</span> を切り替えられます。</p>
+
+<p>一度ログインすると、その状態は保たれます。次に開いたときは、ログインしたままの画面が出ます。</p>
+
+<p>パスワードを忘れたときは、パスワード欄の下の <span class="ui">パスワードをお忘れですか？</span> を押します。メールアドレスを入れて <span class="ui">パスワードを再設定</span> を押すと、再設定用のリンクが届きます。</p>
+
+<div class="msg">再設定用のリンクを送信しました。メールをご確認ください。</div>
+
+<p>この再設定は、メールアドレスとパスワードで登録した方のためのものです。Google のアカウントで登録した方は、パスワードを持っていないため、<span class="ui">Google で続ける</span> からログインしてください。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p>共有 URL や共有リンクをログインしていない状態で開いても、<strong>中身は何も出ません。リスト名も出ません。</strong> 先にログイン画面が出て、済ませると元の URL へ自動で戻ります。「開いても何も出ない」ときは、まずログインしてください。</p>
+  <p><span class="ui">Google で続ける</span> を押しても何も起きないときは、ブラウザがログイン用のウィンドウを止めていることがあります。その場合は画面にその旨が出ますので、このサイトのポップアップを許可してから、もう一度お試しください。</p>
+</div>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="privacy.html">プライバシーポリシー</a> ／ <a href="../en/start.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

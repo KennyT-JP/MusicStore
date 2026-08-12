@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プライバシーポリシー | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/privacy.html">
+<!-- このページに広告は置かない（目次・法務ページ） -->
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>プライバシーポリシー</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/privacy.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+
+
+<h2 id="operator">運営者</h2>
+
+<p>音源創庫（英語表示 Track Cabinet。以下「本サービス」）の運営者は次のとおりです。</p>
+
+<ul>
+  <li>運営者 — <span class="ui">（未設定：公開前に差し替える）</span></li>
+  <li>連絡先 — <span class="ui">（未設定：公開前に差し替える）</span></li>
+</ul>
+
+<p>本ポリシーは、本サービスの利用にあたって取り扱う情報の範囲と、その使い方を定めたものです。</p>
+
+<h2 id="collected">取得する情報</h2>
+
+<p>本サービスは、次の情報を取り扱います。</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>種類</th><th>内容</th><th>取得の方法</th></tr>
+  <tr>
+    <td>アカウントの情報</td>
+    <td>メールアドレス、表示名、プロフィール画像</td>
+    <td>ご自身での入力、または Google アカウントでログインしたときに Google から受け取ります</td>
+  </tr>
+  <tr>
+    <td>投稿した内容</td>
+    <td>アップロードした音源ファイル、曲名、外部サイトの URL、コメント</td>
+    <td>ご自身での入力・アップロード</td>
+  </tr>
+  <tr>
+    <td>利用の状態</td>
+    <td>参加しているリスト、役割、使用している容量、通知の設定、表示言語</td>
+    <td>本サービスの利用に伴って記録されます</td>
+  </tr>
+</table>
+</div>
+
+<p>本サービスは、行動履歴を集めるためのアクセス解析ツールを設置していません。</p>
+
+<h2 id="purpose">利用の目的</h2>
+
+<ul>
+  <li>本サービスの提供（リストの共有、音源の保存と再生、通知の送信）</li>
+  <li>ご本人の確認と、不正な利用の防止</li>
+  <li>お問い合わせへの対応</li>
+  <li>障害の調査と、機能の改善</li>
+</ul>
+
+<p>取得した情報を、上記の目的の範囲を超えて利用したり、第三者へ販売・提供したりすることはありません。法令に基づく開示の求めがあった場合を除きます。</p>
+
+<h2 id="who-can-see">ほかの利用者から見える範囲</h2>
+
+<p>同じリストに参加している方からは、<strong>表示名とプロフィール画像</strong>、および投稿した内容（曲・コメント）が見えます。</p>
+
+<p><strong>メールアドレスは、ほかの利用者には表示されません。</strong> 表示言語・通知の設定・使用している容量も同様です。</p>
+
+<h2 id="ads">広告について</h2>
+
+<p><strong>本サービスの使い方（マニュアル）のページには、第三者配信の広告サービスである Google AdSense を利用しています。</strong></p>
+
+<ul>
+  <li>Google などの第三者配信事業者は、<strong>Cookie を使用して、利用者がこのサイトや他のサイトに過去にアクセスした情報に基づいて広告を配信します。</strong></li>
+  <li>Google が広告 Cookie を使用することにより、利用者がこのサイトや他のサイトにアクセスした際の情報に基づいて、Google やそのパートナーが適切な広告を表示できます。</li>
+  <li>パーソナライズ広告は、<a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">Google の広告設定</a>で無効にできます。第三者配信事業者の Cookie の使用を無効にする方法は、<a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer">aboutads.info</a> をご覧ください。</li>
+  <li>欧州経済領域および英国からのアクセスには、法令に基づき、広告や Cookie の利用について同意を確認する画面が表示されます。</li>
+</ul>
+
+<div class="note">
+  <span class="label">アプリの画面には広告を出しません</span>
+  <p>広告は、この使い方のページなど<strong>読み物のページにだけ</strong>表示されます。ログインしてリストや音源を扱う画面には、広告のコードを一切置いていません。</p>
+</div>
+
+<h2 id="storage-location">情報の保存先</h2>
+
+<p>本サービスは Google が提供する Firebase（Google Cloud）を使って動いており、情報は同社のデータセンターに保存されます。</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>対象</th><th>保存先</th></tr>
+  <tr><td>アカウントの情報、リスト、コメントなど</td><td>東京（asia-northeast1）</td></tr>
+  <tr><td><strong>アップロードした音源ファイル</strong></td><td><strong>米国（us-east1）</strong></td></tr>
+</table>
+</div>
+
+<p><strong>音源ファイルは米国のデータセンターに保存されます。</strong> 本サービスをご利用いただくことで、この国外への移転に同意いただいたものとして取り扱います。</p>
+
+<h2 id="retention">保存する期間と、削除したときの扱い</h2>
+
+<ul>
+  <li>リストから曲を削除しても、音源ファイルは<strong>30 日間</strong>保管されます。この期間はリスト管理者が復元でき、容量も消費し続けます。期間を過ぎると自動で消去されます。</li>
+  <li><strong>退会しても、投稿した曲やコメントは残ります。</strong> 表示名は「退会したユーザー」に変わり、個人を示す情報（メールアドレス・表示名・プロフィール画像）は本サービスから消去されます。</li>
+  <li>サイト管理者が利用者を削除した場合は、その方が追加した曲と音源ファイルを消去します。コメントは、会話の前後が読めなくならないように残します。</li>
+</ul>
+
+<h2 id="rights">開示・訂正・削除のご請求</h2>
+
+<p>取得している情報の開示、訂正、削除をご希望の場合は、上記の連絡先までご連絡ください。ご本人であることを確認したうえで対応します。</p>
+
+<p>アカウントの削除（退会）は、アプリの<span class="ui">設定</span>画面からご自身で行えます。</p>
+
+<h2 id="children">お子様の利用について</h2>
+
+<p>本サービスは、招待を受けた方が音源を持ち寄って共有することを目的としています。お子様がご利用になる場合は、保護者の方の管理のもとでご利用ください。</p>
+
+<h2 id="changes">本ポリシーの変更</h2>
+
+<p>本ポリシーの内容は、必要に応じて変更します。変更したときは、このページに掲載した時点から適用します。</p>
+
+<p>最終更新日 — 2026 年 8 月 13 日</p>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="./">プライバシーポリシー</a> ／ <a href="../en/privacy.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

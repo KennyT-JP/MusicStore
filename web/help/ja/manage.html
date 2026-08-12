@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>容量・通知・設定・サイト管理 | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/manage.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>容量・通知・設定・サイト管理</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/manage.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+<nav class="toc">
+  <h2>このページの内容</h2>
+  <ol>
+    <li><a href="#storage">容量と、削除したときの扱い</a></li>
+    <li><a href="#notifications">通知</a></li>
+    <li><a href="#settings">設定と退会</a></li>
+    <li><a href="#site-admin">サイト管理</a></li>
+  </ol>
+</nav>
+
+<h2 id="storage">容量と、削除したときの扱い</h2>
+
+<p>容量の上限は<strong>リストごと</strong>に決まっています。初期値は 1GB で、リストごとの上限はサイト管理者が変えられます。<strong>ファイル 1 つあたりの上限はありません。</strong></p>
+
+<p>使用量はリスト管理者以上に見えます。ホームのリストの行と、<span class="ui">リスト設定</span> の <span class="ui">使用容量</span> です。上限の 80% を超えると <span class="ui">容量が 80% を超えました</span>、90% を超えると <span class="ui">容量が 90% を超えました</span> の通知がリスト管理者に届きます。</p>
+
+<p>上限に達すると、それ以降のアップロードは始まりません。<span class="ui">上限を超えました。リスト管理者にご連絡ください。</span> と出ますので、リスト管理者からサイト管理者に上限の引き上げを依頼してください。</p>
+
+<h3>曲を削除したとき</h3>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>曲を削除しても、ファイルはすぐには消えません。初期値で 30 日間そのまま保持され、その間は容量を消費し続けます。</strong> 上限に近いリストで削除しても、すぐには空きが増えないのはこのためです。</p>
+  <p>この猶予期間があるのは、間違えて消したものを戻せるようにするためです。<strong>この期間内であれば、リスト管理者以上が <span class="ui">復元</span> できます。</strong> 曲の詳細に <span class="ui">{date} まではリスト管理者が復元できます。</span> と、いつまで戻せるかが出ます。</p>
+  <p>期間を過ぎるとファイルは完全に消え、そのぶん使用容量が減ります。ここまで来ると、もう戻せません。保持日数はサイト管理者が変えられます。</p>
+</div>
+
+<p>削除しても、一覧上の連番は残ります。<strong>連番は振り直さないため、削除したところは欠番になります</strong>（<a href="lists.html#list">リストの中身</a>）。</p>
+
+<p>アップロードの途中で通信が切れたり、ブラウザを閉じたりした場合、曲は作られず、行き場を失ったファイルだけが残ることがあります。これは自動で片付けられ、容量も戻ります。</p>
+
+<p>なお、リストそのものを削除した場合は猶予期間がありません。ファイルもコメントもすべて消え、元には戻せません（<a href="members.html#list-settings">リスト設定</a>）。</p>
+
+<h2 id="notifications">通知</h2>
+
+<p><span class="ui">通知</span> は、画面の行き先と、上部のベルのどちらからでも開けます。ベルには未読の件数が出ます。通知は新しい順に並び、押すとその対象へ移ります。<span class="ui">すべて既読にする</span> でまとめて既読にできます。何も届いていなければ <span class="ui">通知はありません。</span> と出ます。</p>
+
+<h3>どんなときに届くか</h3>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>通知</th><th>届く相手</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">曲が追加されました</span></td><td>そのリストのメンバー全員（役割は問いません）</td></tr>
+    <tr><td><span class="ui">コメントが付きました</span></td><td>そのリストのリスト管理者、サイト管理者、自分の投稿にコメントが付いた本人</td></tr>
+    <tr><td><span class="ui">容量が 80% を超えました</span></td><td>そのリストのリスト管理者</td></tr>
+    <tr><td><span class="ui">容量が 90% を超えました</span></td><td>そのリストのリスト管理者</td></tr>
+    <tr><td><span class="ui">リスト作成の申請がありました</span></td><td>サイト管理者</td></tr>
+    <tr><td><span class="ui">参加申請がありました</span></td><td>そのリストのリスト管理者</td></tr>
+    <tr><td><span class="ui">申請が承認されました</span></td><td>申請した本人</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>自分の操作の通知は、自分には届きません。</strong> 自分で曲を追加しても、自分あての通知にはなりません。</p>
+  <p><strong>却下されたときの通知はありません。</strong> 申請の結果は <span class="ui">自分の申請</span> でご確認ください（<a href="lists.html#my-requests">自分の申請を確認する</a>）。</p>
+  <p>曲が追加されたことだけは、役割ではなく<strong>そのリストに参加しているかどうか</strong>で決まります。Read Only の方にも届きます。逆に、サイト管理者であっても参加していないリストの曲は通知されません。</p>
+</div>
+
+<h3>通知の設定</h3>
+
+<p>切り替えは <span class="ui">設定</span> の <span class="ui">通知設定</span> で行います。上の 7 種類をそれぞれ切り替えられるほか、<span class="ui">すべての通知</span> でまとめて止められます。最初はすべてオンです。それぞれの下に、どんなときに届くかが書かれています。</p>
+
+<h2 id="settings">設定と退会</h2>
+
+<p><span class="ui">設定</span> では、次のことができます。</p>
+
+<ul>
+  <li><span class="ui">表示名</span> — ほかの方に見える名前です。いつでも変えられます。<span class="ui">保存</span> で確定します。</li>
+  <li><span class="ui">表示言語</span> — 日本語と英語から選べます。この使い方のページも、選んだ言語で開きます。</li>
+  <li><span class="ui">通知設定</span> — <a href="#notifications">通知</a> のとおりです。</li>
+  <li><span class="ui">ログアウト</span></li>
+  <li><span class="ui">退会する</span></li>
+</ul>
+
+<h3>退会について</h3>
+
+<div class="msg">退会しても、登録した項目やコメントは残ります。表示名は「退会したユーザー」になります。</div>
+<div class="msg">この操作は取り消せません。</div>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>退会しても、その方が登録した曲やコメントはリストに残ります。</strong> 消えるのはアカウントで、投稿は残ります。名前のところだけが <span class="ui">退会したユーザー</span> に変わり、元の名前は出なくなります。コメントは前後のつながりで読むものなので、抜けると会話が読めなくなるためです。</p>
+  <p>ひとつのリストだけをやめたいのであれば、退会ではなく、そのリストの <span class="ui">このリストから抜ける</span> をお使いください（<a href="lists.html#list">リストの中身</a>）。</p>
+</div>
+
+<p>自分がただ 1 人のサイト管理者である場合、退会はできません。次のように出ますので、先に別の方をサイト管理者にしてください。</p>
+
+<div class="msg">あなたは現在ただ 1 人のサイト管理者です。先に別の方をサイト管理者に指名してください。</div>
+
+<h2 id="site-admin">サイト管理</h2>
+
+<p><span class="ui">サイト管理</span> は<strong>サイト管理者にだけ出ます。</strong> ほかの方には、この行き先そのものが出ません。中は 4 つに分かれています。</p>
+
+<h3>リスト作成申請</h3>
+
+<p><span class="ui">リスト作成申請</span> に、保留中の申請が並びます。<span class="ui">申請者</span>・<span class="ui">登録曲数</span>・<span class="ui">使用者数</span>・<span class="ui">作成目的</span> を見て、<span class="ui">承認</span> か <span class="ui">却下</span> を選びます。承認すると、<strong>申請した方がそのリストのリスト管理者になります。</strong> 保留中のものがなければ <span class="ui">保留中の申請はありません。</span> と出ます。</p>
+
+<h3>リストと容量</h3>
+
+<p><span class="ui">リストと容量</span> に、すべてのリストの使用量と上限が並びます。<span class="ui">容量上限を変更</span> から、リストごとの上限を MB 単位で入れ直せます。</p>
+
+<p><span class="ui">管理者不在のリスト</span> には、リスト管理者がいなくなったリストが集まります。<span class="ui">リスト管理者を指名</span> から、新しい管理者を決めてください。<strong>この状態は、指名するまで続きます。</strong></p>
+
+<h3>ユーザー管理</h3>
+
+<p><span class="ui">ユーザー管理</span> には、全員が並びます。<span class="ui">サイト管理者 {admins} 人 / 全 {total} 人</span> という形で人数が出ます。各行のメニューからできることは次のとおりです。</p>
+
+<ul>
+  <li><span class="ui">ユーザーを追加</span> — メールアドレス・表示名・パスワードを決めて作ります。<span class="ui">サイト管理者がパスワードを決めます。お渡ししたあとで、ご本人に変更していただいてください。</span> この経路で作った方は、メールアドレスの確認が済んだ扱いになります。</li>
+  <li><span class="ui">サイト管理者にする</span> / <span class="ui">管理者から外す</span> — 反映には本人の再ログインが必要です。その旨が画面に出ます。</li>
+  <li><span class="ui">リストに追加</span> — その方をリストのメンバーに加えます。加えるときは <span class="ui">追加：{role}</span> で <span class="ui">Super User</span> か <span class="ui">Read Only</span> を必ず選びます。リスト管理者にはできません。すでにメンバーの方は加えられません。</li>
+  <li><span class="ui">無効にする</span> / <span class="ui">有効に戻す</span> / <span class="ui">削除する</span> — 下記のとおりです。</li>
+</ul>
+
+<div class="note">
+  <span class="label">無効と削除の違い</span>
+  <p><strong>無効は戻せます。削除は戻せません。迷ったら無効にしてください。</strong></p>
+  <p><span class="ui">無効にする</span> — ログインできなくなり、参加中のリストからも外れます。登録した曲・音源ファイル・コメントは残ります。あとから <span class="ui">有効に戻す</span> で戻せますが、<strong>参加していたリストには戻りません。</strong> 必要であれば、あらためてご案内ください。無効になっている方には <span class="ui">無効</span> と出ます。</p>
+  <p><span class="ui">削除する</span> — アカウントと、その方が登録した曲・音源ファイルを消します。<strong>書かれたコメントは残り、表示名が <span class="ui">退会したユーザー</span> になります。</strong> バックアップは取っていないため、元に戻せません。</p>
+  <p>自分自身に対しては、無効化も削除も行えません。自分をやめるときは <span class="ui">設定</span> の <span class="ui">退会する</span> をお使いください。また、ただ 1 人のサイト管理者を降格・削除することもできません。</p>
+</div>
+
+<h3>サイト設定</h3>
+
+<ul>
+  <li><span class="ui">新規リストの容量上限</span> — <span class="ui">初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。</span></li>
+  <li><span class="ui">削除ファイルの保持日数</span> — <span class="ui">初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。</span></li>
+</ul>
+
+<p>共有リンクに期限はないため、期限の設定はありません（<a href="sharing.html#share-link">共有リンク</a>）。</p>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="privacy.html">プライバシーポリシー</a> ／ <a href="../en/manage.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

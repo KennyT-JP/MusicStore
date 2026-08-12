@@ -96,21 +96,29 @@
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js" crossorigin>
 
   <!--
-    AdSense。パブリッシャー ID は `ca-pub-3984824596223175`。
-    **この ID は秘密ではない**（広告を出すページのソースに必ず出る）。
+    **このページに広告のコードは置かない**（2026-08-13）。
 
-    いまは**サイト審査を通すための設置**。広告枠（ins 要素）はまだ
-    置いていないので、これだけでは広告は出ない。審査に通ってから枠を足す。
+    以前は審査を通すつもりで AdSense のスクリプトをここに書き、画面の
+    最上部に仮の枠を置いていた。**それが審査に落ちる形だった。**
 
-    **現状、CSP（Content-Security-Policy）は設定していない。**
-    設定する際は `pagead2.googlesyndication.com` を許可に入れること。
-    漏れるとこのスクリプトが読み込まれず、審査側から
-    「コードが見つからない」と判定される。
-    所有者証明の `ads.txt` は `web/ads.txt`（同じ ID）。
+    このアプリは CanvasKit で画面を canvas に描くので、**HTML には
+    読める文字が 1 つも残らない。** Googlebot は JS を実行するが、
+    実行しても文字は増えない。つまりここに広告を出すと
+    「コンテンツを含まない画面における広告」そのものになる
+    （共有ドキュメント `ナレッジベース.md` S-7、`アンチパターン集.md` AP-43。
+    別プロジェクトで実際にこの 2 指摘を受けている）。
+
+    **広告は読み物のページに置く**——`web/help/{ja,en}/` のマニュアル
+    （`scripts/build-manual.mjs` が生成）。所有者証明の `ads.txt` は
+    `web/ads.txt` に残す（サイト単位のものなので、ここから外しても要る）。
+
+    配置は `test/domain/ads_placement_test.dart` が見張っている。
+    スクリプトは 1 行なので、戻すのも一瞬で、戻したことに誰も気づかない。
+
+    **CSP（Content-Security-Policy）は設定していない。** もし入れるなら、
+    マニュアル側で `pagead2.googlesyndication.com` を許可に入れること。
+    漏れると広告が出なくなる（そのとき、まず CSP を疑う）。
   -->
-  <script async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175"
-          crossorigin="anonymous"></script>
 
   <style>
     /*
@@ -131,26 +139,17 @@
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     }
 
-    /* **広告枠はアプリの外に置く。** CanvasKit は画面を canvas に描くので、
-       広告の要素をアプリの中には差し込めない。body を縦並びにして、
-       上に広告枠・下にアプリを置く（描画先は flutter_bootstrap.js が指定）。 */
+    /* **アプリは body 直下ではなく #flutter-host に描く。**
+       広告枠を外したあとも、この作りは残している。
+
+       - 読み込み中の表示（#loading）を、この要素を基準に絶対配置している
+       - 実機の狭い幅を作る確認手順が、この要素を縮めて再現する
+         （docs/SETUP.md「ブラウザで実機を見る」。窓を最大化していると
+         リサイズが効かないため）
+
+       描画先の指定は flutter_bootstrap.js（hostElement）にある。 */
     body { display: flex; flex-direction: column; }
-    #ad-top { flex: 0 0 auto; }
     #flutter-host { flex: 1 1 auto; min-height: 0; position: relative; }
-
-    /* 審査に通るまでの仮の見た目。枠の位置と高さを確かめるためのもので、
-       広告が出るようになったら中身ごと差し替える。 */
-    .ad-placeholder {
-      height: 60px; display: flex; align-items: center; justify-content: center;
-      font: 12px/1 system-ui, sans-serif; color: #6B7280;
-      background: #EEF2F7; border-bottom: 1px solid #D7DEE8;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .ad-placeholder {
-        color: #9FC2E4; background: #0B2044; border-bottom-color: #123157;
-      }
-    }
 
     @media (prefers-color-scheme: dark) {
       /* ブランドの Deep Navy（brand/README.md）。読み込み中から
@@ -172,9 +171,8 @@
     }
 
     #loading {
-      /* **fixed ではなく absolute。** 広告枠を置いたことで body が
-         縦並びになり、fixed だと枠の上に重なってしまう。
-         描画先（#flutter-host）を基準に広げる。 */
+      /* **fixed ではなく absolute。** body が縦並びなので、fixed だと
+         画面全体を基準にしてしまう。描画先（#flutter-host）を基準に広げる。 */
       position: absolute;
       inset: 0;
       display: flex;
@@ -218,16 +216,6 @@
   </style>
 </head>
 <body>
-  <!--
-    広告枠（画面の最上部）。
-    **プレミアムには出さない**予定なので、アプリ側から表示を切り替えられる
-    ようにしてある（下の setTopAdVisible）。いまは審査待ちのため仮の枠。
-    通ったら ins 要素に差し替える。
-  -->
-  <div id="ad-top">
-    <div class="ad-placeholder">広告</div>
-  </div>
-
   <div id="flutter-host">
     <div id="loading">
       <!--
@@ -246,14 +234,6 @@
       <div class="label">読み込んでいます…</div>
     </div>
   </div>
-
-  <script>
-    // アプリから広告枠の表示・非表示を切り替えるための入口。
-    window.setTopAdVisible = function (visible) {
-      var el = document.getElementById('ad-top');
-      if (el) el.style.display = visible ? '' : 'none';
-    };
-  </script>
 
   <!--
     You can customize the "flutter_bootstrap.js" script.

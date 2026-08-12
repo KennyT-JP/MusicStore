@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started (sign-up and sign-in) | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/start.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Getting started (sign-up and sign-in)</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/start.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+<nav class="toc">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#getting-started">What this app does</a></li>
+    <li><a href="#account">Creating an account</a></li>
+    <li><a href="#sign-in">Signing in and resetting your password</a></li>
+  </ol>
+</nav>
+
+<h2 id="getting-started">What this app does</h2>
+
+<p>Track Cabinet collects recordings made by each member, along with links to tracks found on video sites and elsewhere, into a single shared list. You can have as many lists as you need, and each list has its own members with their own permissions.</p>
+
+<p>Getting started usually looks like this:</p>
+
+<ol>
+  <li>Create an account and verify your email address (see <a href="#account">Creating an account</a>).</li>
+  <li>Get into a list. There are two ways: <strong>request a list of your own</strong>, or <strong>have someone let you into an existing one</strong>.</li>
+  <li>Inside the list, add tracks and comments, and play the audio right there.</li>
+</ol>
+
+<p>You are never added to a list automatically. To join an existing list, either ask a member for its <span class="ui">Share URL</span> and request to join (see <a href="sharing.html#join-request">Requesting to join</a>), or ask a list admin for a share link (see <a href="sharing.html#share-link">Share links</a>). To start a new list, you need a site admin's approval (see <a href="lists.html#list-request">Requesting a new list</a>).</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>There is no screen that lists every list on the site. Unless someone tells you about a list, you cannot find it. That is deliberate: it keeps list contents from being stumbled upon.</p>
+</div>
+
+<p>Down the left side of the screen (along the bottom on a phone) you will find <span class="ui">Home</span>, <span class="ui">Notifications</span> and <span class="ui">Settings</span>. <span class="ui">Site admin</span> appears only for site admins.</p>
+
+<h2 id="account">Creating an account</h2>
+
+<p>On the sign-in screen, tap <span class="ui">New here? Create an account</span>. There are two ways to sign up.</p>
+
+<ul>
+  <li><strong>Email and password</strong> — fill in <span class="ui">Email address</span>, <span class="ui">Password</span> and <span class="ui">Display name</span>, then press <span class="ui">Create account</span>. The password needs <span class="ui">At least 6 characters</span>, and for the display name, <span class="ui">You can change this later</span>.</li>
+  <li><strong>A Google account</strong> — press <span class="ui">Continue with Google</span>.</li>
+</ul>
+
+<p>If you sign up with an email address and password, <strong>verifying that address is required</strong>. You will land on the <span class="ui">Check your email</span> screen and cannot go further until you open the link in the message we send you.</p>
+
+<div class="msg">Once you open the link, this page moves on by itself.</div>
+
+<p>You can open the link in another tab, or even on another device. The app notices and moves on by itself. If it does not, press <span class="ui">I have verified, continue</span>. If the message never arrives, press <span class="ui">Resend verification email</span>. The verification email arrives in whichever language the app is currently showing.</p>
+
+<p>Signing up with Google skips this step, since Google has already verified the address.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>Even if someone has sent you a share link, you cannot choose to join or view the list until your email address is verified. Finish the verification first.</p>
+</div>
+
+<h2 id="sign-in">Signing in and resetting your password</h2>
+
+<p>The sign-in screen puts <span class="ui">Email address</span> and <span class="ui">Password</span> at the top, then an <span class="ui">or</span> divider, then <span class="ui">Continue with Google</span> below it. Sign in the same way you signed up. The eye icon at the end of the password field toggles between <span class="ui">Show password</span> and <span class="ui">Hide password</span>.</p>
+
+<p>Once you sign in, you stay signed in. Next time you open the app, you land straight back where you were.</p>
+
+<p>If you have forgotten your password, tap <span class="ui">Forgot your password?</span> just below the password field. Enter your email address, press <span class="ui">Reset password</span>, and a reset link is sent to you.</p>
+
+<div class="msg">We sent you a reset link. Please check your email.</div>
+
+<p>Password resets are only for accounts created with an email address and password. If you signed up with Google you have no password here, so use <span class="ui">Continue with Google</span> instead.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>If you open a share URL or a share link while signed out, <strong>nothing about the list is shown — not even its name.</strong> You get the sign-in screen first, and once you are through, you are sent back to the URL you opened. So if a link seems to show nothing, sign in first.</p>
+  <p>If <span class="ui">Continue with Google</span> seems to do nothing, your browser has probably blocked the sign-in window. The app says so on screen; allow pop-ups for this site and try again.</p>
+</div>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="privacy.html">Privacy policy</a> ／ <a href="../ja/start.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

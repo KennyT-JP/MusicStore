@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>メンバーと役割 | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/members.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>メンバーと役割</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/members.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+<nav class="toc">
+  <h2>このページの内容</h2>
+  <ol>
+    <li><a href="#members">メンバー管理</a></li>
+    <li><a href="#list-settings">リスト設定</a></li>
+    <li><a href="#roles">役割でできること</a></li>
+  </ol>
+</nav>
+
+<h2 id="members">メンバー管理</h2>
+
+<p><span class="ui">メンバー管理</span> は、リスト管理者以上に出ます。リストのメニューから開きます。</p>
+
+<h3>役割の変更と除外</h3>
+
+<p>見出しは <span class="ui">メンバー（{count}）</span> の形で、いま何人いるかが出ます。各メンバーのメニューから <span class="ui">役割を変更：{role}</span> で役割を変えられます。<span class="ui">リストから外す</span> を選ぶと、次のように確認が出ます。</p>
+
+<div class="msg">このメンバーをリストから外します。<br><br>登録した項目やコメントは残りますが、表示名は「退会したユーザー」になります。あらためて参加申請することもできます。</div>
+
+<p>自分自身をここから外すことはできません。自分が抜けるときは、リストのメニューの <span class="ui">このリストから抜ける</span> を使ってください。</p>
+
+<h3>参加せずに見ている人</h3>
+
+<p><span class="ui">参加せずに見ている人</span> には、共有リンクで <span class="ui">リストのメンバーにならずに見る</span> を選んだ方が並びます。まだいなければ <span class="ui">まだいません。</span> と出ます。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>この方たちはメンバーではありません。</strong> メンバーの人数にも、通知の宛先にも入りません。曲やコメントを足すこともできません。誰が見ているかを追えるように、この一覧だけが用意されています。</p>
+</div>
+
+<h3>この画面にある 2 種類の URL</h3>
+
+<ul>
+  <li><span class="ui">共有 URL</span> — <span class="ui">この URL を渡すと、受け取った人は参加を申請できます。中身は承認するまで見えません。</span> 承認する手間はかかりますが、誰を入れるかを都度決められます。</li>
+  <li><span class="ui">共有リンクを作る</span> — 開いた方がその場で入れるリンクです。承認は要りません。止めるときは <span class="ui">リンクを取り消す</span> を押します（<a href="sharing.html#share-link">共有リンク</a>）。</li>
+</ul>
+
+<p>参加申請が届くと、<span class="ui">参加申請</span> の画面で承認・却下できます。保留中のものがなければ <span class="ui">保留中の申請はありません。</span> と出ます。</p>
+
+<h2 id="list-settings">リスト設定</h2>
+
+<p><span class="ui">リスト設定</span> は、リスト管理者以上に出ます。ここでできるのは、容量の確認とリストの削除です。</p>
+
+<h3>使用容量</h3>
+
+<p><span class="ui">使用容量</span> に、使った量と上限が「使用量 / 上限」の形で出ます。上限に近づくと、次のような案内が添えられます。</p>
+
+<div class="msg">上限の 80% を超えています。</div>
+<div class="msg">上限の 90% を超えています。上限の引き上げはサイト管理者に依頼してください。</div>
+<div class="msg">削除した項目のファイルは一定期間保持されるため、削除してもすぐには空きが増えません。</div>
+
+<p>上限そのものを変えられるのはサイト管理者だけです。足りなくなったら、サイト管理者にご相談ください（<a href="manage.html#storage">容量と、削除したときの扱い</a>）。</p>
+
+<h3>リストの削除</h3>
+
+<div class="msg">リストを削除すると、そのリストのファイル・コメントもすべて削除されます。この操作は取り消せません。</div>
+
+<p><span class="ui">リストを削除</span> を押すと、リスト名を添えて最終確認が出ます。バックアップは取っていないため、消したものは戻せません。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p>リスト名を変える画面はありません。名前は作成を申請したときのまま変わりません。</p>
+</div>
+
+<h2 id="roles">役割でできること</h2>
+
+<p>役割は <span class="ui">サイト管理者</span>・<span class="ui">リスト管理者</span>・<span class="ui">Super User</span>・<span class="ui">Read Only</span> の 4 つです。上の役割は、下の役割にできることをすべて含みます。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>役割はリストごとに決まります。</strong> 同じ方が、あるリストでは Super User、別のリストでは Read Only、ということもあります。ホームの各リストの行に、そのリストでの自分の役割が出ますので、迷ったらそこを見てください。</p>
+</div>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>できること</th><th>Read Only</th><th>Super User</th><th>リスト管理者</th><th>サイト管理者</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>曲の一覧・詳細を見る</td><td>できる</td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>再生・ダウンロード</td><td>できる</td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>コメントを読む</td><td>できる</td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>曲を追加する</td><td><strong>できない</strong></td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>コメント・返信を書く</td><td><strong>できない</strong></td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>自分が登録した曲・コメントを編集・削除</td><td>—</td><td>できる</td><td>できる</td><td>できる</td></tr>
+    <tr><td>他の方の曲・コメントを編集・削除</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>削除した曲を復元する</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>メンバー管理（役割の変更・除外・承認）</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>共有リンクを作る・取り消す</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>使用容量を見る</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>リストを削除する</td><td>できない</td><td>できない</td><td>できる</td><td>できる</td></tr>
+    <tr><td>このリストから抜ける</td><td>できる</td><td>できる</td><td>できる</td><td>—</td></tr>
+    <tr><td>サイト管理の画面</td><td>できない</td><td>できない</td><td>できない</td><td>できる</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Read Only は閲覧だけです。</strong> 曲を追加できないだけでなく、<strong>コメントも返信も一切書けません。</strong> 権限のない操作は、ボタンごと画面に出ません。「ボタンが見当たらない」ときは、そのリストでの自分の役割をご確認ください。</p>
+
+<p>共有リンクで <span class="ui">リストのメンバーにならずに見る</span> を選んだ方は、役割を持ちません。曲の一覧を見て音を聴くことはできますが、書き込みはできず、メンバー一覧にも出ません（<a href="#members">メンバー管理</a>）。</p>
+
+<p>役割を変えられるのは、リスト管理者とサイト管理者です。共有リンクや参加申請から、いきなりリスト管理者になることはありません。</p>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="privacy.html">プライバシーポリシー</a> ／ <a href="../en/members.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>
