@@ -1029,7 +1029,7 @@ node scripts/build-manual.mjs
 | ✓ | プライバシーポリシーの公開（Cookie と第三者配信について記載） |
 | — | **自動広告の有効化**（枠を置いていないので、これが無いと出ません） |
 | — | **同意メッセージ（CMP）の作成**。欧州経済領域・英国向けに法令で必要 |
-| — | **運営者名と連絡先の記入**（`docs/manual/legal-*.html`。本番前に必須） |
+| ✓ | 運営者名と連絡先の記入（値は `scripts/build-manual.mjs` の `OPERATOR`） |
 
 残りは `docs/BACKLOG.md`「AdSense の審査に出すまでに、依頼者しか
 できないこと」にまとめてあります。
@@ -1051,7 +1051,7 @@ node scripts/build-manual.mjs
 ### 単体テスト
 
 ```sh
-flutter test      # 418 件
+flutter test      # 419 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
 cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）

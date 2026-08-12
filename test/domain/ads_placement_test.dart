@@ -143,6 +143,26 @@ void main() {
       expect(_plain(_read('web/help/en/privacy.html')), contains('cookies'));
       expect(_plain(_read('web/help/en/privacy.html')), contains('AdSense'));
     });
+
+    test('運営者と連絡先が、日英どちらにも同じ値で入っている', () {
+      // **運営者の分からないポリシーは、無いのと同じ扱いになる。**
+      // 値は scripts/build-manual.mjs の OPERATOR が正本で、原本には
+      // 差し込み用の目印しか書かない。ここでは
+      // 「差し込まれたか」と「日英で同じか」を見る。
+      const name = "F's Factory";
+      const contact = 'support@session-concierge.jp';
+
+      for (final lang in _languages) {
+        final page = _read('web/help/$lang/privacy.html');
+        expect(page, contains(name), reason: '$lang のポリシーに運営者名がありません');
+        expect(page, contains(contact), reason: '$lang のポリシーに連絡先がありません');
+        expect(
+          RegExp(r'%[A-Z_]+%').hasMatch(page),
+          isFalse,
+          reason: '$lang のポリシーに差し込めなかった目印が残っています',
+        );
+      }
+    });
   });
 
   group('広告を置かないページ', () {

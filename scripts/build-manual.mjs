@@ -58,6 +58,19 @@ const PUBLISHER_ID = 'ca-pub-3984824596223175';
 const MIN_CHARS = 1600;
 
 /**
+ * プライバシーポリシーに出す運営者と連絡先（2026-08-13 に依頼者が指定）。
+ *
+ * **ここが正本。** 日英の原本には差し込み用の目印だけを書き、値は書かない。
+ * 2 か所に書くと、片方だけ直したときに**言語によって連絡先が違う**という
+ * 状態になり、しかも誰も気づかない
+ * （docs/AUDIT-CHECKLIST.md「同じ内容が 2 か所にあるなら、片方が正本」）。
+ */
+const OPERATOR = {
+  name: "F's Factory",
+  contact: 'support@session-concierge.jp',
+};
+
+/**
  * ページの束ね方。**日英で同じ**にする。
  *
  * 言語ごとに分け方を変えると、`lib/domain/help_links.dart` の
@@ -159,12 +172,32 @@ function readSource(lang) {
   return { style: style[0], h1: h1[1], lede: lede[1], chapters };
 }
 
-/** 法務ページの原本（本文だけの断片）。 */
+/** 法務ページの原本（本文だけの断片）。運営者と連絡先を差し込む。 */
 function readLegal(lang) {
-  const html = readFileSync(join(root, `docs/manual/legal-${lang}.html`), 'utf8');
+  const path = `docs/manual/legal-${lang}.html`;
+  let html = readFileSync(join(root, path), 'utf8');
+
   const h1 = html.match(/<h1>([\s\S]*?)<\/h1>/);
-  if (!h1) throw new Error(`docs/manual/legal-${lang}.html に <h1> がありません`);
-  return { title: h1[1], html: html.slice(html.indexOf('</h1>') + 5).trim() };
+  if (!h1) throw new Error(`${path} に <h1> がありません`);
+
+  const body = html
+    .slice(html.indexOf('</h1>') + 5)
+    .replaceAll('%OPERATOR_NAME%', OPERATOR.name)
+    .replaceAll('%OPERATOR_CONTACT%', OPERATOR.contact)
+    .trim();
+
+  // **差し込み漏れを配信しない。** 目印を書き間違えると、その文字列が
+  // そのまま公開される（運営者名の代わりに目印が出ているポリシーは、
+  // 無いのと同じ扱いになる）。
+  const leftover = body.match(/%[A-Z_]+%/);
+  if (leftover) {
+    throw new Error(`${path} に差し込めない目印が残っています: ${leftover[0]}`);
+  }
+  if (!OPERATOR.name || !OPERATOR.contact) {
+    throw new Error('scripts/build-manual.mjs の OPERATOR が空です');
+  }
+
+  return { title: h1[1], html: body };
 }
 
 // ---------------------------------------------------------------------------
