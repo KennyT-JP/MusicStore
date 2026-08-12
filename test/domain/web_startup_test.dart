@@ -162,28 +162,18 @@ void main() {
     });
   });
 
-  group('広告枠とアプリの置き場所（2026-08-09）', () {
+  group('アプリの置き場所（2026-08-09／2026-08-13 に広告枠を撤去）', () {
     String bootstrap() => File('web/flutter_bootstrap.js').readAsStringSync();
 
-    test('広告枠はアプリの外に置く', () {
-      // **CanvasKit は画面を canvas に描く。** 広告の要素をアプリの
-      // 画面の中には差し込めないので、body を縦並びにして
-      // 上に広告枠・下にアプリを置く。
-      final html = _indexHtml();
-      expect(html, contains('id="ad-top"'));
-      expect(html, contains('id="flutter-host"'));
-
-      // 順番が逆だと、広告が画面の下に出る。
-      expect(
-        html.indexOf('id="ad-top"'),
-        lessThan(html.indexOf('id="flutter-host"')),
-      );
-    });
+    // **広告の置き場所そのものは test/domain/ads_placement_test.dart が
+    // 見張っている。** ここは「アプリがどこに描かれるか」だけを見る。
 
     test('アプリの描画先を指定している', () {
-      // **これが無いと body 全面に描かれ、広告枠と重なる。**
+      // **これが無いと body 全面に描かれ、読み込み中の表示の基準も、
+      // 狭い幅を作る確認手順（SETUP.md）も崩れる。**
       expect(bootstrap(), contains('hostElement'));
       expect(bootstrap(), contains('flutter-host'));
+      expect(_indexHtml(), contains('id="flutter-host"'));
     });
 
     test('ビルドが差し替える印を消していない', () {
@@ -202,27 +192,11 @@ void main() {
       );
     });
 
-    test('読み込み中の表示が広告枠に重ならない', () {
-      // fixed のままだと、body が縦並びになった時点で枠の上に重なる。
+    test('読み込み中の表示が、描画先を基準にしている', () {
+      // fixed のままだと body（画面全体）を基準にしてしまう。
       final html = _indexHtml();
       final loading = html.substring(html.indexOf('#loading {'));
       expect(loading, contains('position: absolute'));
-    });
-
-    test('広告の出し分けの入口がある', () {
-      // プレミアムには出さない予定。アプリ側から切り替えられるようにする。
-      expect(_indexHtml(), contains('window.setTopAdVisible'));
-    });
-
-    test('AdSense のコードと ads.txt が揃っている', () {
-      // **片方だけでは審査に通らない。** ads.txt は所有者の証明で、
-      // 同じパブリッシャー ID を書く。
-      const publisherId = 'pub-3984824596223175';
-      expect(_indexHtml(), contains('adsbygoogle.js?client=ca-$publisherId'));
-
-      final adsTxt = File('web/ads.txt').readAsStringSync();
-      expect(adsTxt, contains(publisherId));
-      expect(adsTxt, contains('DIRECT'));
     });
   });
 

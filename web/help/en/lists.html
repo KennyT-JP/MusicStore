@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creating and viewing lists | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/lists.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Creating and viewing lists</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/lists.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+<nav class="toc">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#home">Home: the lists you belong to</a></li>
+    <li><a href="#list-request">Requesting a new list</a></li>
+    <li><a href="#my-requests">Checking your requests</a></li>
+    <li><a href="#list">Inside a list</a></li>
+  </ol>
+</nav>
+
+<h2 id="home">Home: the lists you belong to</h2>
+
+<p><span class="ui">Your lists</span> shows every list you belong to. Each row gives the list name, your role in that list, and how many tracks it holds. List admins also see how much storage the list is using.</p>
+
+<p>Before you belong to anything, you will see this:</p>
+
+<div class="msg">You have not joined any list yet.<br>To start a new list, submit a request. To join an existing one, ask a member for its share URL.</div>
+
+<p>This screen is also where <span class="ui">Request a new list</span> and <span class="ui">My requests</span> live. If you are a list admin or above, the menu on a list's row offers <span class="ui">Copy link</span>, which creates a share link on the spot (see <a href="sharing.html#share-link">Share links</a>).</p>
+
+<p>A row may be tagged <span class="ui">Lists without an admin</span>. That means the list's admin has left, and it stays that way until a site admin appoints a new one. You can still browse and add tracks as before.</p>
+
+<h2 id="list-request">Requesting a new list</h2>
+
+<p>You cannot create a list outright. You <strong>submit a request and a site admin approves it</strong>. Start from <span class="ui">Request a new list</span> on Home. Anyone can submit a request.</p>
+
+<p>A request asks for four things:</p>
+
+<ul>
+  <li><span class="ui">List name</span> — <span class="ui">A name already in use is not allowed</span></li>
+  <li><span class="ui">Estimated number of tracks</span></li>
+  <li><span class="ui">Expected number of users</span></li>
+  <li><span class="ui">Purpose</span></li>
+</ul>
+
+<p>Once you send it:</p>
+
+<div class="msg">Request submitted.<br>Please wait for a site administrator to review and approve it.</div>
+
+<p><strong>When the request is approved, you become the list admin of that list.</strong> It appears on your Home screen, and you can start inviting members and watching its storage. Names already taken — or already requested by someone else — are refused, and the app tells you so.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>The list name is fixed when you request it. There is no screen for renaming a list afterwards, so choose the name carefully.</p>
+</div>
+
+<h2 id="my-requests">Checking your requests</h2>
+
+<p><span class="ui">My requests</span> on Home shows the state of everything you have submitted — both new-list requests and, under <span class="ui">Your join requests</span>, requests to join existing lists. Each one reads <span class="ui">Pending</span>, <span class="ui">Approved</span> or <span class="ui">Rejected</span>. If you have not submitted anything, you see <span class="ui">You have no requests yet.</span></p>
+
+<p>Approved entries have an <span class="ui">Open</span> or <span class="ui">Open list</span> action that takes you straight there.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>You are not notified when a request is rejected.</strong> Nothing is being hidden — we simply do not send a message about it. So if a request seems to have gone quiet, check this screen. A rejected request says so plainly.</p>
+  <p>After a rejection you can submit again with <span class="ui">Request again</span>, and <strong>there is no limit on how many times you may try.</strong> Administrators are not asked to give a reason, so no reason is shown.</p>
+</div>
+
+<h2 id="list">Inside a list</h2>
+
+<p>Opening a list shows its tracks. Each row carries the number, the date, the title, the artist and who added it. Tracks with no title or artist show their file name or URL instead.</p>
+
+<h3>Sorting, searching and deleted tracks</h3>
+
+<ul>
+  <li><span class="ui">Sort by</span> — order the list by <span class="ui">No.</span>, <span class="ui">Date</span> or <span class="ui">Added by</span>.</li>
+  <li>Search — the field reads <span class="ui">Search by title, artist, or file name</span>. When nothing matches you get <span class="ui">No items matched your search.</span></li>
+  <li><span class="ui">Show deleted items</span> — turn deleted tracks on and off in the list.</li>
+</ul>
+
+<p>A deleted track keeps its place in the numbering and shows only <span class="ui">Deleted</span>. Its title, artist, file name and URL are not shown.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>Numbers are never reassigned.</strong> Deleting a track does not renumber the ones after it — that number simply stays missing. A gap in the numbering is not a bug. If you turn <span class="ui">Show deleted items</span> off you will see the gaps without an explanation, so turn it back on when you want to know what happened.</p>
+  <p><strong>Deleted tracks never appear in search results.</strong> Search is meant for finding what is currently in the list.</p>
+  <p>The <span class="ui">Show deleted items</span> setting lasts only while the screen is open. Reopen the list and it goes back to showing them.</p>
+</div>
+
+<h3>Where you can go from here</h3>
+
+<p>The <span class="ui">Add</span> button at the bottom right adds a track (Super User and above). While the list is empty you get <span class="ui">There are no items yet.</span> along with a hint about how to add one. Each row has a <span class="ui">Details</span> action leading to that track's own screen.</p>
+
+<p>The screen menu holds <span class="ui">Leave this list</span>, and <strong>it is there for every member regardless of role.</strong> List admins and above also get <span class="ui">Manage members</span>, <span class="ui">Join requests</span> and <span class="ui">List settings</span>.</p>
+
+<p>People who have left, or who have closed their account, appear as <span class="ui">Former member</span>. The tracks and comments they added stay where they are.</p>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="privacy.html">Privacy policy</a> ／ <a href="../ja/lists.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Members and roles | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/members.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Members and roles</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/members.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+<nav class="toc">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#members">Managing members</a></li>
+    <li><a href="#list-settings">List settings</a></li>
+    <li><a href="#roles">What each role can do</a></li>
+  </ol>
+</nav>
+
+<h2 id="members">Managing members</h2>
+
+<p><span class="ui">Manage members</span> is available to list admins and above, from the list's menu.</p>
+
+<h3>Changing roles and removing people</h3>
+
+<p>The heading reads <span class="ui">Members ({count})</span> and gives the current count. Each member's menu offers <span class="ui">Change role: {role}</span> to change their role, and <span class="ui">Remove from list</span>, which asks you to confirm:</p>
+
+<div class="msg">This member will be removed from the list.<br><br>Their items and comments stay, but their name will be shown as "Former member". They can request to join again.</div>
+
+<p>You cannot remove yourself from here. To leave a list yourself, use <span class="ui">Leave this list</span> in the list's own menu.</p>
+
+<h3>People viewing without joining</h3>
+
+<p><span class="ui">Viewing without joining</span> lists everyone who opened a share link and chose <span class="ui">View without becoming a member</span>. If there is nobody, it reads <span class="ui">No one yet.</span></p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>These people are not members.</strong> They do not count towards the member total, they never receive notifications about the list, and they cannot add tracks or comments. This list exists so you can still see who is looking.</p>
+</div>
+
+<h3>The two URLs on this screen</h3>
+
+<ul>
+  <li><span class="ui">Share URL</span> — <span class="ui">Anyone with this URL can request to join. They cannot see the contents until approved.</span> It costs you an approval step, but you decide case by case who gets in.</li>
+  <li><span class="ui">Create a share link</span> — whoever opens this one is in straight away, with no approval. Use <span class="ui">Revoke link</span> to stop it (see <a href="sharing.html#share-link">Share links</a>).</li>
+</ul>
+
+<p>Incoming requests are approved or rejected on the <span class="ui">Join requests</span> screen. With nothing waiting, it reads <span class="ui">There are no pending requests.</span></p>
+
+<h2 id="list-settings">List settings</h2>
+
+<p><span class="ui">List settings</span> is available to list admins and above. It covers two things: storage and deleting the list.</p>
+
+<h3>Storage used</h3>
+
+<p><span class="ui">Storage used</span> shows the amount used against the limit, as "used / limit". As the list fills up, a note is added:</p>
+
+<div class="msg">Over 80% of the limit.</div>
+<div class="msg">Over 90% of the limit. Ask a site administrator to raise it.</div>
+<div class="msg">Files from deleted items are kept for a while, so deleting does not free space immediately.</div>
+
+<p>Only a site admin can change the limit itself, so ask one when a list runs short (see <a href="manage.html#storage">Storage and deletion</a>).</p>
+
+<h3>Deleting the list</h3>
+
+<div class="msg">Deleting this list also deletes all of its files and comments. This cannot be undone.</div>
+
+<p><span class="ui">Delete list</span> asks you to confirm once more, naming the list. There are no backups, so anything deleted is gone for good.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>There is no screen for renaming a list. A list keeps the name it was given when it was requested.</p>
+</div>
+
+<h2 id="roles">What each role can do</h2>
+
+<p>There are four roles: <span class="ui">Site admin</span>, <span class="ui">List admin</span>, <span class="ui">Super User</span> and <span class="ui">Read Only</span>. Each role includes everything the roles below it can do.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>Roles are set per list.</strong> The same person can be a Super User in one list and Read Only in another. Your role in a given list is shown on that list's row on Home, so check there when you are unsure.</p>
+</div>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Action</th><th>Read Only</th><th>Super User</th><th>List admin</th><th>Site admin</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Browse tracks and details</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Play and download</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Read comments</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Add tracks</td><td><strong>No</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Post comments and replies</td><td><strong>No</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Edit or delete your own tracks and comments</td><td>—</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Edit or delete anyone else's</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Restore a deleted track</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Manage members (roles, removal, approvals)</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Create and revoke share links</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>See storage used</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Delete the list</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Leave the list</td><td>Yes</td><td>Yes</td><td>Yes</td><td>—</td></tr>
+    <tr><td>Reach the site admin screens</td><td>No</td><td>No</td><td>No</td><td>Yes</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Read Only really is read-only.</strong> Beyond not being able to add tracks, <strong>a Read Only member cannot post comments or replies at all.</strong> Actions you are not allowed to take are not shown as disabled buttons — they are not shown at all. If a button seems to be missing, check your role in that list.</p>
+
+<p>Anyone who opened a share link and chose <span class="ui">View without becoming a member</span> has no role. They can browse and listen, but they cannot post anything and do not appear among the members (see <a href="#members">Managing members</a>).</p>
+
+<p>Roles are changed by list admins and site admins. Neither a share link nor an approved join request ever makes someone a list admin.</p>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="privacy.html">Privacy policy</a> ／ <a href="../ja/members.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

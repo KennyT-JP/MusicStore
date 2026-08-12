@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adding and playing tracks | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/items.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Adding and playing tracks</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/items.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+<nav class="toc">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#item">Track details and comments</a></li>
+    <li><a href="#item-form">Adding and editing tracks</a></li>
+    <li><a href="#playback">Playback</a></li>
+  </ol>
+</nav>
+
+<h2 id="item">Track details and comments</h2>
+
+<p>A track's own screen gathers the title, artist, <span class="ui">Date</span>, <span class="ui">Added by</span> and the file or URL, together with every comment on it.</p>
+
+<p>For uploaded audio and video, this screen lets you open the file in another app or download it. For a track that is a URL, following the link takes you out to that site.</p>
+
+<h3>Comments</h3>
+
+<p>Under <span class="ui">Comments</span>, use <span class="ui">Write a comment</span> to post. You can <span class="ui">Reply</span> to anyone, and <strong>replies to replies nest as deeply as you like.</strong> Before anyone has posted you see <span class="ui">There are no comments yet.</span></p>
+
+<p>Posting requires Super User or above. <strong>Read Only members cannot comment or reply at all</strong> (see <a href="members.html#roles">What each role can do</a>). You can edit and delete your own comments; list admins and above can edit or delete any comment in their list. A deleted comment shows as <span class="ui">Deleted</span>.</p>
+
+<h3>Editing, deleting and restoring</h3>
+
+<p><span class="ui">Edit</span> and <span class="ui">Delete</span> appear for whoever added the track, and for list admins and above. When you delete, the app tells you how many days the file will be kept. Deleted tracks offer <span class="ui">Restore</span> to list admins and above, along with a line reading <span class="ui">List administrators can restore this until {date}.</span> (see <a href="manage.html#storage">Storage and deletion</a>).</p>
+
+<p>List admins and above can also use <span class="ui">Copy a link to this track</span> to create a share link pointing at this one track (see <a href="sharing.html#share-link">Share links</a>).</p>
+
+<h2 id="item-form">Adding and editing tracks</h2>
+
+<p><span class="ui">Add</span> inside a list opens the add screen. Tabs at the top switch between <span class="ui">File</span> and <span class="ui">URL</span>. <strong>A track holds either one file or one URL — never both.</strong></p>
+
+<ul>
+  <li>On the <span class="ui">File</span> tab, press <span class="ui">Choose a file</span>. Once chosen, the app shows the file name and size along with the list's remaining space, as in <span class="ui">{remaining} left</span>.</li>
+  <li>On the <span class="ui">URL</span> tab, type the address into the <span class="ui">URL</span> field.</li>
+</ul>
+
+<p>The fields below — <span class="ui">Date</span>, <span class="ui">Title (optional)</span>, <span class="ui">Artist (optional)</span> and <span class="ui">Comment (optional)</span> — are shared by both tabs, and switching tabs keeps whatever you have typed. The date starts as today and you can change it freely. <strong>It is a plain calendar date with no time and no time zone</strong>, so it reads the same from anywhere in the world as the person who entered it meant it.</p>
+
+<p><span class="ui">Save</span> stays disabled until the file or URL is there. What is missing is spelled out next to the button, as <span class="ui">Please choose a file</span> or <span class="ui">Please enter a URL</span>.</p>
+
+<h3>How uploading works</h3>
+
+<p>The file is uploaded first, and <strong>the track is only created once that finishes.</strong> Along the way you see <span class="ui">Uploading… {percent}%</span>, and <span class="ui">Cancel upload</span> stops it.</p>
+
+<div class="msg">Upload failed. Please try again.</div>
+
+<p>If the connection drops, the browser closes, or you cancel, <strong>no track is created and no number is used up.</strong> That keeps half-finished entries out of the list. There is no way to resume a partial upload, so start it again from the beginning. A failed save leaves the screen open, so nothing you typed is lost.</p>
+
+<p>If the list has hit its storage limit, the upload never starts and you see this instead (see <a href="manage.html#storage">Storage and deletion</a>):</p>
+
+<div class="msg">Storage limit reached. Please contact the list admin.</div>
+
+<h3>Editing an existing track</h3>
+
+<p><span class="ui">Edit</span> on the track's screen reopens the same form. The title, artist, date and comment can all be changed and saved.</p>
+
+<div class="note">
+  <span class="label">Not available yet</span>
+  <p><strong>Swapping an already-uploaded file for a different one is not possible yet.</strong> Choosing a new file while editing stops the save and shows this:</p>
+  <div class="msg">Replacing the file is not implemented yet. You can still change the title, artist and date.</div>
+  <p>To replace the audio itself, add the recording as a new track and delete the old one. The new track gets a new number, and the old number stays behind as a gap.</p>
+</div>
+
+<p>If someone else updates the same track while you are editing it, your save is stopped rather than allowed to overwrite theirs:</p>
+
+<div class="msg">Someone else updated this item. Please reload the latest version.</div>
+
+<p>Press <span class="ui">Reload</span> to pull in the current version, then make your changes again.</p>
+
+<h2 id="playback">Playback</h2>
+
+<p>In the track list, the control at the left of each row plays the audio right there. Which buttons appear depends on what is happening:</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Current state</th><th>Buttons shown</th></tr></thead>
+  <tbody>
+    <tr><td>Stopped</td><td><span class="ui">Play</span></td></tr>
+    <tr><td>Playing</td><td><span class="ui">Pause</span> and <span class="ui">Stop</span></td></tr>
+    <tr><td>Paused</td><td><span class="ui">Play</span> and <span class="ui">Stop</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><span class="ui">Stop</span> halts playback and rewinds to the start, so the next <span class="ui">Play</span> begins from the beginning. <span class="ui">Pause</span> holds your place, so the next <span class="ui">Play</span> picks up where you left off.</p>
+
+<p>Pressing <span class="ui">Play</span> on a different track stops whatever was playing. <strong>Two tracks never play at once.</strong> When a track reaches the end, it returns to the stopped state.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>The play control only appears on files that can actually be played as audio.</strong> Tracks that are URLs — a video site, say — cannot be played here, so open them from the track's screen instead. File types are not restricted at upload, so images and documents can be stored too; they get no play control either.</p>
+</div>
+
+<p>If playback fails, the app says <span class="ui">Could not play this. Please try again.</span></p>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="privacy.html">Privacy policy</a> ／ <a href="../ja/items.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

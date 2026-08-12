@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/privacy.html">
+<!-- このページに広告は置かない（目次・法務ページ） -->
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Privacy policy</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/privacy.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+
+
+<h2 id="operator">Who runs this service</h2>
+
+<p>Track Cabinet (音源創庫 in Japanese; “the Service”) is operated by:</p>
+
+<ul>
+  <li>Operator — <span class="ui">F's Factory</span></li>
+  <li>Contact — <a href="mailto:support@session-concierge.jp">support@session-concierge.jp</a></li>
+</ul>
+
+<p>This policy explains what information the Service handles and how it is used.</p>
+
+<h2 id="collected">Information we handle</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Type</th><th>What it includes</th><th>How we get it</th></tr>
+  <tr>
+    <td>Account information</td>
+    <td>Email address, display name, profile picture</td>
+    <td>Entered by you, or received from Google when you sign in with a Google account</td>
+  </tr>
+  <tr>
+    <td>What you post</td>
+    <td>Uploaded audio files, track names, links to external sites, comments</td>
+    <td>Entered or uploaded by you</td>
+  </tr>
+  <tr>
+    <td>Usage state</td>
+    <td>Lists you belong to, your role, storage used, notification settings, display language</td>
+    <td>Recorded as you use the Service</td>
+  </tr>
+</table>
+</div>
+
+<p>The Service does not install any analytics tool that tracks your browsing behaviour.</p>
+
+<h2 id="purpose">Why we use it</h2>
+
+<ul>
+  <li>To provide the Service (sharing lists, storing and playing audio, sending notifications)</li>
+  <li>To verify who you are and prevent misuse</li>
+  <li>To answer your enquiries</li>
+  <li>To investigate faults and improve the Service</li>
+</ul>
+
+<p>We do not use your information beyond these purposes, and we do not sell or hand it to third parties, except where disclosure is required by law.</p>
+
+<h2 id="who-can-see">What other people can see</h2>
+
+<p>People in the same list can see your <strong>display name and profile picture</strong>, and what you post (tracks and comments).</p>
+
+<p><strong>Your email address is never shown to other users.</strong> Neither is your display language, your notification settings, or how much storage you use.</p>
+
+<h2 id="ads">Advertising</h2>
+
+<p><strong>The user guide pages of this site use Google AdSense, a third-party advertising service.</strong></p>
+
+<ul>
+  <li>Third-party vendors, including Google, <strong>use cookies to serve ads based on your prior visits to this website or other websites.</strong></li>
+  <li>Google’s use of advertising cookies enables it and its partners to serve ads based on your visits to this site and/or other sites on the internet.</li>
+  <li>You may opt out of personalised advertising in <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">Google Ads Settings</a>. To opt out of third-party vendors’ use of cookies for personalised advertising, visit <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer">aboutads.info</a>.</li>
+  <li>Visitors from the European Economic Area and the United Kingdom are shown a consent message about advertising and cookies, as required by law.</li>
+</ul>
+
+<div class="note">
+  <span class="label">No ads inside the app</span>
+  <p>Ads appear only on <strong>reading pages</strong> such as this user guide. The signed-in screens where you handle lists and audio contain no advertising code at all.</p>
+</div>
+
+<h2 id="storage-location">Where your information is stored</h2>
+
+<p>The Service runs on Firebase (Google Cloud), so your information is stored in Google’s data centres.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>What</th><th>Where</th></tr>
+  <tr><td>Account information, lists, comments and so on</td><td>Tokyo (asia-northeast1)</td></tr>
+  <tr><td><strong>Uploaded audio files</strong></td><td><strong>United States (us-east1)</strong></td></tr>
+</table>
+</div>
+
+<p><strong>Audio files are stored in the United States.</strong> By using the Service you agree to this transfer outside your country.</p>
+
+<h2 id="retention">How long we keep it, and what deletion means</h2>
+
+<ul>
+  <li>When a track is removed from a list, the audio file is kept for <strong>30 days</strong>. During that period a list administrator can restore it, and it still counts towards the storage limit. After that it is deleted automatically.</li>
+  <li><strong>If you close your account, the tracks and comments you posted remain.</strong> Your display name changes to “Deleted user”, and information that identifies you (email address, display name, profile picture) is removed from the Service.</li>
+  <li>If a site administrator deletes a user, the tracks and audio files that person added are deleted. Comments are kept so that conversations remain readable.</li>
+</ul>
+
+<h2 id="rights">Access, correction and deletion</h2>
+
+<p>To ask what information we hold about you, or to have it corrected or deleted, contact us at the address above. We will act on the request once we have confirmed your identity.</p>
+
+<p>You can close your own account at any time from the <span class="ui">Settings</span> screen in the app.</p>
+
+<h2 id="children">Use by children</h2>
+
+<p>The Service is meant for invited people sharing audio with each other. If a child uses it, please do so under the supervision of a parent or guardian.</p>
+
+<h2 id="changes">Changes to this policy</h2>
+
+<p>We may change this policy when necessary. Changes take effect when they are published on this page.</p>
+
+<p>Last updated — 13 August 2026</p>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="./">Privacy policy</a> ／ <a href="../ja/privacy.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

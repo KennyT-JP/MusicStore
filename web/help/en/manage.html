@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage, notifications, settings, site admin | Track Cabinet — User Guide</title>
+<meta name="description" content="Gather your own recordings and links to tracks you have found, all in one shared list.">
+<link rel="alternate" hreflang="ja" href="../ja/manage.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.35; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Storage, notifications, settings, site admin</h1>
+  <p class="lede">Gather your own recordings and links to tracks you have found, all in one shared list.</p>
+</header>
+
+<p class="langswitch"><a href="../ja/manage.html">日本語</a> ／ <a href="./">Back to contents</a></p>
+
+<nav class="toc">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#storage">Storage and deletion</a></li>
+    <li><a href="#notifications">Notifications</a></li>
+    <li><a href="#settings">Settings and leaving</a></li>
+    <li><a href="#site-admin">Site administration</a></li>
+  </ol>
+</nav>
+
+<h2 id="storage">Storage and deletion</h2>
+
+<p>The storage limit applies <strong>per list</strong>. It starts at 1GB, and a site admin can set a different limit for each list. <strong>There is no limit on the size of an individual file.</strong></p>
+
+<p>List admins and above can see how much is used, both on the list's row on Home and under <span class="ui">Storage used</span> in <span class="ui">List settings</span>. Passing 80% sends the list's admins a <span class="ui">Storage passed 80%</span> notification, and passing 90% sends <span class="ui">Storage passed 90%</span>.</p>
+
+<p>Once the limit is reached, further uploads do not start. You get <span class="ui">Storage limit reached. Please contact the list admin.</span>, and the list admin should ask a site admin to raise the limit.</p>
+
+<h3>When a track is deleted</h3>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>Deleting a track does not free its file right away. The file is kept for 30 days by default, and it keeps using storage the whole time.</strong> That is why deleting things in a nearly-full list does not immediately make room.</p>
+  <p>The delay exists so that mistakes can be undone. <strong>During that window, list admins and above can <span class="ui">Restore</span> the track.</strong> The track's screen shows exactly how long is left, as <span class="ui">List administrators can restore this until {date}.</span></p>
+  <p>Once the window passes, the file is deleted for good and the storage is released. At that point there is no way back. A site admin can change how many days are allowed.</p>
+</div>
+
+<p>Deleting a track leaves its number in place. <strong>Numbers are never reassigned, so a deleted track leaves a permanent gap</strong> (see <a href="lists.html#list">Inside a list</a>).</p>
+
+<p>If an upload is interrupted — the connection drops, or the browser closes — no track is created, and the orphaned file is cleaned up automatically, returning the space.</p>
+
+<p>Deleting an entire list works differently: there is no grace period. Every file and comment goes at once, and none of it can be recovered (see <a href="members.html#list-settings">List settings</a>).</p>
+
+<h2 id="notifications">Notifications</h2>
+
+<p>Reach <span class="ui">Notifications</span> either from the navigation or from the bell at the top, which carries a badge with your unread count. Notifications are listed newest first, and tapping one takes you to whatever it is about. <span class="ui">Mark all as read</span> clears the badge. With nothing waiting, the screen reads <span class="ui">No notifications.</span></p>
+
+<h3>What triggers a notification</h3>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Notification</th><th>Who receives it</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">A song was added</span></td><td>Every member of that list, whatever their role</td></tr>
+    <tr><td><span class="ui">A comment was posted</span></td><td>The list's admins, site admins, and whoever posted the thing being commented on</td></tr>
+    <tr><td><span class="ui">Storage passed 80%</span></td><td>The list's admins</td></tr>
+    <tr><td><span class="ui">Storage passed 90%</span></td><td>The list's admins</td></tr>
+    <tr><td><span class="ui">A list was requested</span></td><td>Site admins</td></tr>
+    <tr><td><span class="ui">Someone asked to join</span></td><td>The list's admins</td></tr>
+    <tr><td><span class="ui">Your request was approved</span></td><td>Whoever submitted the request</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>You are never notified about your own actions.</strong> Adding a track yourself does not send you a notification about it.</p>
+  <p><strong>Rejections are never notified.</strong> Check <span class="ui">My requests</span> for the outcome instead (see <a href="lists.html#my-requests">Checking your requests</a>).</p>
+  <p>Added tracks are the one case decided by <strong>membership rather than role</strong>, so Read Only members get those too. In the other direction, even a site admin hears nothing about tracks in lists they have not joined.</p>
+</div>
+
+<h3>Choosing what you receive</h3>
+
+<p>Open <span class="ui">Notifications</span> under <span class="ui">Settings</span>. All seven types above can be switched individually, and <span class="ui">All notifications</span> turns everything off at once. Everything starts switched on, and each type carries a line describing exactly when it fires.</p>
+
+<h2 id="settings">Settings and leaving</h2>
+
+<p><span class="ui">Settings</span> covers the following:</p>
+
+<ul>
+  <li><span class="ui">Display name</span> — the name others see. Change it whenever you like and press <span class="ui">Save</span>.</li>
+  <li><span class="ui">Language</span> — Japanese or English. This guide opens in whichever you choose.</li>
+  <li><span class="ui">Notifications</span> — as described under <a href="#notifications">Notifications</a>.</li>
+  <li><span class="ui">Sign out</span></li>
+  <li><span class="ui">Withdraw from the service</span></li>
+</ul>
+
+<h3>Withdrawing</h3>
+
+<div class="msg">Your items and comments stay in the lists after you leave. Your name will be shown as "Former member".</div>
+<div class="msg">This cannot be undone.</div>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>Withdrawing does not remove the tracks and comments you added.</strong> The account goes; the posts stay. Only your name changes, to <span class="ui">Former member</span>, and your real name is no longer shown. Comments are kept because a conversation stops making sense when pieces of it vanish.</p>
+  <p>If you only want out of one list, do not withdraw — use <span class="ui">Leave this list</span> in that list instead (see <a href="lists.html#list">Inside a list</a>).</p>
+</div>
+
+<p>If you are the only site admin, you cannot withdraw. You will see the message below; appoint someone else as a site admin first.</p>
+
+<div class="msg">You are currently the only site admin. Please appoint another site admin first.</div>
+
+<h2 id="site-admin">Site administration</h2>
+
+<p><span class="ui">Site admin</span> appears <strong>only for site admins</strong> — for everyone else the navigation entry is simply absent. It has four parts.</p>
+
+<h3>List requests</h3>
+
+<p><span class="ui">List requests</span> holds every pending request. Weigh up the <span class="ui">Requested by</span>, <span class="ui">Tracks</span>, <span class="ui">Expected number of users</span> and <span class="ui">Purpose</span>, then choose <span class="ui">Approve</span> or <span class="ui">Reject</span>. Approving <strong>makes the requester the list admin of the new list.</strong> With nothing waiting, the screen reads <span class="ui">There are no pending requests.</span></p>
+
+<h3>Lists and storage</h3>
+
+<p><span class="ui">Lists and storage</span> shows every list with its usage and limit. <span class="ui">Change storage limit</span> sets a list's limit in MB.</p>
+
+<p><span class="ui">Lists without an admin</span> collects lists whose admin has gone. Use <span class="ui">Assign a list admin</span> to appoint a replacement — <strong>the list stays in that state until you do.</strong></p>
+
+<h3>Users</h3>
+
+<p><span class="ui">Users</span> lists everyone, with a summary in the form <span class="ui">{admins} of {total} users are site admins</span>. Each row's menu offers:</p>
+
+<ul>
+  <li><span class="ui">Add user</span> — create an account with an email address, display name and password. As the screen puts it, <span class="ui">You choose the password. Ask them to change it once you have handed it over.</span> Accounts created this way count as already email-verified.</li>
+  <li><span class="ui">Make site admin</span> and <span class="ui">Remove as administrator</span> — the change applies after that person signs in again, and the app says so.</li>
+  <li><span class="ui">Add to a list</span> — put someone into a list directly. You must pick the role via <span class="ui">Add as {role}</span>, choosing <span class="ui">Super User</span> or <span class="ui">Read Only</span>; you cannot make someone a list admin this way, and existing members are refused.</li>
+  <li><span class="ui">Disable</span>, <span class="ui">Re-enable</span> and <span class="ui">Delete</span> — see below.</li>
+</ul>
+
+<div class="note">
+  <span class="label">Disable versus delete</span>
+  <p><strong>Disabling can be undone. Deleting cannot. When in doubt, disable.</strong></p>
+  <p><span class="ui">Disable</span> — the person can no longer sign in and is removed from the lists they belonged to, but their tracks, audio files and comments are kept. <span class="ui">Re-enable</span> restores their access, though <strong>it does not put them back into their lists</strong> — invite them again if they need to be there. Disabled accounts are tagged <span class="ui">Disabled</span>.</p>
+  <p><span class="ui">Delete</span> — removes the account along with the tracks and audio files that person added. <strong>Their comments are kept, shown as <span class="ui">Former member</span>.</strong> There are no backups, so this cannot be undone.</p>
+  <p>You cannot disable or delete your own account here. To close your own account, use <span class="ui">Withdraw from the service</span> in <span class="ui">Settings</span>. Nor can the only remaining site admin be demoted or deleted.</p>
+</div>
+
+<h3>Site settings</h3>
+
+<ul>
+  <li><span class="ui">Default storage limit for new lists</span> — <span class="ui">Default 1024 (1GB). Change existing lists from "Lists and storage".</span></li>
+  <li><span class="ui">Days to keep deleted files</span> — <span class="ui">Default 30. List administrators can restore during this period, and the space stays used.</span></li>
+</ul>
+
+<p>Share links never expire, so there is no expiry setting to configure (see <a href="sharing.html#share-link">Share links</a>).</p>
+
+<footer>
+  <p class="totop"><a href="./">Back to contents</a> ／ <a href="privacy.html">Privacy policy</a> ／ <a href="../ja/manage.html">日本語</a></p>
+</footer>
+
+</div>
+</body>
+</html>

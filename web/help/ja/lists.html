@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>リストを作る・見る | 音源創庫 使い方</title>
+<meta name="description" content="録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。">
+<link rel="alternate" hreflang="en" href="../en/lists.html">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984824596223175" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1620;
+      --fg: #dce5f2;
+      --muted: #9aabc2;
+      --accent: #8ab4f8;
+      --accent-fg: #a9c8fb;
+      --surface: #16202c;
+      --border: #27374b;
+      --note-bg: #14202e;
+      --ui-bg: #1d2c3f;
+      --ui-fg: #bcd4f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1620;
+    --fg: #dce5f2;
+    --muted: #9aabc2;
+    --accent: #8ab4f8;
+    --accent-fg: #a9c8fb;
+    --surface: #16202c;
+    --border: #27374b;
+    --note-bg: #14202e;
+    --ui-bg: #1d2c3f;
+    --ui-fg: #bcd4f7;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1b2531;
+    --muted: #56637a;
+    --accent: #1d4ed8;
+    --accent-fg: #1e40af;
+    --surface: #f3f7fd;
+    --border: #d5e0f2;
+    --note-bg: #eef4fd;
+    --ui-bg: #e6eefb;
+    --ui-fg: #14356f;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0 20px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { padding: 32px 0 8px; border-bottom: 2px solid var(--border); }
+  h1 { font-size: 1.6rem; line-height: 1.4; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 12px; }
+  .langswitch { margin: 0 0 20px; font-size: 0.95rem; }
+  .langswitch a { color: var(--accent); }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.45;
+    margin: 44px 0 10px;
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 12px;
+  }
+  h3 { font-size: 1.02rem; margin: 26px 0 6px; color: var(--accent-fg); }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.4em; }
+  li { margin: 0 0 6px; }
+  a { color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 24px 0 8px;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    padding: 0;
+    border: none;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.5em; }
+  nav.toc li { margin: 0 0 4px; }
+
+  .ui {
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .msg {
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 14px;
+    margin: 0 0 14px;
+    color: var(--fg);
+  }
+  .note {
+    background: var(--note-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+  }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font-weight: 700;
+    color: var(--accent-fg);
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.94rem; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 700; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .totop { font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>リストを作る・見る</h1>
+  <p class="lede">録音した音源や、見つけた曲の URL を、ひとつのリストに集めて仲間と共有するためのアプリです。</p>
+</header>
+
+<p class="langswitch"><a href="../en/lists.html">English</a> ／ <a href="./">目次へ戻る</a></p>
+
+<nav class="toc">
+  <h2>このページの内容</h2>
+  <ol>
+    <li><a href="#home">ホーム（参加しているリスト）</a></li>
+    <li><a href="#list-request">リスト作成を申請する</a></li>
+    <li><a href="#my-requests">自分の申請を確認する</a></li>
+    <li><a href="#list">リストの中身</a></li>
+  </ol>
+</nav>
+
+<h2 id="home">ホーム（参加しているリスト）</h2>
+
+<p><span class="ui">参加しているリスト</span> には、自分が入っているリストが並びます。それぞれの行には、リスト名・自分の役割・曲の件数が出ます。リスト管理者には、そのリストの使用容量も出ます。</p>
+
+<p>まだどこにも入っていないときは、次のように出ます。</p>
+
+<div class="msg">まだどのリストにも参加していません。<br>リストを作りたい場合は作成を申請してください。既にあるリストに入りたい場合は、参加している方から共有 URL を受け取ってください。</div>
+
+<p>この画面には <span class="ui">リスト作成を申請</span> と <span class="ui">自分の申請</span> の入口があります。リスト管理者以上であれば、リストの行のメニューから <span class="ui">リンクをコピー</span> で共有リンクをその場で作れます（<a href="sharing.html#share-link">共有リンク</a>）。</p>
+
+<p>リストの行に <span class="ui">管理者不在のリスト</span> と出ていることがあります。そのリストのリスト管理者が抜けた状態で、サイト管理者が新しい管理者を指名するまで続きます。曲を見たり足したりすることは、これまでどおりできます。</p>
+
+<h2 id="list-request">リスト作成を申請する</h2>
+
+<p>新しいリストは、その場では作れません。<strong>申請して、サイト管理者に承認してもらう</strong>必要があります。ホームの <span class="ui">リスト作成を申請</span> から申請します。誰でも申請できます。</p>
+
+<p>申請には次の 4 つを入れます。</p>
+
+<ul>
+  <li><span class="ui">リスト名</span> — <span class="ui">既にあるリストと同じ名前は使えません</span></li>
+  <li><span class="ui">概算の登録曲数</span></li>
+  <li><span class="ui">使用者数</span></li>
+  <li><span class="ui">作成目的</span></li>
+</ul>
+
+<p>送ると、次のように出ます。</p>
+
+<div class="msg">申請しました。<br>サイト管理者が確認して承認するまでお待ちください。</div>
+
+<p><strong>承認されると、申請した方がそのリストのリスト管理者になります。</strong> リストはホームに現れ、メンバーを呼んだり、容量を確かめたりできるようになります。すでに使われている名前や、他の方が申請中の名前は使えず、その旨が出ます。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p>リスト名は申請のときに決まり、あとから変える画面はありません。名前は最初によく考えて入れてください。</p>
+</div>
+
+<h2 id="my-requests">自分の申請を確認する</h2>
+
+<p>ホームの <span class="ui">自分の申請</span> から、自分が出した申請の状態を確認できます。リスト作成の申請と、<span class="ui">自分の参加申請</span> の両方が並びます。状態は <span class="ui">申請中</span>・<span class="ui">承認済み</span>・<span class="ui">却下済み</span> のいずれかです。まだ何も出していなければ <span class="ui">まだ申請はありません。</span> と出ます。</p>
+
+<p>承認済みのものは <span class="ui">開く</span> や <span class="ui">リストを開く</span> から、そのままリストへ行けます。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>却下されても通知は届きません。</strong> 隠すためではなく、わざわざお知らせしないためです。返事が来ないと感じたら、この画面を見てください。「却下済み」であれば、そこで分かります。</p>
+  <p>却下されたあとは <span class="ui">もう一度申請する</span> から出し直せます。<strong>回数の制限はありません。</strong> 却下の理由は入力されないため、画面には出ません。</p>
+</div>
+
+<h2 id="list">リストの中身</h2>
+
+<p>リストを開くと、登録された曲が並びます。各行には連番・日付・曲名・アーティスト名・登録者が出ます。曲名やアーティスト名が入っていない曲は、ファイル名や URL がそのまま出ます。</p>
+
+<h3>並び替え・検索・削除済みの表示</h3>
+
+<ul>
+  <li><span class="ui">並び替え</span> — <span class="ui">連番</span>・<span class="ui">日付</span>・<span class="ui">登録者</span> のいずれかで並べ替えられます。</li>
+  <li>検索 — <span class="ui">曲名・アーティスト名・ファイル名で検索</span> と出ている欄に入れて絞り込みます。見つからないときは <span class="ui">該当する項目が見つかりませんでした。</span> と出ます。</li>
+  <li><span class="ui">削除済みも表示</span> — 削除された曲を出すかどうかを切り替えます。</li>
+</ul>
+
+<p>削除された曲は、連番の位置に <span class="ui">削除されました</span> とだけ出ます。曲名・アーティスト名・ファイル名・URL は出ません。</p>
+
+<div class="note">
+  <span class="label">ここでつまずきやすい点</span>
+  <p><strong>連番は振り直しません。</strong> 曲を削除しても、あとの曲の番号は繰り上がらず、その番号は欠番のまま残ります。番号が飛んでいるのは不具合ではありません。<span class="ui">削除済みも表示</span> を切ると番号だけが飛んで見えるので、理由を知りたいときは表示に戻してください。</p>
+  <p><strong>削除された曲は検索に出ません。</strong> 検索は「いまある曲を探す」ためのものとしているためです。</p>
+  <p><span class="ui">削除済みも表示</span> の切り替えは、この画面を開いている間だけ効きます。画面を開き直すと「表示する」に戻ります。</p>
+</div>
+
+<h3>この画面から行ける先</h3>
+
+<p>右下の <span class="ui">追加</span> から曲を足せます（Super User 以上）。まだ 1 曲もないときは <span class="ui">まだ項目がありません。</span> と、追加のしかたの案内が出ます。各行の <span class="ui">詳細</span> から、その曲の詳しい画面へ行けます。</p>
+
+<p>画面のメニューには <span class="ui">このリストから抜ける</span> があります。<strong>役割にかかわらず、そのリストのメンバー全員に出ます。</strong> リスト管理者以上には、これに加えて <span class="ui">メンバー管理</span>・<span class="ui">参加申請</span>・<span class="ui">リスト設定</span> が出ます。</p>
+
+<p>抜けた方や退会した方の名前は、<span class="ui">退会したユーザー</span> と出ます。その方が登録した曲やコメントはそのまま残ります。</p>
+
+<footer>
+  <p class="totop"><a href="./">目次へ戻る</a> ／ <a href="privacy.html">プライバシーポリシー</a> ／ <a href="../en/lists.html">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

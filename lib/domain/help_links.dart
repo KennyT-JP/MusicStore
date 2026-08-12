@@ -5,38 +5,49 @@
 /// 端末やブラウザの言語ではない——設定画面で日本語を選んでいる人には
 /// 日本語を出す。
 ///
+/// **マニュアルは章ごとのページに分かれている**（2026-08-13）。
+/// 広告を出すページを薄くしないため、`scripts/build-manual.mjs` が
+/// 原本（`docs/manual/{言語}.html`）を 6 ページに束ねて生成する
+/// （理由はそのスクリプトの冒頭）。**見出し ID は変えていない**ので、
+/// 飛び先は「どのページの、どの節か」の 2 つで決まる。
+///
 /// **対応表をここに置く理由。** 画面側に URL を直接書くと、節の名前を
 /// 変えたときに拾い漏れる。ここに集めておけば、
 /// `test/domain/help_links_test.dart` が**実際のマニュアルを読んで**、
-/// リンク先の節が存在することを確かめられる。
+/// その節がそのページに実在することを確かめられる。
+/// **束ね方を変えたら、ここも直さないとテストが落ちる**（写しではなく
+/// 生成物そのものと突き合わせている）。
 library;
 
 /// 使い方の節（マニュアルの見出し ID と一対一）。
 enum HelpTopic {
-  gettingStarted('getting-started'),
-  account('account'),
-  signIn('sign-in'),
-  home('home'),
-  listRequest('list-request'),
-  myRequests('my-requests'),
-  list('list'),
-  item('item'),
-  itemForm('item-form'),
-  playback('playback'),
-  shareLink('share-link'),
-  joinRequest('join-request'),
-  members('members'),
-  listSettings('list-settings'),
-  roles('roles'),
-  storage('storage'),
-  notifications('notifications'),
-  settings('settings'),
-  siteAdmin('site-admin');
+  gettingStarted('getting-started', 'start'),
+  account('account', 'start'),
+  signIn('sign-in', 'start'),
+  home('home', 'lists'),
+  listRequest('list-request', 'lists'),
+  myRequests('my-requests', 'lists'),
+  list('list', 'lists'),
+  item('item', 'items'),
+  itemForm('item-form', 'items'),
+  playback('playback', 'items'),
+  shareLink('share-link', 'sharing'),
+  joinRequest('join-request', 'sharing'),
+  members('members', 'members'),
+  listSettings('list-settings', 'members'),
+  roles('roles', 'members'),
+  storage('storage', 'manage'),
+  notifications('notifications', 'manage'),
+  settings('settings', 'manage'),
+  siteAdmin('site-admin', 'manage');
 
-  const HelpTopic(this.anchor);
+  const HelpTopic(this.anchor, this.page);
 
   /// マニュアル側の見出し ID（`<h2 id="...">`）。
   final String anchor;
+
+  /// その節が載っているページ（`web/help/{言語}/{page}.html`）。
+  final String page;
 }
 
 /// 使い方のページを組み立てる。
@@ -45,7 +56,7 @@ enum HelpTopic {
 /// 日本語以外は英語に倒す（用意しているのは 2 言語だけ）。
 String helpUrlFor(HelpTopic topic, String languageCode) {
   final language = languageCode == 'ja' ? 'ja' : 'en';
-  return '/help/$language/#${topic.anchor}';
+  return '/help/$language/${topic.page}.html#${topic.anchor}';
 }
 
 /// いま出ている画面に対応する節を返す。
