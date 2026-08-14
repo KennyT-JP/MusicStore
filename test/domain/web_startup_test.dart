@@ -46,13 +46,30 @@ void main() {
       );
     });
 
-    test('最初の描画が済んだら消す', () {
+    test('読み込み画面は、アプリの準備が整うまで消さない', () {
       final html = _indexHtml();
 
-      // このイベント名は Flutter の engine が発火する。
-      // 変えると読み込み中の表示が消えなくなる。
-      expect(html, contains('flutter-first-frame'));
+      // **消すのはアプリからの合図（window.appReady）。**
+      //
+      // 以前は flutter-first-frame（最初の描画）で消していた。そのとき
+      // 出るのはログイン状態の復元を待つ画面なので、**いちばん見せたい
+      // ところで読み込み画面を自分から消していた**（2026-08-14 の
+      // 「白い画面のまま数秒」）。合図は lib/app.dart が送る。
+      expect(html, contains('window.appReady'));
       expect(html, contains("getElementById('loading')"));
+      expect(
+        html,
+        isNot(contains("addEventListener('flutter-first-frame'")),
+        reason: '最初の描画で消してはいけない（復元中の画面に切り替わるだけ）',
+      );
+
+      // **上限が要る。** 合図が来ないときにロゴのまま止まらないように
+      // （共有ドキュメント AP-12「外部の完了待ちに上限を付けない」）。
+      expect(
+        RegExp(r'setTimeout\(\s*__removeLoading').hasMatch(html),
+        isTrue,
+        reason: '合図が来なかったときに読み込み画面を消す上限がありません',
+      );
     });
 
     test('どの画面でも要るものは、先に取りに行かせる', () {

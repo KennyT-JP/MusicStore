@@ -13,6 +13,7 @@ import { shouldResetNotice, shouldResetWarning } from '../domain/quota';
 import { isAssignableRole } from '../domain/roles';
 import { requireSiteAdmin, requireString } from './access';
 import { fail } from '../errors';
+import { runPurge } from '../scheduled/purge';
 
 /**
  * ユーザーの一覧を返す（仕様書 11.1 ユーザー管理）。
@@ -298,4 +299,24 @@ export const addListMember = onCall({ region: REGION }, async (request) => {
   });
 
   return { ok: true };
+});
+
+/**
+ * 掃除をいますぐ動かす（サイト管理者だけ／仕様書 13.4・2026-08-15）。
+ *
+ * **定期実行（毎日 4:00）と同じ中身を呼ぶ。** 別に書くと、手で試した
+ * 結果が夜中に走るものの確認にならない。
+ *
+ * 用途は 2 つ。
+ *
+ *   - **通しの確認**（統合テスト）。定期実行そのものは自動テストから
+ *     呼べないため、ここが唯一の「最後まで動かす」経路になる
+ *   - 猶予を短くしたあと、すぐ空けたいとき
+ *
+ * **消したファイルは戻せない。** 判断（何を消すか）は共有した実装が
+ * 持ち、ここは入口だけ。
+ */
+export const runPurgeNow = onCall({ region: REGION }, async (request) => {
+  requireSiteAdmin(request);
+  return await runPurge();
 });

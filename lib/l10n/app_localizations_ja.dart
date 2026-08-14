@@ -427,6 +427,16 @@ class AppL10nJa extends AppL10n {
   String get purgeGraceHelp => '初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。';
 
   @override
+  String get orphanGraceLabel => '行き場を失ったファイルの保持時間';
+
+  @override
+  String get unitHours => '時間';
+
+  @override
+  String get orphanGraceHelp =>
+      '初期値 24。アップロードは終わったのに曲として登録されなかったファイルを、この時間が過ぎてから消します。短くしすぎると、登録の直前のファイルまで巻き添えで消えます。';
+
+  @override
   String get invalidNumber => '数値を正しく入力してください。';
 
   @override
@@ -477,10 +487,6 @@ class AppL10nJa extends AppL10n {
   String fileWithSize(Object name, Object size) {
     return '$name（$size）';
   }
-
-  @override
-  String get fileReplaceNotSupported =>
-      'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。';
 
   @override
   String get save => '保存';
@@ -535,6 +541,13 @@ class AppL10nJa extends AppL10n {
   String get leaveList => 'このリストから抜ける';
 
   @override
+  String get stopViewing => 'このリストを見るのをやめる';
+
+  @override
+  String get stopViewingBody =>
+      'このリストの閲覧をやめます。\n\n中身は見られなくなりますが、同じ共有リンクからまた入れます。あなたが書いたコメントは残ります。';
+
+  @override
   String get myRequestsEmpty => 'まだ申請はありません。';
 
   @override
@@ -542,6 +555,12 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get open => '開く';
+
+  @override
+  String get openLink => 'リンクを開く';
+
+  @override
+  String get downloadFile => 'ファイルをダウンロード';
 
   @override
   String get requestStatusPending => '申請中';
@@ -874,6 +893,24 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get functionErrorItemNotFound => '曲が見つかりません。';
+
+  @override
+  String get functionErrorItemDeleted => '削除済みの曲は差し替えられません。先に復元してください。';
+
+  @override
+  String get functionErrorCannotEditItem => 'この曲を編集する権限がありません。';
+
+  @override
+  String get functionErrorFileNotInThisItem =>
+      'ファイルの置き場所が正しくありません。もう一度やり直してください。';
+
+  @override
+  String get functionErrorUploadNotFound =>
+      'アップロードしたファイルが見つかりません。通信の状態を確かめて、もう一度お試しください。';
+
+  @override
+  String get functionErrorSameStoragePath =>
+      '同じ場所へ上書きされています。もう一度ファイルを選び直してください。';
 
   @override
   String get viewersTitle => '参加せずに見ている人';

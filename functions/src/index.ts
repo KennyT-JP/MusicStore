@@ -69,6 +69,7 @@ export {
   setUserQuota,
   assignListAdmin,
   addListMember,
+  runPurgeNow,
 } from './callable/site_management';
 export {
   createCoupon,
@@ -78,6 +79,7 @@ export {
   redeemCoupon,
 } from './callable/coupons';
 export { extendPremium } from './callable/premium';
+export { replaceItemFile } from './callable/items';
 export {
   createSiteUser,
   disableSiteUser,

@@ -550,12 +550,50 @@ class _ItemFormScreenState extends ConsumerState<ItemFormScreen>
     bool isFileTab,
     AppL10n l10n,
   ) async {
-    // ファイルの差し替えは未実装。
-    // 新しいファイルを別名で保存し、旧ファイルを猶予期間後に削除する必要があり
-    // （仕様書 13.7 / 13.4）、Cloud Functions 側の対応と合わせて実装する。
-    if (isFileTab && _picked != null) {
-      await _showError(l10n.fileReplaceNotSupported);
-      return false;
+    // **ファイルの差し替え**（仕様書 6.3 / 13.7・2026-08-14）。
+    //
+    // 新しいファイルを**別の場所へ**置いてから、Functions に項目の
+    // 指す先を移してもらう。旧ファイルは猶予（既定 30 日）のあいだ残り、
+    // **その間は容量も消費し続ける**（削除の扱いと同じ／依頼者の決定）。
+    if (isFileTab && _picked?.bytes != null) {
+      final picked = _picked!;
+      final stats = ref.read(listStatsProvider(widget.listId)).value;
+      final storagePath = await repo.uploadReplacementFile(
+        listId: widget.listId,
+        itemId: widget.itemId!,
+        bytes: picked.bytes!,
+        fileName: picked.name,
+        contentType: _guessContentType(picked.name),
+        // 送る前の判定も、人ごとの合計で行う（追加のときと同じ）。
+        quota:
+            stats?.ownerQuota ??
+            stats?.quota ??
+            const QuotaStatus(usedBytes: 0, quotaBytes: kDefaultQuotaBytes),
+        onProgress: (fraction) {
+          if (mounted) setState(() => _uploadProgress = fraction);
+        },
+        onTaskStarted: (task) {
+          if (mounted) setState(() => _uploadTask = task);
+        },
+      );
+
+      await ref
+          .read(functionsRepositoryProvider)
+          .replaceItemFile(
+            listId: widget.listId,
+            itemId: widget.itemId!,
+            storagePath: storagePath,
+            fileName: picked.name,
+          );
+
+      // **下の updateItem が古いファイルを書き戻さないようにする。**
+      // ここを忘れると、せっかく移した指す先が元に戻る。
+      _existingFile = ItemFile(
+        storagePath: storagePath,
+        fileName: picked.name,
+        sizeBytes: picked.bytes!.length,
+        contentType: _guessContentType(picked.name),
+      );
     }
 
     await repo.updateItem(

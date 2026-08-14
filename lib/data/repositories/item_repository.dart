@@ -171,6 +171,68 @@ class ItemRepository {
     );
   }
 
+  /// 差し替える新しいファイルを置く（仕様書 6.3 / 13.7）。
+  ///
+  /// **置くだけ。** 項目が指す先を移すのは Functions（`replaceItemFile`）で、
+  /// そちらが旧ファイルを猶予つきで `previousFiles` に積む。
+  /// クライアントからその項目は書けない（firestore.rules）——書けると、
+  /// 他人のリストのパスを紛れ込ませてサーバーに消させられる（監査 S1）。
+  ///
+  /// 戻り値は置いた場所。そのまま `replaceItemFile` に渡す。
+  Future<String> uploadReplacementFile({
+    required String listId,
+    required String itemId,
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+    required QuotaStatus quota,
+    UploadProgressCallback? onProgress,
+    void Function(UploadTask task)? onTaskStarted,
+  }) async {
+    // 送る前に容量を確かめる（追加のときと同じ）。
+    // **旧ファイルは猶予のあいだ数え続ける**（依頼者の決定・2026-08-14）ので、
+    // 差し替えは一時的に 2 つぶんを使う。ここを甘くすると、送り終えてから
+    // サーバーに断られる。
+    final decision = QuotaPolicy.canStartUpload(
+      status: quota,
+      fileSizeBytes: bytes.length,
+    );
+    if (!decision.allowed) {
+      throw QuotaExceededException(decision.reason!);
+    }
+
+    // **必ず別の場所へ置く。** 同じ場所への上書きは storage.rules が
+    // 禁じているし、上書きできてしまうと**旧ファイルを残せない**
+    // （実体が 1 つしかなくなる）。
+    final storedName = '${DateTime.now().millisecondsSinceEpoch}-$fileName';
+    final storagePath = StoragePaths.itemFile(
+      listId: listId,
+      itemId: itemId,
+      fileName: storedName,
+    );
+
+    final task = _storage
+        .ref(storagePath)
+        .putData(bytes, SettableMetadata(contentType: contentType));
+    if (onProgress != null) {
+      task.snapshotEvents.listen((snapshot) {
+        if (snapshot.totalBytes > 0) {
+          onProgress(snapshot.bytesTransferred / snapshot.totalBytes);
+        }
+      });
+    }
+    onTaskStarted?.call(task);
+
+    try {
+      await task;
+    } on FirebaseException catch (e) {
+      if (e.code == 'canceled') throw const UploadCanceledException();
+      rethrow;
+    }
+
+    return storagePath;
+  }
+
   Future<String> _createItem({
     required String listId,
     required String uid,

@@ -194,6 +194,14 @@ class ListRepository {
   Future<void> removeMember(String listId, String uid) =>
       _db.doc(FirestorePaths.listMember(listId, uid)).delete();
 
+  /// 閲覧をやめる（仕様書 3.3・2026-08-15）。
+  ///
+  /// 共有リンクで「メンバーにならずに見る」を選んだ人が、自分で外れる。
+  /// **ルールは以前から許していた**が、画面に入口が無かった（監査 第4回）。
+  /// 抜けたあとも、同じリンクからまた入れる。
+  Future<void> stopViewing(String listId, String uid) =>
+      _db.doc(FirestorePaths.listViewer(listId, uid)).delete();
+
   /// リストを削除する（仕様書 5.5）。
   ///
   /// 配下の項目・コメント・ファイルの削除は Cloud Functions が行う。

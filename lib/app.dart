@@ -10,10 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'l10n/app_localizations.dart';
+import 'platform/app_ready.dart';
 import 'providers/app_providers.dart';
 import 'providers/font_provider.dart';
 import 'ui/app_router.dart';
 import 'ui/routes.dart';
+import 'ui/widgets/startup_splash.dart';
 
 /// 配色の基準色（仕様書 12.5）。**寒色系で統一する。**
 const Color kSeedColor = Color(0xFF1B5E9E);
@@ -74,6 +76,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// 読み込み画面を消す合図を、1 度だけ送る。
+///
+/// 画面が作り直されるたびに呼ばれるので、印を持って 1 回に絞る。
+/// **描画の途中で DOM を触らない**——最初のフレームを描き終えてから
+/// 消す（描いている最中に外側を書き換えると、ちらつく）。
+bool _appReadyNotified = false;
+
+void _notifyAppReadyOnce() {
+  if (_appReadyNotified) return;
+  _appReadyNotified = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) => notifyAppReady());
+}
+
 /// 音源創庫（Track Cabinet） — 音源を持ち寄って共有するアプリ。
 class MusicListApp extends ConsumerWidget {
   const MusicListApp({super.key, this.routerOverride});
@@ -94,12 +109,36 @@ class MusicListApp extends ConsumerWidget {
     // 読み終わるまでは端末のフォントで描き、終わったらここが作り直されて
     // 差し替わる。`fontFamily` に未登録の名前を渡すと字が出ないので、
     // 読み終わるまでは既定（null）にしておく。
-    final fontReady = ref.watch(japaneseFontProvider).value ?? false;
+    final font = ref.watch(japaneseFontProvider);
+    final fontReady = font.value ?? false;
     final fontFamily = fontReady ? kAppFontFamily : null;
 
     final authRestoring = ref.watch(firebaseUserProvider).isLoading;
+
+    // **HTML の読み込み画面（ロゴ）を消してよいのは、ここが決まってから。**
+    //
+    // 待つのは 2 つ——ログイン状態の復元と、日本語フォントの読み込み。
+    // フォントを待つのは、**読み終わる前に画面を出すと、端末に無い字が
+    // □ で描かれる**ため（2026-08-08 の指摘）。
+    //
+    // **失敗も「決着」に数える。** フォントが読めなかったときは
+    // `value == false` で返るので（font_provider.dart）、
+    // `isLoading` が下りた時点で先へ進む。成功だけを待つと、
+    // 読み込みに失敗した人の画面が永久にロゴのままになる。
+    if (routerOverride == null && !authRestoring && !font.isLoading) {
+      _notifyAppReadyOnce();
+    }
+
     if (authRestoring && routerOverride == null) {
       return MaterialApp(
+        // **この画面にも l10n を渡す。** ロゴの読み上げにアプリ名を使う。
+        localizationsDelegates: const [
+          AppL10n.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppL10n.supportedLocales,
         theme: ThemeData(
           colorScheme: appColorScheme(Brightness.light),
           fontFamily: fontFamily,
@@ -108,7 +147,9 @@ class MusicListApp extends ConsumerWidget {
           colorScheme: appColorScheme(Brightness.dark),
           fontFamily: fontFamily,
         ),
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+        // **ロゴを出す。** ここが真っ白だと、HTML の読み込み画面から
+        // 引き継いだ瞬間に「白くなった」と見える（2026-08-14）。
+        home: const StartupSplash(),
       );
     }
 

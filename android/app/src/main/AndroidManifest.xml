@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="music_list_app"
+        android:label="音源創庫"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

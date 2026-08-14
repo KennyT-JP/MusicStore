@@ -37,16 +37,27 @@ export const purgeDeletedFiles = onSchedule(
     timeoutSeconds: 540,
   },
   async () => {
-    const config = await readSiteConfig();
-    const purged = await purgeExpiredItems();
-    const orphans = await purgeOrphanFiles(config.orphanFileGraceHours);
-
-    logger.info('定期削除を実行しました', {
-      purgedItems: purged,
-      purgedOrphans: orphans,
-    });
+    const result = await runPurge();
+    logger.info('定期削除を実行しました', result);
   }
 );
+
+/**
+ * 掃除の中身。**定期実行と、サイト管理者からの手動実行で共有する。**
+ *
+ * 分けて書くと、片方だけ直したときに**手で試した結果が、夜中に走る
+ * ものの確認にならない**（docs/AUDIT-CHECKLIST.md「テストが守っているのは
+ * 本番で動いているコードか」）。
+ */
+export async function runPurge(): Promise<{
+  purgedItems: number;
+  purgedOrphans: number;
+}> {
+  const config = await readSiteConfig();
+  const purgedItems = await purgeExpiredItems();
+  const purgedOrphans = await purgeOrphanFiles(config.orphanFileGraceHours);
+  return { purgedItems, purgedOrphans };
+}
 
 /**
  * 猶予期間を過ぎた削除項目のファイルを、Storage から完全に削除する。

@@ -13,6 +13,7 @@ import '../../data/models/coupon.dart';
 import '../../data/models/music_list.dart';
 import '../../data/models/requests.dart';
 import '../../data/repositories/functions_repository.dart';
+import '../../domain/site_settings.dart';
 import '../../domain/premium.dart';
 import '../../domain/quota.dart';
 import '../../domain/permissions.dart';
@@ -1790,6 +1791,7 @@ class _SiteAdminSettingsScreenState
     extends ConsumerState<SiteAdminSettingsScreen> {
   final _quotaMb = TextEditingController();
   final _graceDays = TextEditingController();
+  final _orphanHours = TextEditingController();
   bool _loaded = false;
   bool _busy = false;
 
@@ -1797,6 +1799,7 @@ class _SiteAdminSettingsScreenState
   void dispose() {
     _quotaMb.dispose();
     _graceDays.dispose();
+    _orphanHours.dispose();
     super.dispose();
   }
 
@@ -1812,6 +1815,7 @@ class _SiteAdminSettingsScreenState
           if (!_loaded) {
             _loaded = true;
             _graceDays.text = '${site.itemPurgeGraceDays}';
+            _orphanHours.text = '${site.orphanFileGraceHours}';
             // **定数ではなく設定から読む。** 定数で埋めていたため、
             // 別の項目を直して保存するたびに容量上限が 1GB へ戻っていた
             // （監査 S10）。
@@ -1835,6 +1839,14 @@ class _SiteAdminSettingsScreenState
                 suffix: l10n.unitDays,
                 help: l10n.purgeGraceHelp,
               ),
+              // **データとしては前から持っていたが、画面に出ていなかった**
+              // ため、初期値の 24 時間から変えられなかった（監査 第2回）。
+              _SettingField(
+                controller: _orphanHours,
+                label: l10n.orphanGraceLabel,
+                suffix: l10n.unitHours,
+                help: l10n.orphanGraceHelp,
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _busy ? null : _save,
@@ -1850,11 +1862,15 @@ class _SiteAdminSettingsScreenState
   Future<void> _save() async {
     final quotaMb = int.tryParse(_quotaMb.text.trim());
     final grace = int.tryParse(_graceDays.text.trim());
+    final orphanHours = int.tryParse(_orphanHours.text.trim());
 
-    if (quotaMb == null ||
-        quotaMb <= 0 ||
-        grace == null ||
-        grace < 0) {
+    // **判定は domain/site_settings.dart に置いてある。**
+    // 画面の中に書くと、テストが同じ規則を写すことになる（AP-54）。
+    if (!isValidSiteSettings(
+      quotaMb: quotaMb,
+      purgeGraceDays: grace,
+      orphanGraceHours: orphanHours,
+    )) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(AppL10n.of(context).invalidNumber)));
@@ -1865,8 +1881,10 @@ class _SiteAdminSettingsScreenState
     try {
       // siteAdminCount は Functions が持つため、ここでは触らない（仕様書 4.5）。
       await ref.read(firestoreProvider).doc('siteConfig/global').set({
-        'defaultQuotaBytes': quotaMb * 1024 * 1024,
-        'itemPurgeGraceDays': grace,
+        // 上の判定を通っているので、ここでは null にならない。
+        'defaultQuotaBytes': quotaMb! * 1024 * 1024,
+        'itemPurgeGraceDays': grace!,
+        'orphanFileGraceHours': orphanHours!,
       }, SetOptions(merge: true));
       if (mounted) {
         ScaffoldMessenger.of(

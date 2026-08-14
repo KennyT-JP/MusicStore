@@ -749,8 +749,22 @@ if (!listId) {
   check('サイト管理者でなければ無効にもできない', r.body?.error?.status === 'PERMISSION_DENIED',
         r.body?.error?.status);
 
+  // **通知を 1 件仕込んでから消す（2026-08-15）。**
+  // 通知は users/{uid} の下にぶら下がるので、親を消しても残る。
+  // 残ると、**到達できない場所に誰宛てか分からない通知が積まれたまま**になる。
+  await setDoc(`users/${madeUid}/notifications/n1`, {
+    type: { stringValue: 'itemAdded' },
+    read: { booleanValue: false },
+  });
+
   r = await call('deleteSiteUser', { uid: madeUid }, siteAdmin.idToken);
   check('ユーザーを削除できる（11.1）', r.status === 200, JSON.stringify(r.body).slice(0, 80));
+
+  {
+    const left = await list(`users/${madeUid}/notifications`);
+    check('削除すると通知も残らない（孤児データ）', left.length === 0,
+          `${left.length} 件残っている`);
+  }
 
   const deletedUser = await doc(`users/${madeUid}`);
   check('削除すると users も消える', deletedUser === null || deletedUser.fields === undefined,
@@ -1345,6 +1359,155 @@ if (!listId) {
     }
     check('音源を置けるバケットがある（次の確認の土台）', bucket !== null,
           bucket ?? 'どのバケットにも置けなかった');
+
+    // -----------------------------------------------------------------------
+    // ファイルの差し替え（6.3 / 13.7・2026-08-14）
+    //
+    // **旧ファイルは消さずに previousFiles へ積む。** そこはクライアント
+    // から書けない場所なので、Functions を通す経路そのものを確かめる。
+    // -----------------------------------------------------------------------
+    if (bucket !== null) {
+      const replaceItemId = `replace${stamp}`;
+      const oldPath = `lists/${freeListId}/items/${replaceItemId}/old.mp3`;
+      const newPath = `lists/${freeListId}/items/${replaceItemId}/new.mp3`;
+
+      await upload(bucket, oldPath);
+      await setDoc(`lists/${freeListId}/items/${replaceItemId}`, {
+        seq: { integerValue: '1' },
+        date: { stringValue: '2026-08-14' },
+        kind: { stringValue: 'file' },
+        status: { stringValue: 'active' },
+        createdBy: { stringValue: freeUser.localId },
+        file: {
+          mapValue: {
+            fields: {
+              storagePath: { stringValue: oldPath },
+              fileName: { stringValue: 'old.mp3' },
+              sizeBytes: { integerValue: String(SIZE) },
+              contentType: { stringValue: 'audio/mpeg' },
+            },
+          },
+        },
+      });
+
+      // **まだ置いていないファイルは指せない。** 先に呼べてしまうと、
+      // 実体の無い場所を指した項目ができる。
+      r = await call('replaceItemFile',
+                     { listId: freeListId, itemId: replaceItemId,
+                       storagePath: newPath, fileName: 'new.mp3' },
+                     freeUser.idToken);
+      check('置いていないファイルには差し替えられない',
+            codeOf(r) === 'uploadNotFound', codeOf(r));
+
+      await upload(bucket, newPath);
+
+      // **他人のリストのパスは受け付けない**（監査 S1 と同じ形）。
+      r = await call('replaceItemFile',
+                     { listId: freeListId, itemId: replaceItemId,
+                       storagePath: `lists/OTHER/items/X/victim.mp3`,
+                       fileName: 'victim.mp3' },
+                     freeUser.idToken);
+      check('別のリストのパスには差し替えられない',
+            codeOf(r) === 'fileNotInThisItem', codeOf(r));
+
+      // **参加していない人は差し替えられない。**
+      r = await call('replaceItemFile',
+                     { listId: freeListId, itemId: replaceItemId,
+                       storagePath: newPath, fileName: 'new.mp3' },
+                     premiumUser.idToken);
+      check('参加していない人は差し替えられない',
+            codeOf(r) === 'cannotEditItem', codeOf(r));
+
+      r = await call('replaceItemFile',
+                     { listId: freeListId, itemId: replaceItemId,
+                       storagePath: newPath, fileName: 'new.mp3' },
+                     freeUser.idToken);
+      check('本人はファイルを差し替えられる（6.3）', r.status === 200,
+            JSON.stringify(r.body).slice(0, 100));
+
+      {
+        const item = await doc(`lists/${freeListId}/items/${replaceItemId}`);
+        const file = item?.fields?.file?.mapValue?.fields;
+        check('項目が新しいファイルを指す',
+              file?.storagePath?.stringValue === newPath,
+              String(file?.storagePath?.stringValue));
+
+        // **大きさは Storage の実物から読む。** 申告値だと集計とずれる。
+        check('大きさは実物から読む', file?.sizeBytes?.integerValue === String(SIZE),
+              String(file?.sizeBytes?.integerValue));
+
+        const previous = item?.fields?.previousFiles?.arrayValue?.values ?? [];
+        const first = previous[0]?.mapValue?.fields;
+        check('旧ファイルが猶予つきで残る（消さない）',
+              first?.storagePath?.stringValue === oldPath
+                && !!first?.purgeAt?.timestampValue,
+              JSON.stringify(first ?? null).slice(0, 120));
+
+        // **実体も残っている。** ここで消していると、依頼者の決定
+        //（旧ファイルの容量も数える）と食い違う。
+        check('旧ファイルの実体は消していない', await exists(bucket, oldPath));
+      }
+
+      // ---------------------------------------------------------------------
+      // 掃除の通し確認（13.4・2026-08-15）
+      //
+      // **定期実行（毎日 4:00）は自動テストから呼べない。** 同じ中身を
+      // 呼ぶサイト管理者向けの入口（runPurgeNow）で、最後まで動かす。
+      // ここを確かめないままにしていた（BACKLOG「定期実行の関数の確認」）。
+      // ---------------------------------------------------------------------
+      {
+        const purgeItemId = `purge${stamp}`;
+        const purgePath = `lists/${freeListId}/items/${purgeItemId}/gone.mp3`;
+        await upload(bucket, purgePath);
+        await setDoc(`lists/${freeListId}/items/${purgeItemId}`, {
+          seq: { integerValue: '2' },
+          date: { stringValue: '2026-08-14' },
+          kind: { stringValue: 'file' },
+          status: { stringValue: 'deleted' },
+          createdBy: { stringValue: freeUser.localId },
+          // **猶予を過ぎている**（昨日）。
+          purgeAt: { timestampValue: new Date(Date.now() - 86400000).toISOString() },
+          file: { mapValue: { fields: {
+            storagePath: { stringValue: purgePath },
+            fileName: { stringValue: 'gone.mp3' },
+            sizeBytes: { integerValue: String(SIZE) },
+            contentType: { stringValue: 'audio/mpeg' },
+          } } },
+        });
+
+        r = await call('runPurgeNow', {}, freeUser.idToken);
+        check('掃除は誰でも動かせるわけではない', codeOf(r) === 'siteAdminOnly',
+              codeOf(r));
+
+        r = await call('runPurgeNow', {}, siteAdmin.idToken);
+        check('サイト管理者は掃除を動かせる（13.4）', r.status === 200,
+              JSON.stringify(r.body).slice(0, 100));
+
+        check('猶予を過ぎたファイルが実際に消える',
+              !(await exists(bucket, purgePath)));
+
+        // **生きているファイルは巻き添えにしない。** ここが壊れると、
+        // 消してはいけない音源が消える（戻せない）。
+        check('差し替えたばかりの新しいファイルは残る',
+              await exists(bucket, newPath));
+
+        const purged = await doc(`lists/${freeListId}/items/${purgeItemId}`);
+        check('掃除のあと、消した印が付く（次回の対象から外れる）',
+              purged?.fields?.purgedAt !== undefined,
+              JSON.stringify(purged?.fields?.purgeAt ?? null).slice(0, 60));
+      }
+
+      // **削除済みの項目には差し替えられない**（猶予の判定が二重になる）。
+      await setDoc(`lists/${freeListId}/items/${replaceItemId}`, {
+        status: { stringValue: 'deleted' },
+      });
+      r = await call('replaceItemFile',
+                     { listId: freeListId, itemId: replaceItemId,
+                       storagePath: newPath, fileName: 'new.mp3' },
+                     freeUser.idToken);
+      check('削除済みの項目には差し替えられない',
+            codeOf(r) === 'itemDeleted', codeOf(r));
+    }
 
     // 集計は保存のあとに走る。**待ち時間は既定（長め）に任せる。**
     const counted = bucket !== null && await waitUntil(

@@ -99,16 +99,39 @@ export function shouldDeleteOrphan(params: {
   // 項目が今このファイルを指している。
   if (item.file?.storagePath === path) return false;
 
-  // 差し替えの旧ファイルは、項目が保持している間は消さない。
+  // **差し替えの旧ファイルは、猶予のあいだだけ残す**（2026-08-14）。
+  //
+  // 以前はここで無条件に守っていたため、**差し替えた古いファイルが
+  // 永久に残り、容量を食い続けた**。積んだ側（callable/items.ts）が
+  // `purgeAt` を入れるので、それを過ぎたものは孤児として扱う。
+  //
+  // **`purgeAt` が無い行も守る。** 差し替え機能より前に積まれたものが
+  // あれば、時刻が分からない＝消してよいか判断できない。
+  // **判断できないものは消さない**（この関数の他の枝と同じ方針）。
   const previous = item.previousFiles;
-  if (
-    Array.isArray(previous) &&
-    previous.some(
+  if (Array.isArray(previous)) {
+    const entry = previous.find(
       (old: { storagePath?: unknown } | null) => old?.storagePath === path
-    )
-  ) {
-    return false;
+    );
+    if (entry) {
+      const purgeAtMs = toMillis((entry as { purgeAt?: unknown }).purgeAt);
+      if (purgeAtMs === null) return false; // 時刻が無い／読めない
+      return purgeAtMs <= Date.now();
+    }
   }
 
   return true;
+}
+
+/** Firestore の Timestamp・Date・数値のどれでもミリ秒にする。読めなければ null。 */
+function toMillis(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (value instanceof Date) return value.getTime();
+  const asTimestamp = value as { toMillis?: () => number };
+  if (typeof asTimestamp.toMillis === 'function') {
+    const ms = asTimestamp.toMillis();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
 }

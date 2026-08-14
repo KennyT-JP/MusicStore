@@ -316,6 +316,158 @@ describe('他人の項目（6.3）', () => {
   });
 });
 
+describe('purgeAt（いつ消してよいか／6.3・2026-08-14）', () => {
+  // **定期削除の唯一の判断材料**（functions/src/scheduled/purge.ts）。
+  // 以前は update で自由に書けたため、**削除したはずのファイルを永久に
+  // 残せた**（監査 第4回で「直さず記録」に回していた項目）。
+  const itemPath = `lists/${LIST_ID}/items/${ITEM_ID}`;
+  const days = (n) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+
+  test('削除するときは、猶予つきの時刻を入れられる', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, itemPath), {
+        status: 'deleted',
+        purgeAt: days(30),
+      }),
+    );
+  });
+
+  test('遠すぎる時刻は入れられない（実質「消えない」になる）', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, itemPath), {
+        status: 'deleted',
+        purgeAt: days(3650),
+      }),
+    );
+  });
+
+  test('削除するのに purgeAt を入れないことはできない', async () => {
+    // 入れずに消せると、**掃除の対象にならないまま残る**。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(updateDoc(doc(superUser, itemPath), { status: 'deleted' }));
+  });
+
+  test('ふつうの編集で purgeAt を伸ばせない', async () => {
+    // 曲名を直すついでに猶予を伸ばす、ができないこと。
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, itemPath), {
+        title: '曲名を付けた',
+        purgeAt: days(300),
+      }),
+    );
+  });
+
+  test('復元するときは null に戻す', async () => {
+    await mutateAsAdmin(env, async (ctx) => {
+      await setDoc(doc(ctx.firestore(), itemPath), {
+        seq: 1,
+        date: '2026-08-04',
+        kind: 'url',
+        url: 'https://example.com/song',
+        createdBy: UID.superUser,
+        status: 'deleted',
+        purgeAt: days(30),
+      });
+    });
+
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await allow(
+      updateDoc(doc(listAdmin, itemPath), { status: 'active', purgeAt: null }),
+    );
+  });
+
+  test('復元しながら purgeAt を残せない', async () => {
+    // 残ると、**復元したのに掃除に消される**（active なのに purgeAt がある）。
+    await mutateAsAdmin(env, async (ctx) => {
+      await setDoc(doc(ctx.firestore(), itemPath), {
+        seq: 1,
+        date: '2026-08-04',
+        kind: 'url',
+        url: 'https://example.com/song',
+        createdBy: UID.superUser,
+        status: 'deleted',
+        purgeAt: days(30),
+      });
+    });
+
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await deny(updateDoc(doc(listAdmin, itemPath), { status: 'active' }));
+  });
+});
+
+describe('差し替えた旧ファイル（previousFiles／6.3・2026-08-14）', () => {
+  // **Functions だけが書く場所**（callable/items.ts）。クライアントから
+  // 書けると、他人のリストのパスを紛れ込ませてサーバーに消させられる
+  // （監査 S1）。
+  const itemPath = `lists/${LIST_ID}/items/${ITEM_ID}`;
+
+  /** 差し替えを 1 度行ったあとの状態を作る。 */
+  const withPreviousFiles = () =>
+    mutateAsAdmin(env, async (ctx) => {
+      await setDoc(doc(ctx.firestore(), itemPath), {
+        seq: 1,
+        date: '2026-08-04',
+        kind: 'file',
+        createdBy: UID.superUser,
+        status: 'active',
+        file: { storagePath: `lists/${LIST_ID}/items/${ITEM_ID}/new.mp3` },
+        previousFiles: [
+          { storagePath: `lists/${LIST_ID}/items/${ITEM_ID}/old.mp3` },
+        ],
+      });
+    });
+
+  test('クライアントからは書けない', async () => {
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(
+      updateDoc(doc(superUser, itemPath), {
+        previousFiles: [{ storagePath: 'lists/OTHER/items/X/victim.mp3' }],
+      }),
+    );
+  });
+
+  test('消すこともできない', async () => {
+    await withPreviousFiles();
+    const superUser = db(asUser(env, UID.superUser));
+    await deny(updateDoc(doc(superUser, itemPath), { previousFiles: null }));
+  });
+
+  test('差し替えたあとでも、曲名は編集できる', async () => {
+    // **ここが本題。** 「無いか null」で塞ぐと、差し替えを 1 度でも
+    // 行った項目は**それ以降まったく編集できなくなる**（update の
+    // request.resource.data は書き換え後の全体なので、Functions が
+    // 積んだ previousFiles が必ず入る）。
+    await withPreviousFiles();
+    const superUser = db(asUser(env, UID.superUser));
+    await allow(
+      updateDoc(doc(superUser, itemPath), { title: '曲名を直した' }),
+    );
+  });
+});
+
+describe('リスト名（5.1 / 13.3・2026-08-14）', () => {
+  // **名前の一意性は listNames/{nameLower} の予約で守っている。**
+  // name だけ書き換えると予約と食い違い、同じ名前のリストが 2 つできる。
+  // 画面に変更の導線は無いので、ルールでも閉じる。
+  test('リスト管理者でも、リスト名を書き換えられない', async () => {
+    const listAdmin = db(asUser(env, UID.listAdmin));
+    await deny(
+      updateDoc(doc(listAdmin, `lists/${LIST_ID}`), { name: '別の名前' }),
+    );
+  });
+
+  test('サイト管理者でも、リスト名を書き換えられない', async () => {
+    // 直すなら Functions 経由（予約の付け替えごと 1 つの処理で行う）。
+    const siteAdmin = db(asSiteAdmin(env));
+    await deny(
+      updateDoc(doc(siteAdmin, `lists/${LIST_ID}`), { name: '別の名前' }),
+    );
+  });
+});
+
 describe('削除済みコメントの復元（9／監査 第4回）', () => {
   // items と同じ規則（restoreIsAllowed 相当）。以前は status に制約が無く、
   // リスト管理者が消したコメントを投稿者本人が active に書き戻して、

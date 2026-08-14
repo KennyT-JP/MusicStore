@@ -835,6 +835,24 @@ abstract class AppL10n {
   /// **'初期値 30。この期間はリスト管理者が復元でき、容量も消費し続けます。'**
   String get purgeGraceHelp;
 
+  /// No description provided for @orphanGraceLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'行き場を失ったファイルの保持時間'**
+  String get orphanGraceLabel;
+
+  /// No description provided for @unitHours.
+  ///
+  /// In ja, this message translates to:
+  /// **'時間'**
+  String get unitHours;
+
+  /// No description provided for @orphanGraceHelp.
+  ///
+  /// In ja, this message translates to:
+  /// **'初期値 24。アップロードは終わったのに曲として登録されなかったファイルを、この時間が過ぎてから消します。短くしすぎると、登録の直前のファイルまで巻き添えで消えます。'**
+  String get orphanGraceHelp;
+
   /// No description provided for @invalidNumber.
   ///
   /// In ja, this message translates to:
@@ -912,12 +930,6 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'{name}（{size}）'**
   String fileWithSize(Object name, Object size);
-
-  /// No description provided for @fileReplaceNotSupported.
-  ///
-  /// In ja, this message translates to:
-  /// **'ファイルの差し替えはまだ実装されていません。曲名・アーティスト名・日付の変更は保存できます。'**
-  String get fileReplaceNotSupported;
 
   /// No description provided for @save.
   ///
@@ -1015,6 +1027,18 @@ abstract class AppL10n {
   /// **'このリストから抜ける'**
   String get leaveList;
 
+  /// No description provided for @stopViewing.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストを見るのをやめる'**
+  String get stopViewing;
+
+  /// No description provided for @stopViewingBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストの閲覧をやめます。\n\n中身は見られなくなりますが、同じ共有リンクからまた入れます。あなたが書いたコメントは残ります。'**
+  String get stopViewingBody;
+
   /// No description provided for @myRequestsEmpty.
   ///
   /// In ja, this message translates to:
@@ -1032,6 +1056,18 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'開く'**
   String get open;
+
+  /// No description provided for @openLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'リンクを開く'**
+  String get openLink;
+
+  /// No description provided for @downloadFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルをダウンロード'**
+  String get downloadFile;
 
   /// No description provided for @requestStatusPending.
   ///
@@ -1656,6 +1692,36 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'曲が見つかりません。'**
   String get functionErrorItemNotFound;
+
+  /// No description provided for @functionErrorItemDeleted.
+  ///
+  /// In ja, this message translates to:
+  /// **'削除済みの曲は差し替えられません。先に復元してください。'**
+  String get functionErrorItemDeleted;
+
+  /// No description provided for @functionErrorCannotEditItem.
+  ///
+  /// In ja, this message translates to:
+  /// **'この曲を編集する権限がありません。'**
+  String get functionErrorCannotEditItem;
+
+  /// No description provided for @functionErrorFileNotInThisItem.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルの置き場所が正しくありません。もう一度やり直してください。'**
+  String get functionErrorFileNotInThisItem;
+
+  /// No description provided for @functionErrorUploadNotFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'アップロードしたファイルが見つかりません。通信の状態を確かめて、もう一度お試しください。'**
+  String get functionErrorUploadNotFound;
+
+  /// No description provided for @functionErrorSameStoragePath.
+  ///
+  /// In ja, this message translates to:
+  /// **'同じ場所へ上書きされています。もう一度ファイルを選び直してください。'**
+  String get functionErrorSameStoragePath;
 
   /// No description provided for @viewersTitle.
   ///
