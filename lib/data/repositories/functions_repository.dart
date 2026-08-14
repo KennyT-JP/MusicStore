@@ -374,6 +374,26 @@ class FunctionsRepository {
   Future<void> setUserQuota({required String uid, required int quotaBytes}) =>
       _call('setUserQuota', {'uid': uid, 'quotaBytes': quotaBytes});
 
+  /// 項目のファイルを差し替える（仕様書 6.3 / 13.7）。
+  ///
+  /// 先に新しいファイルを置いてから呼ぶ
+  /// （`ItemRepository.uploadReplacementFile`）。**旧ファイルは
+  /// 猶予つきで残り**、期間を過ぎると掃除が消す。
+  ///
+  /// [fileName] は**画面に出す名前**。置き場所（[storagePath]）には
+  /// 重複を避ける印が付いているので、そのまま見せない。
+  Future<void> replaceItemFile({
+    required String listId,
+    required String itemId,
+    required String storagePath,
+    required String fileName,
+  }) => _call('replaceItemFile', {
+    'listId': listId,
+    'itemId': itemId,
+    'storagePath': storagePath,
+    'fileName': fileName,
+  });
+
   // -------------------------------------------------------------------
 
   Future<Map<String, dynamic>> _call(

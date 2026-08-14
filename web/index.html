@@ -245,12 +245,41 @@
   -->
   <script src="flutter_bootstrap.js" async></script>
   <script>
-    // Flutter が最初の描画を終えたら、読み込み中の表示を消す。
-    // このイベントは Flutter 側が発火する。
-    window.addEventListener('flutter-first-frame', function () {
+    /*
+      **読み込み画面を消すのは「アプリの準備が整ったとき」**（2026-08-14）。
+
+      以前は `flutter-first-frame`（Flutter の最初の描画）で消していた。
+      ところが、そのとき Flutter が描くのは**ログイン状態の復元を待つ
+      あいだの画面**で、当時はロゴも無かった。つまり
+      **いちばん見せたいところで、自分から読み込み画面を消して
+      白い画面に差し替えていた。**
+
+      本番での実測（2026-08-14・キャッシュを迂回）:
+
+        0.12 秒  この読み込み画面を出せる状態になる
+        0.13 秒  ロゴ画像が届く
+        4.5 秒   Flutter の最初の描画   ← 以前はここで消していた
+        5.3 秒   日本語フォントが届く（それまで端末のフォントで描かれ、
+                 端末に無い字は □ になる）
+
+      いまは `lib/app.dart` が、**ログイン状態の復元と日本語フォントの
+      読み込みの両方が決着した時点で** `window.appReady()` を呼ぶ。
+    */
+    var __removeLoading = function () {
       var loading = document.getElementById('loading');
       if (loading) loading.remove();
-    });
+    };
+    window.appReady = __removeLoading;
+
+    /*
+      **上限を必ず置く。** 合図が来ない作りに変わったとき、あるいは
+      アプリが起動の途中で落ちたときに、**ロゴのまま永久に止まる**のを
+      防ぐ（外部の完了待ちには上限を付ける／共有ドキュメント AP-12）。
+
+      15 秒は、実測 5.4 秒の約 3 倍。**固まったままより、
+      壊れていることが分かる方がよい。**
+    */
+    setTimeout(__removeLoading, 15000);
   </script>
 </body>
 </html>

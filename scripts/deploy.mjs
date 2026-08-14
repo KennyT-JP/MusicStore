@@ -317,6 +317,27 @@ if (layers.includes('hosting') && !skipBuild) {
   if (now !== null) {
     try { mkdirSync(dirname(pluginsMemo), { recursive: true }); writeFileSync(pluginsMemo, now); } catch { /* 次回作り直すだけ */ }
   }
+
+  // **共有カードの画像を、配信先のものに差し替える（監査 第4回）。**
+  //
+  // `web/index.html` の og:image は**絶対 URL でなければならない**
+  // （相対だと読み取る側が解決できない）ため、本番の URL を直書きして
+  // ある。そのまま検証環境へ出すと、**検証環境のリンクを共有したときに
+  // 本番の画像が出る**。どちらの環境の話をしているのか分からなくなる。
+  //
+  // ビルド結果の側だけを書き換える。`web/index.html`（原本）は触らない。
+  {
+    const built = join(root, 'build', 'web', 'index.html');
+    const html = readFileSync(built, 'utf8');
+    const replaced = html.replaceAll(
+      'https://music-storage-d79b2.web.app/',
+      `https://${projectId}.web.app/`
+    );
+    if (replaced !== html) {
+      writeFileSync(built, replaced);
+      console.log(`    共有カードの画像を ${projectId} のものに差し替えました`);
+    }
+  }
 } else if (layers.includes('hosting') && skipBuild) {
   console.log('\n==> Flutter Web のビルドは省略（--no-build）。build/web がこの環境向けか確認してください');
 }

@@ -147,6 +147,13 @@ class Permissions {
   /// サイト管理者はそもそもメンバー登録を持たないため対象外。
   static bool canLeaveList(ListAccess access) => access.role != null;
 
+  /// 閲覧をやめられるか（3.3・2026-08-15）。
+  ///
+  /// **メンバーではない「見るだけの人」だけ。** メンバーは [canLeaveList]
+  /// で抜ける。両方に出すと、同じ画面に似た操作が 2 つ並ぶ。
+  static bool canStopViewing(ListAccess access) =>
+      access.isViewer && access.role == null;
+
   // ---------------------------------------------------------------------
   // サイト管理（11.1）
   // ---------------------------------------------------------------------

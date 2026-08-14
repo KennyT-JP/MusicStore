@@ -310,11 +310,21 @@ service cloud.firestore {
       // 作成は承認処理（Functions）のみ（5.1）。
       allow create: if false;
 
-      // 集計フィールドは Functions が持つ。人が触れるのは名前まで。
-      allow update: if isListAdmin(listId)
-        && !request.resource.data.diff(resource.data)
-             .affectedKeys()
-             .hasAny(['adminCount', 'memberCount', 'createdBy', 'nameLower']);
+      // **更新は全面禁止**（2026-08-14）。
+      //
+      // 以前は「集計フィールド以外なら書ける」形だったので、
+      // **`name` を API 直で書き換えられた。** ところが名前の一意性は
+      // `listNames/{nameLower}` の予約と `nameLower` で守っており
+      // （13.3）、`name` だけ変わると**予約と表示名が食い違う**。
+      // 同じ名前のリストを 2 つ作れる状態になる。
+      //
+      // 画面にリスト名を変える導線は無い。**使えない道を開けておく理由が
+      // 無い**ので閉じる（監査 第4回で記録に回していた項目）。
+      //
+      // **リスト名の変更を作るときは、ここではなく Functions で**——
+      // 予約の付け替えと `nameLower` の更新を、ひとつのトランザクション
+      // でまとめて行う必要がある（承認処理と同じ形）。
+      allow update: if false;
 
       allow delete: if isListAdmin(listId);
 
@@ -440,6 +450,21 @@ service cloud.firestore {
             || request.resource.data.previousFiles == null;
         }
 
+        // **更新では「変えられない」で守る**（2026-08-14）。
+        //
+        // 上の形（無いか null）を update にも使うと、**差し替えを 1 度でも
+        // 行った項目は、それ以降まったく編集できなくなる。**
+        // update の `request.resource.data` は**書き換えた後の全体**なので、
+        // Functions が積んだ `previousFiles` がそこに必ず含まれるためである。
+        // 曲名を直すだけの保存も拒否される。
+        //
+        // 守りたいのは「クライアントが previousFiles を書けないこと」なので、
+        // **差分に出てこないこと**で表す。
+        function previousFilesUnchanged() {
+          return !request.resource.data.diff(resource.data)
+            .affectedKeys().hasAny(['previousFiles']);
+        }
+
         // 追加は Super User 以上（4.2）。登録者は自分自身に限る。
         allow create: if canWrite(listId)
           && request.resource.data.createdBy == uid()
@@ -462,14 +487,42 @@ service cloud.firestore {
                 && resource.data.purgeAt > request.time);
         }
 
+        // **purgeAt は「いつ消してよいか」を決める値**で、定期削除の
+        // 唯一の判断材料（functions/src/scheduled/purge.ts）。
+        // 以前は update で自由に書けたため、**削除したはずのファイルを
+        // 永久に残せた**（監査 第4回で記録に回していた項目。実害は
+        // 自分のリストの容量を食うことに閉じるが、掃除が効かなくなる）。
+        //
+        // 決まりは 3 つ。
+        //
+        //   - 削除するとき（→ deleted）は**未来の時刻**を入れる。
+        //     **上限も置く**（400 日）。年 3000 のような値を弾くため。
+        //     猶予の既定は 30 日なので、設定を変えても収まる
+        //   - 復元するとき（deleted → active）は **null に戻す**
+        //   - **それ以外の編集では変えられない**（曲名を直すついでに
+        //     猶予を伸ばす、ができないようにする）
+        function purgeAtIsValid() {
+          let before = resource.data.status;
+          let after = request.resource.data.status;
+          let purge = request.resource.data.get('purgeAt', null);
+          return (after == 'deleted' && before != 'deleted')
+            ? (purge is timestamp
+                && purge > request.time
+                && purge < request.time + duration.value(400, 'd'))
+            : ((after == 'active' && before == 'deleted')
+                ? purge == null
+                : purge == resource.data.get('purgeAt', null));
+        }
+
         allow update: if (isListAdmin(listId) ||
             (canWrite(listId) && resource.data.createdBy == uid()))
           && request.resource.data.seq == resource.data.seq
           && request.resource.data.createdBy == resource.data.createdBy
           && statusIsValid()
           && fileBelongsHere()
-          && noPreviousFiles()
-          && restoreIsAllowed();
+          && previousFilesUnchanged()
+          && restoreIsAllowed()
+          && purgeAtIsValid();
 
         // 物理削除はしない。status を 'deleted' にするソフト削除（6.2）。
         allow delete: if false;

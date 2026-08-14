@@ -291,7 +291,7 @@ for f in submitListRequest approveListRequest rejectListRequest \
          grantSiteAdmin revokeSiteAdmin withdrawAccount \
          listSiteUsers setListQuota assignListAdmin addListMember \
          createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
-         createListDirectly setUserQuota extendPremium \
+         createListDirectly setUserQuota extendPremium replaceItemFile runPurgeNow \
          createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon; do
   gcloud functions add-invoker-policy-binding "$f" \
     --region="$REGION" --member=allUsers --project="$PROJECT"
@@ -311,7 +311,7 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   grantSiteAdmin revokeSiteAdmin withdrawAccount \
   listSiteUsers setListQuota assignListAdmin addListMember \
   createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
-  createListDirectly setUserQuota extendPremium \
+  createListDirectly setUserQuota extendPremium replaceItemFile runPurgeNow \
   createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon \
   --region asia-northeast1 --project music-storage-d79b2 --force
 
@@ -1051,7 +1051,7 @@ node scripts/build-manual.mjs
 ### 単体テスト
 
 ```sh
-flutter test      # 419 件
+flutter test      # 438 件
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
 cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）
@@ -1112,7 +1112,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（178 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（193 件）。
 
 ```sh
 cd functions && npm run test:integration

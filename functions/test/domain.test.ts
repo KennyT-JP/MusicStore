@@ -420,7 +420,39 @@ describe('孤児ファイルの削除判断（7.5）', () => {
     ).toBe(true);
   });
 
-  test('差し替えの旧ファイルとして保持されていれば消さない', () => {
+  test('差し替えの旧ファイルは、猶予のあいだ消さない', () => {
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: {
+          file: { storagePath: 'lists/L1/items/I1/new.mp3' },
+          previousFiles: [{ storagePath: path, purgeAt: Date.now() + 60_000 }],
+        },
+      })
+    ).toBe(false);
+  });
+
+  test('差し替えの旧ファイルは、猶予を過ぎたら消す（2026-08-14）', () => {
+    // **以前はここで無条件に守っていた。** そのため差し替えた古い
+    // ファイルが永久に残り、容量を食い続けた。
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: {
+          file: { storagePath: 'lists/L1/items/I1/new.mp3' },
+          previousFiles: [{ storagePath: path, purgeAt: Date.now() - 60_000 }],
+        },
+      })
+    ).toBe(true);
+  });
+
+  test('猶予の時刻が無い旧ファイルは消さない（判断できないため）', () => {
+    // 差し替え機能より前に積まれた行があれば、時刻が分からない。
+    // **判断できないものは消さない**——この関数の他の枝と同じ方針。
     expect(
       shouldDeleteOrphan({
         path,
@@ -432,6 +464,22 @@ describe('孤児ファイルの削除判断（7.5）', () => {
         },
       })
     ).toBe(false);
+  });
+
+  test('Firestore の Timestamp でも読める', () => {
+    // 実際に入るのは Timestamp（toMillis を持つ）。
+    const purgeAt = { toMillis: () => Date.now() - 60_000 };
+    expect(
+      shouldDeleteOrphan({
+        path,
+        createdAtMs: old,
+        cutoffMs,
+        item: {
+          file: { storagePath: 'lists/L1/items/I1/new.mp3' },
+          previousFiles: [{ storagePath: path, purgeAt }],
+        },
+      })
+    ).toBe(true);
   });
 
   test('項目のファイル置き場でないパスには触らない', () => {

@@ -61,3 +61,6 @@ node_modules/
 # scripts/check.mjs が書く「このコミットは検証済み」の印。
 # 環境ごとの状態なのでコミットしない。
 .last-check.json
+android/key.properties
+android/*.jks
+android/*.keystore

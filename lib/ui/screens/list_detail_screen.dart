@@ -4,6 +4,8 @@
 /// 検索と並び替えはアプリのメモリ上で行う（仕様書 13.6）。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/playback_provider.dart';
 import '../routes.dart';
+import '../widgets/item_external_action.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
 import 'requests_screens.dart';
@@ -35,11 +38,35 @@ class ItemQueryNotifier extends Notifier<ItemQuery> {
   final String listId;
 
   @override
-  ItemQuery build() => const ItemQuery();
+  ItemQuery build() {
+    // **端末に残した好みから始める（6.4）。**
+    // 以前はメモリ上だけで、画面を開き直すと既定に戻っていた（監査 第2回）。
+    //
+    // 読めていないうちは既定（出す）で始め、届いたら差し替える。
+    // **待たない。** ここで待つと、保存領域が遅い端末で一覧が出ない。
+    final prefs = ref.watch(localPreferencesProvider).value;
+    return ItemQuery(showDeleted: prefs?.showDeletedItems ?? true);
+  }
 
   void setKeyword(String keyword) => state = state.copyWith(keyword: keyword);
 
-  void setShowDeleted(bool show) => state = state.copyWith(showDeleted: show);
+  void setShowDeleted(bool show) {
+    state = state.copyWith(showDeleted: show);
+
+    // **保存は待たない。切り替えはもう画面に効いている。**
+    //
+    // ただし `.value` で受けてはいけない。保存領域がまだ開いていないと
+    // **null に静かに倒れ、覚えないまま何も起きない**
+    // （test/domain/async_provider_read_test.dart）。開いてから書く。
+    //
+    // 書けなくても画面は動く。次に開いたとき既定に戻るだけ。
+    unawaited(
+      ref
+          .read(localPreferencesProvider.future)
+          .then((prefs) => prefs.setShowDeletedItems(show))
+          .catchError((Object _) {}),
+    );
+  }
 
   /// 同じキーを再度選んだら昇順・降順を入れ替える。
   void toggleSort(ItemSortKey key) {
@@ -212,12 +239,16 @@ class _Header extends ConsumerWidget {
               // **自分からリストを抜ける手段がどこにも無かった**
               // （仕様書 5.4／監査 第2回）。
               if (Permissions.canManageMembers(access) ||
-                  Permissions.canLeaveList(access))
+                  Permissions.canLeaveList(access) ||
+                  Permissions.canStopViewing(access))
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.settings_outlined),
-                  onSelected: (value) => value == _leaveAction
-                      ? _confirmLeave(context, ref, listId)
-                      : context.go(value),
+                  onSelected: (value) => switch (value) {
+                    _leaveAction => _confirmLeave(context, ref, listId),
+                    _stopViewingAction =>
+                      _confirmStopViewing(context, ref, listId),
+                    _ => context.go(value),
+                  },
                   itemBuilder: (context) => [
                     if (Permissions.canManageMembers(access)) ...[
                       PopupMenuItem(
@@ -237,6 +268,14 @@ class _Header extends ConsumerWidget {
                       PopupMenuItem(
                         value: _leaveAction,
                         child: Text(l10n.leaveList),
+                      ),
+                    // **見るだけの人にも出口を出す（3.3）。**
+                    // ルールは以前から自分で外れることを許していたのに、
+                    // 画面に入口が無かった（監査 第4回）。
+                    if (Permissions.canStopViewing(access))
+                      PopupMenuItem(
+                        value: _stopViewingAction,
+                        child: Text(l10n.stopViewing),
                       ),
                   ],
                 ),
@@ -296,6 +335,7 @@ class _Header extends ConsumerWidget {
 
 /// メニューの値。ルートのパスと混ざらない文字列にする。
 const String _leaveAction = '#leave';
+const String _stopViewingAction = '#stop-viewing';
 
 /// 自分からリストを抜ける（仕様書 5.4）。
 Future<void> _confirmLeave(
@@ -330,6 +370,49 @@ Future<void> _confirmLeave(
     await ref.read(listRepositoryProvider).removeMember(listId, uid);
   } catch (error) {
     // 抜けられなかったのにホームへ送らない（監査 第4回）。
+    if (context.mounted) showWriteFailure(context, error);
+    return;
+  }
+  if (context.mounted) context.go(AppRoutes.home);
+}
+
+/// 閲覧をやめる（仕様書 3.3・2026-08-15）。
+///
+/// **メンバーではない人の出口。** 抜けても同じ共有リンクから戻れることを
+/// 確認の文言で伝える（戻れないと思われると、押すのをためらう）。
+Future<void> _confirmStopViewing(
+  BuildContext context,
+  WidgetRef ref,
+  String listId,
+) async {
+  final l10n = AppL10n.of(context);
+  final uid = ref.read(firebaseUserProvider).value?.uid;
+  if (uid == null) return;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.stopViewing),
+      content: Text(l10n.stopViewingBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(l10n.stopViewing),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  try {
+    await ref.read(listRepositoryProvider).stopViewing(listId, uid);
+  } catch (error) {
+    // **失敗したのにホームへ送らない**（監査 第4回。抜けられていないのに
+    // 抜けたように見えるのがいちばん困る）。
     if (context.mounted) showWriteFailure(context, error);
     return;
   }
@@ -471,12 +554,11 @@ class _ItemRow extends StatelessWidget {
       ),
       title: Text(item.displayLabel(), overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, overflow: TextOverflow.ellipsis),
-      trailing: Icon(
-        item.kind == ItemKind.file
-            ? Icons.audio_file_outlined
-            : Icons.link_outlined,
-        color: theme.colorScheme.outline,
-      ),
+      // **右に「外部で開く」を置く（6.4）。**
+      // 種類が分かる印は、その操作のアイコンが兼ねる（ダウンロード／
+      // 新しいタブ）。飾りのアイコンを別に並べると、押せるものと
+      // 押せないものが隣り合って紛らわしい。
+      trailing: ItemExternalAction(item: item),
       isThreeLine: !isWide && subtitle.length > 40,
       onTap: () => context.go(AppRoutes.item(listId, item.id)),
     );

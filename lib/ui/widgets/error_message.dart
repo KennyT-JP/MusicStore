@@ -258,6 +258,12 @@ String describeFunctionsError(
     'shareLinkNotFound' => l10n.functionErrorShareLinkNotFound,
     'shareLinkRevoked' => l10n.functionErrorShareLinkRevoked,
     'itemNotFound' => l10n.functionErrorItemNotFound,
+    // ファイルの差し替え（6.3 / 14.4・2026-08-14）
+    'itemDeleted' => l10n.functionErrorItemDeleted,
+    'cannotEditItem' => l10n.functionErrorCannotEditItem,
+    'fileNotInThisItem' => l10n.functionErrorFileNotInThisItem,
+    'uploadNotFound' => l10n.functionErrorUploadNotFound,
+    'sameStoragePath' => l10n.functionErrorSameStoragePath,
     'roleNotAllowed' => l10n.functionErrorRoleNotAllowed,
     'missingField' => l10n.functionErrorMissingField,
     'fieldTooLong' => l10n.functionErrorFieldTooLong,

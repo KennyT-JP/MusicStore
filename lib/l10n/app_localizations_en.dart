@@ -447,6 +447,16 @@ class AppL10nEn extends AppL10n {
       'Default 30. List administrators can restore during this period, and the space stays used.';
 
   @override
+  String get orphanGraceLabel => 'Keep stray files for';
+
+  @override
+  String get unitHours => 'hours';
+
+  @override
+  String get orphanGraceHelp =>
+      'Default 24. Files that finished uploading but never became a track are deleted after this long. Setting it too short can delete a file that is about to be registered.';
+
+  @override
   String get invalidNumber => 'Please enter a valid number.';
 
   @override
@@ -501,10 +511,6 @@ class AppL10nEn extends AppL10n {
   String fileWithSize(Object name, Object size) {
     return '$name ($size)';
   }
-
-  @override
-  String get fileReplaceNotSupported =>
-      'Replacing the file is not implemented yet. You can still change the title, artist and date.';
 
   @override
   String get save => 'Save';
@@ -563,6 +569,13 @@ class AppL10nEn extends AppL10n {
   String get leaveList => 'Leave this list';
 
   @override
+  String get stopViewing => 'Stop viewing this list';
+
+  @override
+  String get stopViewingBody =>
+      'You will stop viewing this list.\n\nYou will no longer see its contents, but the same share link lets you back in. Comments you wrote stay.';
+
+  @override
   String get myRequestsEmpty => 'You have no requests yet.';
 
   @override
@@ -570,6 +583,12 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get open => 'Open';
+
+  @override
+  String get openLink => 'Open link';
+
+  @override
+  String get downloadFile => 'Download file';
 
   @override
   String get requestStatusPending => 'Pending';
@@ -918,6 +937,26 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get functionErrorItemNotFound => 'Track not found.';
+
+  @override
+  String get functionErrorItemDeleted =>
+      'A deleted track cannot be replaced. Restore it first.';
+
+  @override
+  String get functionErrorCannotEditItem =>
+      'You do not have permission to edit this track.';
+
+  @override
+  String get functionErrorFileNotInThisItem =>
+      'That file is not stored in the right place. Please try again.';
+
+  @override
+  String get functionErrorUploadNotFound =>
+      'The uploaded file could not be found. Check your connection and try again.';
+
+  @override
+  String get functionErrorSameStoragePath =>
+      'The file was written to the same place. Please pick the file again.';
 
   @override
   String get viewersTitle => 'Viewing without joining';

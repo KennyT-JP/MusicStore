@@ -9,6 +9,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../data/local_preferences.dart';
 import '../data/firestore_paths.dart';
 import '../data/models/app_user.dart';
 import '../data/models/coupon.dart';
@@ -369,6 +372,15 @@ final itemCommentsProvider =
     );
 
 // ---------------------------------------------------------------------------
+// 端末に残す表示の好み（6.4）
+// ---------------------------------------------------------------------------
+
+/// 端末の保存領域。**最初に読まれた時点で開く。**
+final localPreferencesProvider = FutureProvider<LocalPreferences>(
+  (ref) async => LocalPreferences(await SharedPreferences.getInstance()),
+);
+
+// ---------------------------------------------------------------------------
 // サイト設定
 // ---------------------------------------------------------------------------
 
@@ -376,10 +388,19 @@ final itemCommentsProvider =
 class SiteConfig {
   const SiteConfig({
     this.itemPurgeGraceDays = 30,
+    this.orphanFileGraceHours = 24,
     this.defaultQuotaBytes = kDefaultQuotaBytes,
     this.siteAdminCount = 1,
   });
   final int itemPurgeGraceDays;
+
+  /// 行き場を失ったファイルを消すまでの時間（仕様書 13.3）。
+  ///
+  /// アップロードは終わったのに項目ができなかったファイルが対象。
+  /// **短すぎると、アップロード直後のファイルを消しかねない**——
+  /// 完了から項目の作成までのわずかな間に走ると巻き添えになる。
+  /// 既定は 24 時間（`functions/src/config.ts` と揃える）。
+  final int orphanFileGraceHours;
 
   /// 新規リストの容量上限の初期値（仕様書 13.3）。
   ///
@@ -401,6 +422,8 @@ final siteConfigProvider = StreamProvider<SiteConfig>(
         return SiteConfig(
           itemPurgeGraceDays:
               (data['itemPurgeGraceDays'] as num?)?.toInt() ?? 30,
+          orphanFileGraceHours:
+              (data['orphanFileGraceHours'] as num?)?.toInt() ?? 24,
           defaultQuotaBytes:
               (data['defaultQuotaBytes'] as num?)?.toInt() ?? kDefaultQuotaBytes,
           siteAdminCount: (data['siteAdminCount'] as num?)?.toInt() ?? 1,

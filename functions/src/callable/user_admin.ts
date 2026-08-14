@@ -366,6 +366,13 @@ export const deleteSiteUser = onCall({ region: REGION }, async (request) => {
   // ドキュメントには届かない。**消したはずの人のメールアドレス・
   // プレミアム・容量が、親の無い孤児として残り続ける。**
   // 消す順は private が先。親だけ消えて下が残る状態を作らない。
+  // **通知も消す**（2026-08-15。監査 第4回で「直さず記録」に回した項目）。
+  //
+  // これも親の下にぶら下がったコレクションなので、users/{uid} を消しても
+  // 残る。**到達できない場所に、誰宛てか分からない通知が積まれたまま**に
+  // なり、消す手段も無くなる。
+  await deleteCollection(db.collection(paths.userNotifications(uid)));
+
   await db.doc(paths.userPrivate(uid)).delete().catch(() => undefined);
   await db.doc(paths.user(uid)).delete().catch(() => undefined);
 
@@ -378,3 +385,29 @@ export const deleteSiteUser = onCall({ region: REGION }, async (request) => {
 
   return { ok: true, deletedItems: items.length };
 });
+
+
+/**
+ * コレクションの中身をまとめて消す。
+ *
+ * **一度に全部読まない。** 件数が多い人の通知を一括で読むと、
+ * 実行時間の上限で毎回落ちるようになる（監査 S8 と同じ形）。
+ * 500 件ずつ、無くなるまで繰り返す。
+ */
+async function deleteCollection(
+  ref: FirebaseFirestore.CollectionReference
+): Promise<number> {
+  let removed = 0;
+  for (;;) {
+    const page = await ref.limit(500).get();
+    if (page.empty) return removed;
+
+    const batch = ref.firestore.batch();
+    for (const doc of page.docs) batch.delete(doc.ref);
+    await batch.commit();
+    removed += page.size;
+
+    // **同じ大きさで返ってこなければ、それが最後。**
+    if (page.size < 500) return removed;
+  }
+}

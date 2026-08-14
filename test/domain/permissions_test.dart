@@ -78,7 +78,19 @@ void main() {
       expect(Permissions.canAccessSiteAdmin(viewer), isFalse);
       // メンバーではないので「離脱」もしない。
       expect(Permissions.canLeaveList(viewer), isFalse);
+      // **代わりに「閲覧をやめる」が出る**（3.3・2026-08-15）。
+      // 出口がまったく無いと、共有リンクで一度見た人は
+      // リスト管理者に頼むしか外れる手段が無い。
+      expect(Permissions.canStopViewing(viewer), isTrue);
       expect(viewer.effectiveRole, isNull);
+    });
+
+    test('メンバーには「閲覧をやめる」を出さない', () {
+      // メンバーは「このリストから抜ける」で外れる。両方出すと、
+      // 同じ画面に似た操作が 2 つ並んで迷う。
+      expect(Permissions.canStopViewing(readOnly), isFalse);
+      expect(Permissions.canStopViewing(listAdmin), isFalse);
+      expect(Permissions.canStopViewing(siteAdmin), isFalse);
     });
 
     test('サイト管理者はメンバー登録がなくても閲覧できる', () {
