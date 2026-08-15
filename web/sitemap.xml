@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  scripts/build-manual.mjs が生成しています。**手で直さないこと。**
+  読み物を増やしたときは PAGES を直して生成し直します。
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://music-storage-d79b2.web.app/</loc>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/start.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/lists.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/items.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/sharing.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/members.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/manage.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/ja/privacy.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/start.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/lists.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/items.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/sharing.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/members.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/manage.html</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://music-storage-d79b2.web.app/help/en/privacy.html</loc>
+    <priority>1.0</priority>
+  </url>
+</urlset>

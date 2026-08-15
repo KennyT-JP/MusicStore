@@ -51,6 +51,18 @@ String _read(String path) => File(path).readAsStringSync();
 /// 外して数えるのが正しい。
 String _code(String html) => html.replaceAll(RegExp(r'<!--[\s\S]*?-->'), '');
 
+/// **`<noscript>` も外したもの。**
+///
+/// リンクの見張りを `_code` だけでやると通り抜けられる。読み物への
+/// リンクは `<p class="guide">` と `<noscript>` の 2 か所にあり、
+/// **本文側を丸ごと消しても noscript 側が当たって緑のまま**になった
+/// （2026-08-15、この見張りを壊して確かめて発見）。
+///
+/// noscript の中身は JS を切った相手にしか出ない。ふつうの利用者と
+/// JS を実行するクローラーに見えているのは、外側だけ。
+String _visible(String html) =>
+    _code(html).replaceAll(RegExp(r'<noscript>[\s\S]*?</noscript>'), '');
+
 /// タグを外した文章。**`<style>` の中身は本文ではない**ので落とす。
 /// これを忘れると CSS の文字数で下限を満たしてしまい、
 /// 「薄いページを作らない」という見張りが意味を失う。
@@ -188,13 +200,111 @@ void main() {
     test('robots.txt でアプリの画面を隠していない', () {
       // **隠して誤魔化すのは違反**（ナレッジベース S-7）。広告が
       // 「中身の無い画面」に出ている事実は変わらず、サイトの大部分が
-      // 検索から消えるだけ。いまは robots.txt を置いていない。
-      final robots = File('web/robots.txt');
-      if (!robots.existsSync()) return;
+      // 検索から消えるだけ。
       expect(
-        robots.readAsStringSync(),
+        _read('web/robots.txt'),
         isNot(contains('Disallow: /')),
         reason: 'アプリの画面を Disallow で隠してはいけません',
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+
+  group('読み物に辿り着けること', () {
+    // **ここが 2026-08-15 に 2 回続けて審査に落ちた原因。**
+    //
+    // 広告の配置（上の 3 group）は正しかった。それでも落ちたのは、
+    // **配置が正しいことと、見てもらえることが別だった**から。
+    // 本番を実際に叩いて分かった事実：
+    //
+    //   /robots.txt   無い（rewrite `**` に飲まれてアプリの HTML が返る）
+    //   /sitemap.xml  無い（同上）
+    //   /             読める文字は「音源創庫」「読み込んでいます…」だけ
+    //   / → 読み物    <a> が 1 本も無い（help/ の文字はコメントの中だけ）
+    //
+    // つまり審査側から見えるのは中身の無いページ 1 枚で、読み物 16 枚は
+    // **存在しないのと同じ**だった。作ったものが届いているかまで見る
+    // （共有ドキュメント `アンチパターン集.md` AP-53「確かめられない保証」）。
+
+    /// sitemap に書く根元。`scripts/build-manual.mjs` の BASE と揃える。
+    const base = 'https://music-storage-d79b2.web.app';
+
+    test('robots.txt が sitemap の場所を教えている', () {
+      final robots = _read('web/robots.txt');
+      expect(
+        robots,
+        contains('Sitemap: $base/sitemap.xml'),
+        reason: '**sitemap の場所を書かないと、置いても見つけてもらえません。**',
+      );
+      expect(robots, contains('User-agent: *'));
+    });
+
+    test('sitemap に、広告のあるページが全部載っている', () {
+      final sitemap = _read('web/sitemap.xml');
+
+      for (final lang in _languages) {
+        for (final page in _readingPages) {
+          expect(
+            sitemap,
+            contains('<loc>$base/help/$lang/$page.html</loc>'),
+            reason:
+                'sitemap に web/help/$lang/$page.html がありません。'
+                '**このサイトは読み物へのリンクがほぼ無いので、'
+                'sitemap に無いページは発見されません。** '
+                'node scripts/build-manual.mjs で作り直してください。',
+          );
+        }
+        expect(sitemap, contains('<loc>$base/help/$lang/</loc>'));
+      }
+    });
+
+    test('sitemap が検証環境の URL を指していない', () {
+      // **原本は本番を指す。** 検証環境へ出すときだけ scripts/deploy.mjs が
+      // 配信物の側を書き換える。ここに検証環境の URL が混ざると、
+      // 本番の sitemap が検証環境へ審査を連れて行く。
+      final sitemap = _read('web/sitemap.xml');
+      expect(sitemap, isNot(contains('music-storage-dev')));
+      expect(
+        RegExp('<loc>(?!$base)').hasMatch(sitemap),
+        isFalse,
+        reason: 'sitemap に $base 以外の URL があります',
+      );
+    });
+
+    test('アプリの画面から、読み物への実リンクがある', () {
+      // **コメントと `<noscript>` を外してから見る。**
+      //
+      // コメントには「広告は読み物のページに置く」という説明があり、
+      // noscript には JS を切った相手向けの同じリンクがある。どちらも
+      // 外さないと、**本文のリンクを全部消しても緑のまま**になる
+      // （AP-54。実際にこの見張りを壊して確かめたときに見つけた）。
+      final html = _visible(_read('web/index.html'));
+
+      for (final lang in _languages) {
+        expect(
+          html,
+          contains('href="help/$lang/"'),
+          reason:
+              'web/index.html に web/help/$lang/ への <a> がありません。'
+              '**canvas 描画のこの画面で、HTML に残る読み物への経路は'
+              'このリンクだけです。**',
+        );
+      }
+      expect(
+        html,
+        contains('help/ja/privacy.html'),
+        reason: '広告を出すサイトのトップから、プライバシーポリシーへ行けること',
+      );
+    });
+
+    test('JavaScript を実行しない相手にも、読み物の場所を伝えている', () {
+      final html = _code(_read('web/index.html'));
+      expect(html, contains('<noscript>'));
+      expect(
+        html.substring(html.indexOf('<noscript>')),
+        contains('help/'),
+        reason: 'noscript の中から読み物へ行けること',
       );
     });
   });

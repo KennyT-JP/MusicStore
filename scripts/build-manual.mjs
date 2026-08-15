@@ -54,6 +54,15 @@ const checkOnly = process.argv.includes('--check');
 /** AdSense のパブリッシャー ID。**秘密ではない**（広告を出すページのソースに必ず出る）。 */
 const PUBLISHER_ID = 'ca-pub-3984824596223175';
 
+/**
+ * sitemap に書く URL の根元。**本番のドメインを書く。**
+ *
+ * 検証環境へ配信するときは `scripts/deploy.mjs` が配信物の側だけを
+ * 検証環境のものに差し替える（`web/` の原本は触らない）。
+ * `web/robots.txt` の Sitemap 行も同じ扱いなので、**両方を同時に直すこと。**
+ */
+const BASE = 'https://music-storage-d79b2.web.app';
+
 /** 1 ページの本文の下限（タグを除いた文字数）。これを下回ったら生成を止める。 */
 const MIN_CHARS = 1600;
 
@@ -389,6 +398,56 @@ function buildLanguage(lang) {
   return { files, bodyChars };
 }
 
+/**
+ * sitemap.xml を組み立てる
+ *
+ * ## なぜ要るか
+ *
+ * **クローラーは、リンクが無ければ来ない。**
+ *
+ * このサイトのトップは CanvasKit（canvas 描画）なので、HTML に残る文字は
+ * 「読み込んでいます…」だけで、リンクも 1 本も無い。2026-08-15 の AdSense
+ * 審査で「コンテンツを含まない画面における広告」の指摘が 2 回続いたのは、
+ * **広告の位置が悪かったのではなく、広告のある読み物が発見されて
+ * いなかった**ため（本番を実際に叩いて確認：/robots.txt も /sitemap.xml も
+ * 無く、rewrite `**` に飲まれてアプリの HTML が返っていた）。
+ *
+ * sitemap があれば、リンクを 1 本も辿らずに読み物 16 枚へ直接来られる。
+ *
+ * ## lastmod を書かない理由
+ *
+ * **生成物を日付で揺らさないため。** `--check` は原本との一致を見るので、
+ * 日付を入れると「原本を直していないのに古い」と毎日言われる
+ * （共有ドキュメント AP-53「確かめられない保証」）。lastmod は必須ではない。
+ */
+function buildSitemap() {
+  const paths = ['/'];
+  for (const lang of LANGUAGES) {
+    paths.push(`/help/${lang}/`);
+    for (const page of PAGES) paths.push(`/help/${lang}/${page.slug}.html`);
+    paths.push(`/help/${lang}/${PRIVACY_SLUG}.html`);
+  }
+
+  // **読み物の優先度をトップより高くする。** このサイトで読める中身は
+  // 読み物にしか無い。トップ（アプリ）は文字が 0 字なので、そこを主役に
+  // 見せると「中身の無いサイト」という評価に戻る。
+  const priority = (path) => (path === '/' ? '0.3' : path.endsWith('/') ? '0.8' : '1.0');
+
+  const urls = paths
+    .map((path) => `  <url>\n    <loc>${BASE}${path}</loc>\n    <priority>${priority(path)}</priority>\n  </url>`)
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  scripts/build-manual.mjs が生成しています。**手で直さないこと。**
+  読み物を増やしたときは PAGES を直して生成し直します。
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+}
+
 // ---------------------------------------------------------------------------
 // 書き出し
 // ---------------------------------------------------------------------------
@@ -423,6 +482,22 @@ for (const lang of LANGUAGES) {
   for (const [name, content] of files) {
     writeFileSync(join(dir, name), content);
     console.log(`生成: web/help/${lang}/${name}（本文 ${bodyChars.get(name)} 字）`);
+  }
+}
+
+// sitemap.xml（言語をまたぐので、言語ごとのループの外で 1 枚だけ作る）
+{
+  const path = join(root, 'web/sitemap.xml');
+  const content = buildSitemap();
+  if (checkOnly) {
+    const current = existsSync(path) ? readFileSync(path, 'utf8') : '';
+    if (current !== content) {
+      console.error('古い: web/sitemap.xml');
+      changed += 1;
+    }
+  } else {
+    writeFileSync(path, content);
+    console.log(`生成: web/sitemap.xml（${content.match(/<loc>/g).length} 件）`);
   }
 }
 
