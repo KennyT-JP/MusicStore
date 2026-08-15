@@ -35,7 +35,7 @@
  * - FUNCTIONS_DISCOVERY_TIMEOUT を延ばす（Node の版が違う環境で必要）
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -326,16 +326,29 @@ if (layers.includes('hosting') && !skipBuild) {
   // 本番の画像が出る**。どちらの環境の話をしているのか分からなくなる。
   //
   // ビルド結果の側だけを書き換える。`web/index.html`（原本）は触らない。
+  //
+  // **robots.txt と sitemap.xml も同じ理由で書き換える（2026-08-15）。**
+  // 検証環境の sitemap が本番の URL を並べていると、検証環境をクロール
+  // した結果が本番の評価に混ざる。逆に検証環境の URL が本番の sitemap に
+  // 載ると、**審査に検証環境が引きずり込まれる。**
   {
-    const built = join(root, 'build', 'web', 'index.html');
-    const html = readFileSync(built, 'utf8');
-    const replaced = html.replaceAll(
-      'https://music-storage-d79b2.web.app/',
-      `https://${projectId}.web.app/`
-    );
-    if (replaced !== html) {
-      writeFileSync(built, replaced);
-      console.log(`    共有カードの画像を ${projectId} のものに差し替えました`);
+    for (const name of ['index.html', 'robots.txt', 'sitemap.xml']) {
+      const built = join(root, 'build', 'web', name);
+      if (!existsSync(built)) {
+        fail(`build/web/${name} がありません。`,
+             name === 'sitemap.xml'
+               ? 'node scripts/build-manual.mjs を実行してから配信してください'
+               : `web/${name} が消えていないか確認してください`);
+      }
+      const text = readFileSync(built, 'utf8');
+      const replaced = text.replaceAll(
+        'https://music-storage-d79b2.web.app/',
+        `https://${projectId}.web.app/`
+      );
+      if (replaced !== text) {
+        writeFileSync(built, replaced);
+        console.log(`    ${name} の URL を ${projectId} のものに差し替えました`);
+      }
     }
   }
 } else if (layers.includes('hosting') && skipBuild) {

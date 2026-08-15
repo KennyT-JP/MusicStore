@@ -203,9 +203,31 @@
       letter-spacing: 0.02em;
     }
 
+    /* 読み物（使い方・プライバシーポリシー）への入口。
+
+       **これは飾りではない。** このページは CanvasKit なので、HTML に残る
+       文字はロゴの alt とこの数行しかない。ここにリンクが無いと、
+       クローラーから見て**読み物 16 枚が存在しないのと同じ**になる
+       （2026-08-15 の AdSense 審査で 2 回続けて落ちた原因）。
+
+       読み込みが終わると #loading ごと消えるが、それでよい。JS を実行
+       しない相手には最後まで見えるし、実行する相手には sitemap.xml が
+       ある。**隠し文字ではなく、利用者にも実際に見えて押せるリンク。** */
+    #loading .guide {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.9;
+      text-align: center;
+      color: #43474E;
+    }
+
+    #loading .guide a { color: #1B5E9E; }
+
     @media (prefers-color-scheme: dark) {
       #loading .spinner { border-color: rgba(164, 202, 255, 0.25); border-top-color: #A4CAFF; }
       #loading .label { color: #C3C6CF; }
+      #loading .guide { color: #C3C6CF; }
+      #loading .guide a { color: #A4CAFF; }
     }
 
     /* 動きを控える設定の端末では回さない。 */
@@ -232,6 +254,29 @@
       <img class="logo dark" src="brand/png/logo-horizontal-dark@2x.png" alt="音源創庫" width="1200" height="512">
       <div class="spinner"></div>
       <div class="label">読み込んでいます…</div>
+
+      <!--
+        **読み物への入口。ここを消さないこと。**
+
+        録音した音源や見つけた楽曲を 1 つのリストに集めて共有するアプリで、
+        使い方は /help/ 配下に日本語と英語で置いてある。トップは canvas 描画
+        なので、**HTML から読み物へ辿れる経路はこの数行しか無い。**
+      -->
+      <p class="guide">
+        録音した音源や見つけた楽曲を、1 つのリストに集めて共有できます。<br>
+        <a href="help/ja/">使い方を読む</a> ／
+        <a href="help/en/">User guide</a> ／
+        <a href="help/ja/privacy.html">プライバシーポリシー</a>
+      </p>
+
+      <noscript>
+        <p class="guide">
+          このアプリを使うには JavaScript が必要です。
+          機能の説明は <a href="help/ja/">使い方</a> にまとめてあります。<br>
+          JavaScript is required to run this app.
+          See the <a href="help/en/">user guide</a> for what it does.
+        </p>
+      </noscript>
     </div>
   </div>
 
