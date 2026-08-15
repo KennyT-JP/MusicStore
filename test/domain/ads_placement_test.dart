@@ -197,6 +197,29 @@ void main() {
       expect(adsTxt, contains('DIRECT'));
     });
 
+    test('Search Console の所有権確認ファイルが残っている', () {
+      // **確認が済んだあとも消してはいけない**（Google の画面に明記）。
+      // 消すと所有権の確認が外れ、sitemap の送信もインデックスの状況も
+      // 見えなくなる。**中身は「ファイル名を書いた 1 行」で、名前と
+      // 一致していないと確認が通らない。**
+      //
+      // 2026-08-16 に登録。AdSense に 3 回目を出す前に、読み物が
+      // インデックスされたかを見るために要る。
+      const name = 'google8cb653ad7ffb3e95.html';
+      final file = File('web/$name');
+
+      expect(
+        file.existsSync(),
+        isTrue,
+        reason: 'web/$name が消えています。**Search Console の所有権が外れます。**',
+      );
+      expect(
+        file.readAsStringSync().trim(),
+        'google-site-verification: $name',
+        reason: '中身はファイル名と一致した 1 行であること',
+      );
+    });
+
     test('robots.txt でアプリの画面を隠していない', () {
       // **隠して誤魔化すのは違反**（ナレッジベース S-7）。広告が
       // 「中身の無い画面」に出ている事実は変わらず、サイトの大部分が
