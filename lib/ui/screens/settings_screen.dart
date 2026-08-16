@@ -6,14 +6,20 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../data/models/app_user.dart';
 import '../../data/repositories/functions_repository.dart';
 import '../../domain/premium.dart';
 import '../../domain/quota.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/download_provider.dart';
+import '../downloads/download_support.dart';
 import '../format.dart';
+import '../routes.dart';
 import '../widgets/async_view.dart';
+import '../widgets/download_button.dart';
 import '../widgets/error_message.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -43,6 +49,10 @@ class SettingsScreen extends ConsumerWidget {
               // 入れ替わり、その間に触った操作が消える
               // （docs/AUDIT-CHECKLIST.md 観点 2）。
               _PrivateSections(uid: appUser.uid, value: private),
+              // 端末に保存した音源（docs/DOWNLOAD-DESIGN.md 6.4）。
+              // **本人の private とは無関係**なので、その外に置く。
+              // 目録は端末の中にあり、Firestore からは来ない。
+              const _DownloadsSection(),
               const Divider(height: 32),
               const _AccountSection(),
             ],
@@ -411,6 +421,167 @@ class _StorageSection extends StatelessWidget {
   }
 }
 
+/// 端末に保存した音源（docs/DOWNLOAD-DESIGN.md 6.4）。
+///
+/// | 出すもの | 中身 |
+/// | --- | --- |
+/// | 端末内の使用量 | **`localBytes` の合計**（3.5）。**サーバー側の `sizeBytes` を使わない**——落とし損ねたぶんが数字に出ない |
+/// | リストごとの内訳 | 「バンド練習 2026 — 820 MB（28 曲）」 |
+/// | すべて削除 | 確認ダイアログ。**「曲とリストは消えません」を必ず書く**（2.1） |
+/// | モバイル通信でもダウンロードする | 既定 off（論点 11b） |
+///
+/// **端末の空き容量は出していない**（6.4 は「参考として」挙げている）。
+/// 空き容量を読む手段がいまの依存に無く、そのためだけにプラグインを
+/// 1 つ増やす代償に見合わない。**上限を置かない**（論点 6）方針は
+/// 変わらないので、足りなくなったときは 4.1 の失敗として伝わる。
+class _DownloadsSection extends ConsumerWidget {
+  const _DownloadsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // **Web には保存先が無い**（論点 2）。設定に空の節を出さない。
+    if (!ref.watch(audioDownloadSupportedProvider)) {
+      return const SizedBox.shrink();
+    }
+
+    final l10n = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final index = ref.watch(downloadsProvider).value;
+    if (index == null) return const SizedBox.shrink();
+
+    final byList = <String, ({int bytes, int count})>{};
+    for (final item in index.items) {
+      final current = byList[item.listName] ?? (bytes: 0, count: 0);
+      byList[item.listName] = (
+        bytes: current.bytes + item.localBytes,
+        count: current.count + 1,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 32),
+        Text(l10n.downloadsSettingsTitle, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+
+        if (index.items.isEmpty)
+          Text(l10n.downloadsSettingsNone, style: theme.textTheme.bodySmall)
+        else ...[
+          Text(
+            // **端末上の実測を合計する**（3.5・6.4）。
+            formatDownloadUsage(
+              l10n,
+              bytes: index.localBytesTotal,
+              count: index.items.length,
+            ),
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 8),
+          for (final entry in byList.entries)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                l10n.downloadsPerList(
+                  entry.key,
+                  formatBytes(entry.value.bytes),
+                  entry.value.count,
+                ),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+        ],
+
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: const Icon(Icons.cloud_download_outlined),
+            label: Text(l10n.downloadsSettingsOpen),
+            onPressed: () => context.go(AppRoutes.downloads),
+          ),
+        ),
+
+        // 通信条件（4.6・論点 11b）。**既定は Wi-Fi のときだけ。**
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.downloadsAllowMobileData),
+          // **「モバイルデータを使いません」とは書かない**（4.6）。
+          // ほかの端末のテザリングは Wi-Fi に見えるので、確かめられない。
+          subtitle: Text(
+            l10n.downloadsAllowMobileDataNote,
+            style: theme.textTheme.bodySmall,
+          ),
+          value: index.allowMobileData,
+          onChanged: (value) async {
+            try {
+              await ref
+                  .read(downloadsProvider.notifier)
+                  .setAllowMobileData(value);
+            } catch (error) {
+              if (context.mounted) showWriteFailure(context, error);
+            }
+          },
+        ),
+
+        if (index.items.isNotEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+              ),
+              onPressed: () => _confirmRemoveAll(context, ref),
+              child: Text(l10n.downloadsRemoveAll),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// すべて削除（6.4）。
+  ///
+  /// **「曲とリストは消えません」を必ず書く**（2.1）。ダウンロードは
+  /// 「機能」であって「資産」ではない。**「残っているもの」を先に、
+  /// 具体的に書く**——「容量が減りました」とだけ出して誤解された
+  /// （PREMIUM-DESIGN.md）のと同じ間違いを繰り返さない。
+  Future<void> _confirmRemoveAll(BuildContext context, WidgetRef ref) async {
+    final l10n = AppL10n.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.downloadsRemoveAll),
+        content: Text(l10n.downloadsRemoveAllBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.downloadsRemoveAll),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(downloadsProvider.notifier).removeAll();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.downloadsRemoveAllDone)));
+      }
+    } catch (error) {
+      if (context.mounted) showWriteFailure(context, error);
+    }
+  }
+}
+
 /// 通知設定（仕様書 10.3）。
 ///
 /// プッシュ通知は初期リリースでは画面に出さない（仕様書 12.7）。
@@ -572,7 +743,9 @@ class _AccountSectionState extends ConsumerState<_AccountSection> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.withdraw),
-        content: Text('${l10n.withdrawWarning}\n\n${l10n.withdrawIrreversible}'),
+        content: Text(
+          '${l10n.withdrawWarning}\n\n${l10n.withdrawIrreversible}',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

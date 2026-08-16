@@ -22,6 +22,7 @@ import '../data/downloads/download_file_system_factory.dart';
 import '../data/downloads/download_network_status.dart';
 import '../data/models/list_item.dart';
 import '../data/repositories/download_repository.dart';
+import '../data/repositories/download_sync_repository.dart';
 import '../domain/download_estimate.dart';
 import '../domain/download_index.dart';
 import '../domain/offline_access.dart';
@@ -58,6 +59,24 @@ final downloadRepositoryProvider = Provider<DownloadRepository>(
     files: ref.watch(downloadFileSystemProvider),
     access: ref.watch(downloadAccessApiProvider),
     network: ref.watch(networkStatusProvider),
+  ),
+);
+
+/// 同期に要るものをサーバーから取ってくる口（4.4 / 3.5）。
+///
+/// **`downloadRepositoryProvider` とは別にする。** あちらは端末の
+/// ファイルだけを触り、**Firestore を読まない**
+/// （`download_repository.dart` の冒頭）。読む係を分けておかないと、
+/// 目録を読むだけの用（ダウンロード済み画面・設定の使用量）でも
+/// Firestore が付いてくる。
+///
+/// **`ref.read` でしか触らないこと**（[DownloadsController] を参照）。
+/// ここを `build` から `watch` すると、オフラインで開く画面が
+/// Firebase の初期化を待つことになる。
+final downloadSyncRepositoryProvider = Provider<DownloadSyncRepository>(
+  (ref) => DownloadSyncRepository(
+    ref.watch(itemRepositoryProvider),
+    ref.watch(listRepositoryProvider),
   ),
 );
 
@@ -114,6 +133,12 @@ class DownloadsController extends AsyncNotifier<DownloadIndex> {
   }
 
   /// 曲を 1 つ落とす（4.1）。
+  ///
+  /// [comments] は `authorName` を解決済みで渡す（3.5）。解決は
+  /// `ui/downloads/download_jobs.dart` の `offlineCommentsLoaderProvider`
+  /// にあり、**`DisplayNameResolver.resolveInList` を画面と共有している。**
+  /// ここで引き直さないこと——退会・除外の判定が 2 か所になると、
+  /// 画面では「退会したユーザー」なのに端末の写しには本名が残る。
   Future<void> downloadItem({
     required String listId,
     required String listName,
@@ -176,6 +201,52 @@ class DownloadsController extends AsyncNotifier<DownloadIndex> {
     );
     state = AsyncData(report.index);
     return report;
+  }
+
+  /// サーバーを見に行って、元の削除・差し替えを端末へ反映する（4.4）。
+  ///
+  /// **取ってくるところまで含めた入口はこちら。** [sync] は渡されたものを
+  /// 反映するだけなので、画面からはこれを呼ぶ。呼ぶのは**起動時、
+  /// 権限確認（[startup]）のあと**——4.4 は「別のタイミングを増やさない」
+  /// と決めている。
+  ///
+  /// **読めなかったリストは `listIds` に入れない。** 圏外・権限の失敗と
+  /// 「元が消えた」を混ぜると、**電波が悪いだけでそのリストの曲が
+  /// 端末から全部消える**（10 節の危険 4 と同じ形）。読めたリストだけを
+  /// 突き合わせ、読めなかったぶんは次の起動に回す。
+  Future<DownloadSyncReport> syncFromServer() async {
+    final index = state.value ?? const DownloadIndex();
+    if (index.items.isEmpty) {
+      return DownloadSyncReport(
+        index: index,
+        removed: const [],
+        replaced: const [],
+        failed: const [],
+      );
+    }
+
+    final server = ref.read(downloadSyncRepositoryProvider);
+    final listIds = <String>{};
+    final serverItems = <ServerItemSnapshot>[];
+
+    for (final listId in index.items.map((i) => i.listId).toSet()) {
+      try {
+        serverItems.addAll(
+          await server.fetchServerItems(
+            listId: listId,
+            localItems: index.items,
+          ),
+        );
+        listIds.add(listId);
+      } on Object {
+        // **握りつぶすが、消しはしない。** 読めなかったリストを渡さない
+        // ことが、そのまま「触らない」になる（`syncWithServer` は
+        // `listIds` に無いリストの曲を素通りさせる）。
+        continue;
+      }
+    }
+
+    return sync(listIds: listIds, serverItems: serverItems);
   }
 
   /// 端末にある音源の絶対パス（4.3）。無ければ null。

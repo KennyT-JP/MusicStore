@@ -2160,6 +2160,324 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。'**
   String get functionErrorTooManyLists;
+
+  /// No description provided for @navDownloads.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード済み'**
+  String get navDownloads;
+
+  /// No description provided for @downloadsListLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get downloadsListLabel;
+
+  /// 端末に保存した音源の一覧（docs/DOWNLOAD-DESIGN.md 6.1）
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード済み'**
+  String get downloadsTitle;
+
+  /// No description provided for @downloadsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した曲はまだありません。'**
+  String get downloadsEmpty;
+
+  /// No description provided for @downloadsEmptyHint.
+  ///
+  /// In ja, this message translates to:
+  /// **'曲の一覧やリストのメニューから、端末に保存できます。インターネットに繋がっていなくても聴けるようになります（プレミアムの機能です）。'**
+  String get downloadsEmptyHint;
+
+  /// 端末内の使用量。**端末上の実測を使う**（6.4）
+  ///
+  /// In ja, this message translates to:
+  /// **'{size}（{count, plural, other{{count} 曲}}）'**
+  String downloadsUsage(String size, int count);
+
+  /// No description provided for @downloadsPerList.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} — {size}（{count, plural, other{{count} 曲}}）'**
+  String downloadsPerList(String name, String size, int count);
+
+  /// 残り 7 日を切ったら出す帯（6.1・論点 21）。切り捨てなので「あと 0 日」も出る
+  ///
+  /// In ja, this message translates to:
+  /// **'あと {days} 日でオフライン再生が止まります。一度インターネットに接続してください。'**
+  String offlineNoticeExpiring(int days);
+
+  /// No description provided for @offlineNoticeStopped.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフラインで聴ける期間（30 日）が過ぎました。一度インターネットに接続すると、また聴けるようになります。端末のファイルは残っています。'**
+  String get offlineNoticeStopped;
+
+  /// No description provided for @offlineComments.
+  ///
+  /// In ja, this message translates to:
+  /// **'コメント'**
+  String get offlineComments;
+
+  /// No description provided for @offlineCommentsEmpty.
+  ///
+  /// In ja, this message translates to:
+  /// **'この曲にコメントはありません。'**
+  String get offlineCommentsEmpty;
+
+  /// No description provided for @offlineCommentsReadOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した写しです。オフラインでは書き込めません。'**
+  String get offlineCommentsReadOnly;
+
+  /// No description provided for @downloadToDevice.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存'**
+  String get downloadToDevice;
+
+  /// No description provided for @downloadedToDevice.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存済み'**
+  String get downloadedToDevice;
+
+  /// No description provided for @downloadCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードを中止'**
+  String get downloadCancel;
+
+  /// No description provided for @downloadKeepAppOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリを開いたままにしてください。閉じるとダウンロードは止まります。'**
+  String get downloadKeepAppOpen;
+
+  /// 「12.3 MB / 41.2 MB」。**% だけだと止まって見える**（4.1）
+  ///
+  /// In ja, this message translates to:
+  /// **'{done} / {total}'**
+  String downloadProgressBytes(String done, String total);
+
+  /// No description provided for @downloadDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存しました。'**
+  String get downloadDone;
+
+  /// No description provided for @downloadFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードできませんでした。もう一度お試しください。'**
+  String get downloadFailed;
+
+  /// No description provided for @downloadNeedsWifi.
+  ///
+  /// In ja, this message translates to:
+  /// **'Wi-Fi に接続しているあいだだけダウンロードします。設定でモバイル通信も許可できます。'**
+  String get downloadNeedsWifi;
+
+  /// No description provided for @downloadNotSupportedFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'このファイルは端末に保存できません。音源だけが対象です。'**
+  String get downloadNotSupportedFile;
+
+  /// No description provided for @downloadPermissionLost.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストの音源を端末に保存する権限がありません。'**
+  String get downloadPermissionLost;
+
+  /// No description provided for @downloadUnavailableHere.
+  ///
+  /// In ja, this message translates to:
+  /// **'この環境では端末に保存できません。'**
+  String get downloadUnavailableHere;
+
+  /// No description provided for @downloadRemove.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末から削除'**
+  String get downloadRemove;
+
+  /// No description provided for @downloadRemoveBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」を端末から削除します。曲もリストも消えません。もう一度ダウンロードできます。'**
+  String downloadRemoveBody(String title);
+
+  /// No description provided for @downloadPremiumOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフライン保存はプレミアムの機能です'**
+  String get downloadPremiumOnly;
+
+  /// No description provided for @downloadPremiumOnlyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存してオフラインで聴く機能は、プレミアムをご利用の方の機能です。設定でクーポンコードを入力すると、お使いいただけます。'**
+  String get downloadPremiumOnlyBody;
+
+  /// No description provided for @downloadPremiumOnlyCta.
+  ///
+  /// In ja, this message translates to:
+  /// **'クーポンを入力'**
+  String get downloadPremiumOnlyCta;
+
+  /// No description provided for @downloadList.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストを端末に保存'**
+  String get downloadList;
+
+  /// **曲数と合計サイズを必ず両方出す**（6.3・論点 20）
+  ///
+  /// In ja, this message translates to:
+  /// **'{total} 曲中 {done} 曲は保存済みです。残り {count} 曲・約 {size} をダウンロードします。'**
+  String downloadListEstimate(int total, int done, int count, String size);
+
+  /// No description provided for @downloadListNothing.
+  ///
+  /// In ja, this message translates to:
+  /// **'このリストの曲は、すべて端末に保存済みです。'**
+  String get downloadListNothing;
+
+  /// No description provided for @downloadListStart.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードを始める'**
+  String get downloadListStart;
+
+  /// No description provided for @downloadListProgress.
+  ///
+  /// In ja, this message translates to:
+  /// **'{position} / {total} 曲目'**
+  String downloadListProgress(int position, int total);
+
+  /// No description provided for @downloadListDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 曲}}を端末に保存しました。'**
+  String downloadListDone(int count);
+
+  /// No description provided for @downloadListFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'{count, plural, other{{count} 曲}}を保存できませんでした。'**
+  String downloadListFailed(int count);
+
+  /// No description provided for @downloadListStopped.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロードを中止しました。保存が済んだぶんは端末に残っています。'**
+  String get downloadListStopped;
+
+  /// No description provided for @downloadStop.
+  ///
+  /// In ja, this message translates to:
+  /// **'中止'**
+  String get downloadStop;
+
+  /// No description provided for @downloadsSettingsTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した音源'**
+  String get downloadsSettingsTitle;
+
+  /// No description provided for @downloadsSettingsNone.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した音源はありません。'**
+  String get downloadsSettingsNone;
+
+  /// No description provided for @downloadsSettingsOpen.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダウンロード済みを見る'**
+  String get downloadsSettingsOpen;
+
+  /// No description provided for @downloadsRemoveAll.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末の保存をすべて削除'**
+  String get downloadsRemoveAll;
+
+  /// No description provided for @downloadsRemoveAllBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した音源をすべて削除します。曲もリストも、アップロードしたファイルも消えません。これまでどおりオンラインで再生でき、もう一度ダウンロードできます。'**
+  String get downloadsRemoveAllBody;
+
+  /// No description provided for @downloadsRemoveAllDone.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存した音源を削除しました。曲もリストも残っています。'**
+  String get downloadsRemoveAllDone;
+
+  /// No description provided for @downloadsAllowMobileData.
+  ///
+  /// In ja, this message translates to:
+  /// **'モバイル通信でもダウンロードする'**
+  String get downloadsAllowMobileData;
+
+  /// **「モバイルデータを使いません」とは書かない**（4.6）。テザリングは Wi-Fi に見える
+  ///
+  /// In ja, this message translates to:
+  /// **'オフのときは Wi-Fi に接続しているあいだだけダウンロードします。'**
+  String get downloadsAllowMobileDataNote;
+
+  /// **黙って消さない**（4.4）。黙って消えると「アプリが勝手に消した」と受け取られる
+  ///
+  /// In ja, this message translates to:
+  /// **'「{title}」は元が削除されたため、端末からも削除しました。'**
+  String downloadSyncRemovedOne(String title);
+
+  /// No description provided for @downloadSyncRemovedMany.
+  ///
+  /// In ja, this message translates to:
+  /// **'元が削除された {count} 曲を、端末からも削除しました。'**
+  String downloadSyncRemovedMany(int count);
+
+  /// No description provided for @downloadSyncReplaced.
+  ///
+  /// In ja, this message translates to:
+  /// **'差し替えられた {count} 曲を、端末に落とし直しました。'**
+  String downloadSyncReplaced(int count);
+
+  /// No description provided for @webDownloadNoticeTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ブラウザからの音源のダウンロードについて'**
+  String get webDownloadNoticeTitle;
+
+  /// No description provided for @webDownloadNoticeBody1.
+  ///
+  /// In ja, this message translates to:
+  /// **'Web ブラウザからの音源のダウンロードを、今後終了します。Android アプリの公開に合わせて実施します。'**
+  String get webDownloadNoticeBody1;
+
+  /// No description provided for @webDownloadNoticeBody2.
+  ///
+  /// In ja, this message translates to:
+  /// **'これまでどおり、ブラウザでそのまま再生できます。楽譜やその他のファイルは、これまでどおりダウンロードできます。'**
+  String get webDownloadNoticeBody2;
+
+  /// No description provided for @webDownloadNoticeBody3.
+  ///
+  /// In ja, this message translates to:
+  /// **'端末に保存してオフラインで聴く機能は、iOS / Android アプリでご利用いただけます（プレミアムの機能です）。'**
+  String get webDownloadNoticeBody3;
+
+  /// No description provided for @webDownloadReplacement.
+  ///
+  /// In ja, this message translates to:
+  /// **'オフラインで聴くには、アプリをお使いください。'**
+  String get webDownloadReplacement;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

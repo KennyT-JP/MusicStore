@@ -17,11 +17,15 @@ import '../../data/repositories/functions_repository.dart';
 import '../../domain/permissions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../downloads/download_support.dart';
 import '../format.dart';
 import '../routes.dart';
 import '../share_url.dart';
 import '../widgets/async_view.dart';
+import '../widgets/download_button.dart';
 import '../widgets/error_message.dart';
+import '../widgets/item_external_action.dart';
+import '../widgets/web_download_notice.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
   const ItemDetailScreen({
@@ -161,7 +165,7 @@ class _ItemHeader extends ConsumerWidget {
               value: _registrantName(ref, listId, item.createdBy, l10n),
             ),
             const SizedBox(height: 16),
-            _MediaAction(item: item),
+            _MediaAction(listId: listId, item: item),
           ],
         ],
       ),
@@ -272,12 +276,7 @@ class _DeletedNotice extends StatelessWidget {
 /// 退会・除外された人は本名を出さない。まだ読み込めていない人と
 /// 区別できるよう、取得前は空文字を返す（「退会したユーザー」と
 /// 表示してしまうと、在籍中の人が退会したように見える）。
-String _registrantName(
-  WidgetRef ref,
-  String listId,
-  String uid,
-  AppL10n l10n,
-) {
+String _registrantName(WidgetRef ref, String listId, String uid, AppL10n l10n) {
   final users = ref.watch(userDirectoryProvider(userDirectoryKey([uid])));
   final members = ref.watch(listMembersProvider(listId));
 
@@ -328,13 +327,22 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
-/// 再生・リンクの挙動（仕様書 8 章）。
+/// 再生・保存・リンクの挙動（仕様書 8 章／docs/DOWNLOAD-DESIGN.md 6.2 / 7.2）。
 ///
-/// アプリ内蔵のプレーヤーは作らない。ファイルはダウンロード URL を開き、
-/// どう再生するかは端末側に委ねる。URL は外部サイトへ遷移する。
+/// **「アプリ内蔵のプレーヤーは作らない」という以前の注記は、すでに事実と
+/// 違っていた**（一覧に再生ボタンがある）。7.2 の指示どおり、ここで直す。
+///
+/// | 種類 | ここに出るもの |
+/// | --- | --- |
+/// | 音源ファイル | **端末に保存**（6.2）。ダウンロードのボタンは 7 節で外す |
+/// | 音源以外のファイル（PDF・zip など） | **従来どおりダウンロードできる**（論点 2） |
+/// | URL の項目 | 従来どおり外部サイトへ |
+///
+/// 一覧の行から鳴らす再生は `list_detail_screen.dart` にある。
 class _MediaAction extends ConsumerWidget {
-  const _MediaAction({required this.item});
+  const _MediaAction({required this.listId, required this.item});
 
+  final String listId;
   final ListItem item;
 
   @override
@@ -356,27 +364,49 @@ class _MediaAction extends ConsumerWidget {
     final file = item.file;
     if (file == null) return const SizedBox.shrink();
 
+    // **音源のダウンロードだけを外す**（7.1）。判定は `isPlayableAudio` を
+    // 通す `isAudioFileItem` に任せ、ここに 2 つ目の判定を書かない。
+    final isAudio = isAudioFileItem(item);
+    final showsLegacyDownload =
+        !isAudio || ref.watch(legacyAudioDownloadProvider);
+
+    final listName = ref.watch(listProvider(listId)).value?.name ?? '';
+
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
         leading: const Icon(Icons.audio_file_outlined),
         title: Text(file.fileName, overflow: TextOverflow.ellipsis),
         subtitle: Text(formatBytes(file.sizeBytes)),
-        trailing: const Icon(Icons.download_outlined),
-        onTap: () async {
-          try {
-            final url = await ref
-                .read(itemRepositoryProvider)
-                .downloadUrl(file.storagePath);
-            if (context.mounted) await _open(context, url);
-          } catch (_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppL10n.of(context).errorGeneric)),
-              );
-            }
-          }
-        },
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 端末に保存（6.2）。**Web では出ない**（6.5）。
+            ItemDownloadButton(listId: listId, listName: listName, item: item),
+            if (showsLegacyDownload)
+              const Icon(Icons.download_outlined)
+            else
+              // **空白にしない**（7.3）。消えた場所に何も無いと、
+              // 壊れたようにしか見えない。
+              const WebDownloadReplacement(),
+          ],
+        ),
+        onTap: showsLegacyDownload
+            ? () async {
+                try {
+                  final url = await ref
+                      .read(itemRepositoryProvider)
+                      .downloadUrl(file.storagePath);
+                  if (context.mounted) await _open(context, url);
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(AppL10n.of(context).errorGeneric)),
+                    );
+                  }
+                }
+              }
+            : null,
       ),
     );
   }
@@ -725,7 +755,9 @@ class _AuthorLine extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
     final theme = Theme.of(context);
-    final users = ref.watch(userDirectoryProvider(userDirectoryKey([uid]))).value;
+    final users = ref
+        .watch(userDirectoryProvider(userDirectoryKey([uid])))
+        .value;
     final members = ref.watch(listMembersProvider(listId)).value;
 
     final AppUser? user = users?[uid];
@@ -751,7 +783,6 @@ class _AuthorLine extends ConsumerWidget {
     );
   }
 }
-
 
 /// この曲を指す共有リンクをコピーする（仕様書 3.3）。
 ///

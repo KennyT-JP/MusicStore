@@ -11,8 +11,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/list_item.dart';
+import '../../domain/playback.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
+import '../downloads/download_support.dart';
+import 'web_download_notice.dart';
+
+/// この項目は「音源ファイル」か（docs/DOWNLOAD-DESIGN.md 7.1）。
+///
+/// **判定は `isPlayableAudio` を使う**（7.1）。「音源かどうか」の規則は
+/// すでに `playback.dart` にあり、一覧の再生ボタンもそれで出し分けている。
+/// **新しい判定を別に作らないこと**——2 つあると、
+/// 「再生ボタンは出るのにダウンロードもできる曲」ができる。
+bool isAudioFileItem(ListItem item) {
+  final file = item.file;
+  if (item.kind != ItemKind.file || file == null) return false;
+  return isPlayableAudio(
+    contentType: file.contentType,
+    fileName: file.fileName,
+  );
+}
 
 class ItemExternalAction extends ConsumerWidget {
   const ItemExternalAction({super.key, required this.item});
@@ -23,6 +41,20 @@ class ItemExternalAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
     final isFile = item.kind == ItemKind.file;
+
+    // **音源のダウンロードだけを外す**（7.1・論点 2）。
+    //
+    // | | 外す | 残す |
+    // | --- | --- | --- |
+    // | 音源ファイル | ダウンロードのボタン | ストリーミング再生 |
+    // | 音源以外（PDF・zip など） | — | **従来どおり開ける** |
+    // | URL の項目 | — | 従来どおり外部サイトへ |
+    //
+    // 空白にはしない。**消えた場所に何も無いと、壊れたようにしか見えない**
+    // （7.3）ので、置き換えの文を出す。
+    if (isAudioFileItem(item) && !ref.watch(legacyAudioDownloadProvider)) {
+      return const WebDownloadReplacement();
+    }
 
     return IconButton(
       icon: Icon(isFile ? Icons.download_outlined : Icons.open_in_new),

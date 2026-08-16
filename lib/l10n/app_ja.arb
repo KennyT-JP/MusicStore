@@ -645,5 +645,187 @@
   "functionErrorCouponCodeTaken": "そのコードはすでに使われています。別の文字列を指定してください。",
   "functionErrorMonthsInvalid": "月数は 1 以上の整数で指定してください。",
   "functionErrorMaxUsesInvalid": "使える人数は 1 以上の整数で指定してください。",
-  "functionErrorTooManyLists": "一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。"
+  "functionErrorTooManyLists": "一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。",
+
+  "navDownloads": "ダウンロード済み",
+
+  "downloadsListLabel": "リスト",
+  "downloadsTitle": "ダウンロード済み",
+  "@downloadsTitle": {
+    "description": "端末に保存した音源の一覧（docs/DOWNLOAD-DESIGN.md 6.1）"
+  },
+  "downloadsEmpty": "端末に保存した曲はまだありません。",
+  "downloadsEmptyHint": "曲の一覧やリストのメニューから、端末に保存できます。インターネットに繋がっていなくても聴けるようになります（プレミアムの機能です）。",
+  "downloadsUsage": "{size}（{count, plural, other{{count} 曲}}）",
+  "@downloadsUsage": {
+    "description": "端末内の使用量。**端末上の実測を使う**（6.4）",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsPerList": "{name} — {size}（{count, plural, other{{count} 曲}}）",
+  "@downloadsPerList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "offlineNoticeExpiring": "あと {days} 日でオフライン再生が止まります。一度インターネットに接続してください。",
+  "@offlineNoticeExpiring": {
+    "description": "残り 7 日を切ったら出す帯（6.1・論点 21）。切り捨てなので「あと 0 日」も出る",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineNoticeStopped": "オフラインで聴ける期間（30 日）が過ぎました。一度インターネットに接続すると、また聴けるようになります。端末のファイルは残っています。",
+
+  "offlineComments": "コメント",
+  "offlineCommentsEmpty": "この曲にコメントはありません。",
+  "offlineCommentsReadOnly": "端末に保存した写しです。オフラインでは書き込めません。",
+
+  "downloadToDevice": "端末に保存",
+  "downloadedToDevice": "端末に保存済み",
+  "downloadCancel": "ダウンロードを中止",
+  "downloadKeepAppOpen": "アプリを開いたままにしてください。閉じるとダウンロードは止まります。",
+  "downloadProgressBytes": "{done} / {total}",
+  "@downloadProgressBytes": {
+    "description": "「12.3 MB / 41.2 MB」。**% だけだと止まって見える**（4.1）",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadDone": "端末に保存しました。",
+  "downloadFailed": "ダウンロードできませんでした。もう一度お試しください。",
+  "downloadNeedsWifi": "Wi-Fi に接続しているあいだだけダウンロードします。設定でモバイル通信も許可できます。",
+  "downloadNotSupportedFile": "このファイルは端末に保存できません。音源だけが対象です。",
+  "downloadPermissionLost": "このリストの音源を端末に保存する権限がありません。",
+  "downloadUnavailableHere": "この環境では端末に保存できません。",
+
+  "downloadRemove": "端末から削除",
+  "downloadRemoveBody": "「{title}」を端末から削除します。曲もリストも消えません。もう一度ダウンロードできます。",
+  "@downloadRemoveBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+
+  "downloadPremiumOnly": "オフライン保存はプレミアムの機能です",
+  "downloadPremiumOnlyBody": "端末に保存してオフラインで聴く機能は、プレミアムをご利用の方の機能です。設定でクーポンコードを入力すると、お使いいただけます。",
+  "downloadPremiumOnlyCta": "クーポンを入力",
+
+  "downloadList": "このリストを端末に保存",
+  "downloadListEstimate": "{total} 曲中 {done} 曲は保存済みです。残り {count} 曲・約 {size} をダウンロードします。",
+  "@downloadListEstimate": {
+    "description": "**曲数と合計サイズを必ず両方出す**（6.3・論点 20）",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadListNothing": "このリストの曲は、すべて端末に保存済みです。",
+  "downloadListStart": "ダウンロードを始める",
+  "downloadListProgress": "{position} / {total} 曲目",
+  "@downloadListProgress": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListDone": "{count, plural, other{{count} 曲}}を端末に保存しました。",
+  "@downloadListDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListFailed": "{count, plural, other{{count} 曲}}を保存できませんでした。",
+  "@downloadListFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListStopped": "ダウンロードを中止しました。保存が済んだぶんは端末に残っています。",
+  "downloadStop": "中止",
+
+  "downloadsSettingsTitle": "端末に保存した音源",
+  "downloadsSettingsNone": "端末に保存した音源はありません。",
+  "downloadsSettingsOpen": "ダウンロード済みを見る",
+  "downloadsRemoveAll": "端末の保存をすべて削除",
+  "downloadsRemoveAllBody": "端末に保存した音源をすべて削除します。曲もリストも、アップロードしたファイルも消えません。これまでどおりオンラインで再生でき、もう一度ダウンロードできます。",
+  "downloadsRemoveAllDone": "端末に保存した音源を削除しました。曲もリストも残っています。",
+  "downloadsAllowMobileData": "モバイル通信でもダウンロードする",
+  "downloadsAllowMobileDataNote": "オフのときは Wi-Fi に接続しているあいだだけダウンロードします。",
+  "@downloadsAllowMobileDataNote": {
+    "description": "**「モバイルデータを使いません」とは書かない**（4.6）。テザリングは Wi-Fi に見える"
+  },
+
+  "downloadSyncRemovedOne": "「{title}」は元が削除されたため、端末からも削除しました。",
+  "@downloadSyncRemovedOne": {
+    "description": "**黙って消さない**（4.4）。黙って消えると「アプリが勝手に消した」と受け取られる",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSyncRemovedMany": "元が削除された {count} 曲を、端末からも削除しました。",
+  "@downloadSyncRemovedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadSyncReplaced": "差し替えられた {count} 曲を、端末に落とし直しました。",
+  "@downloadSyncReplaced": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webDownloadNoticeTitle": "ブラウザからの音源のダウンロードについて",
+  "webDownloadNoticeBody1": "Web ブラウザからの音源のダウンロードを、今後終了します。Android アプリの公開に合わせて実施します。",
+  "webDownloadNoticeBody2": "これまでどおり、ブラウザでそのまま再生できます。楽譜やその他のファイルは、これまでどおりダウンロードできます。",
+  "webDownloadNoticeBody3": "端末に保存してオフラインで聴く機能は、iOS / Android アプリでご利用いただけます（プレミアムの機能です）。",
+  "webDownloadReplacement": "オフラインで聴くには、アプリをお使いください。"
 }

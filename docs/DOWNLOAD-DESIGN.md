@@ -222,8 +222,18 @@
 var url = URL(fileURLWithPath: path)
 var values = URLResourceValues()
 values.isExcludedFromBackup = true
-try url.setResourceValues(&values)
+try url.setResourceValues(values)
 ```
+
+> **この断片は 2026-08-16 に直しました。** 当初 `setResourceValues(&values)` と
+> 書いていましたが、**`URL.setResourceValues` は inout を取らない**ので
+> コンパイルが通りません（`mutating func setResourceValues(_ values: URLResourceValues) throws`。
+> 変わるのは `url` のほうで、`values` ではありません）。
+> **実装の担当が、書く前に実物のシグネチャを確かめて気づきました。**
+>
+> **この誤りは Windows では見つかりません。** Swift をビルドできないためです。
+> 同じ理由で、この断片が本当に通るかは**クラウド CI の初回ビルドまで分かりません**。
+> 「読んで正しい」と「ビルドが通る」は別です（1.4）。
 
 - **既存のパッケージにこれを行うものはありません。** `path_provider` にも
   ありません。**MethodChannel を 1 本足します**（`lib/platform/` の

@@ -4,16 +4,22 @@
 /// （仕様書 12.5）。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'data/repositories/download_repository.dart';
 import 'l10n/app_localizations.dart';
 import 'platform/app_ready.dart';
+import 'platform/downloads_supported.dart';
 import 'providers/app_providers.dart';
+import 'providers/download_provider.dart';
 import 'providers/font_provider.dart';
 import 'ui/app_router.dart';
+import 'ui/downloads/download_sync_notice.dart';
 import 'ui/routes.dart';
 import 'ui/widgets/startup_splash.dart';
 
@@ -89,6 +95,67 @@ void _notifyAppReadyOnce() {
   WidgetsBinding.instance.addPostFrameCallback((_) => notifyAppReady());
 }
 
+/// 端末のダウンロードの起動処理を、1 回だけ走らせる印
+/// （docs/DOWNLOAD-DESIGN.md 4.7 → 4.2 → 4.4）。
+bool _downloadsStarted = false;
+
+/// 起動時の知らせを出すための入口。
+///
+/// **画面より外側で起きることを、画面へ伝えるために要る。** 同期（4.4）は
+/// 最初の描画の直後に走るので、どの画面が出ているか分からない。
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+/// **掃除（4.7）→ 権限確認（4.2）→ 同期（4.4）を、起動ごとに 1 回。**
+///
+/// 順序は `DownloadsController.startup` が持っている。掃除を先にしないと、
+/// `.part` の残骸や孤児が権限確認のあとまで残る。
+/// **同期は権限確認のあと**——4.4 は「別のタイミングを増やさない」と決めている。
+///
+/// **ログインが済んでから呼ぶ。** `verifyDownloadAccess` は
+/// `requireUid` を通るので、未ログインでは必ず失敗する。
+/// **失敗しても何も起きない**（5.1）——圏外で 1 回失敗しただけで
+/// 全曲が消える事故を避けるため、応答が無いときは「オフライン」として扱う。
+///
+/// **Web では呼ばない。** 保存先が無く、掃除するものも無い（論点 2）。
+void _startDownloadsOnce(WidgetRef ref) {
+  if (!kDownloadsSupported || _downloadsStarted) return;
+  _downloadsStarted = true;
+  WidgetsBinding.instance.addPostFrameCallback(
+    // **待たない。** 画面はダウンロードの有無に関わらず動く。
+    (_) => unawaited(_runDownloadsStartup(ref)),
+  );
+}
+
+Future<void> _runDownloadsStartup(WidgetRef ref) async {
+  final controller = ref.read(downloadsProvider.notifier);
+  await controller.startup();
+
+  // **元の削除・差し替えを端末へ反映する**（4.4・論点 11）。
+  _tellWhatSyncDid(await controller.syncFromServer());
+}
+
+/// **黙って消さない**（4.4）。黙って消えると、利用者は
+/// 「アプリが勝手に消した」と受け取る。
+///
+/// **同期を待ってから呼ばれるが、この関数自体は非同期にしない。**
+/// `BuildContext` を await をまたいで持ち回らないため
+/// （`use_build_context_synchronously`）。ここで取り直す。
+void _tellWhatSyncDid(DownloadSyncReport report) {
+  if (report.isEmpty) return;
+
+  final context = rootScaffoldMessengerKey.currentContext;
+  final messenger = rootScaffoldMessengerKey.currentState;
+  if (context == null || messenger == null) return;
+
+  final message = describeDownloadSync(AppL10n.of(context), report);
+  if (message == null) return;
+  messenger.showSnackBar(
+    // **既定の 4 秒では読み切れない。** 端末の中身が変わったことを
+    // 伝える知らせなので、消えるまでの時間を延ばす。
+    SnackBar(content: Text(message), duration: const Duration(seconds: 10)),
+  );
+}
+
 /// 音源創庫（Track Cabinet） — 音源を持ち寄って共有するアプリ。
 class MusicListApp extends ConsumerWidget {
   const MusicListApp({super.key, this.routerOverride});
@@ -129,6 +196,12 @@ class MusicListApp extends ConsumerWidget {
       _notifyAppReadyOnce();
     }
 
+    // ログインが済んだところで、端末のダウンロードの起動処理を 1 回だけ。
+    if (routerOverride == null &&
+        ref.watch(firebaseUserProvider).value != null) {
+      _startDownloadsOnce(ref);
+    }
+
     if (authRestoring && routerOverride == null) {
       return MaterialApp(
         // **この画面にも l10n を渡す。** ロゴの読み上げにアプリ名を使う。
@@ -163,6 +236,8 @@ class MusicListApp extends ConsumerWidget {
     return MaterialApp.router(
       onGenerateTitle: (context) => AppL10n.of(context).appTitle,
       routerConfig: router,
+      // 起動時の同期（4.4）が何をしたかを知らせるための入口。
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       locale: locale == null ? null : Locale(locale),
 
       // 多言語対応（仕様書 2 章）。初期対応は日本語・英語。

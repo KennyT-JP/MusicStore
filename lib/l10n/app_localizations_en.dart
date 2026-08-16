@@ -1221,4 +1221,250 @@ class AppL10nEn extends AppL10n {
   @override
   String get functionErrorTooManyLists =>
       'You can check up to 50 lists at a time. Please reduce the number of lists you keep for offline use and try again.';
+
+  @override
+  String get navDownloads => 'Downloads';
+
+  @override
+  String get downloadsListLabel => 'List';
+
+  @override
+  String get downloadsTitle => 'Downloaded';
+
+  @override
+  String get downloadsEmpty => 'Nothing is saved on this device yet.';
+
+  @override
+  String get downloadsEmptyHint =>
+      'You can save tracks to this device from the track list or from a list\'s menu. They then play without an internet connection (a premium feature).';
+
+  @override
+  String downloadsUsage(String size, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks',
+      one: '1 track',
+    );
+    return '$size ($_temp0)';
+  }
+
+  @override
+  String downloadsPerList(String name, String size, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks',
+      one: '1 track',
+    );
+    return '$name — $size ($_temp0)';
+  }
+
+  @override
+  String offlineNoticeExpiring(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other:
+          'Offline playback stops in $days days. Please connect to the internet once.',
+      one:
+          'Offline playback stops in 1 day. Please connect to the internet once.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get offlineNoticeStopped =>
+      'The 30-day offline period has passed. Connect to the internet once and you can listen again. The files are still on your device.';
+
+  @override
+  String get offlineComments => 'Comments';
+
+  @override
+  String get offlineCommentsEmpty => 'This track has no comments.';
+
+  @override
+  String get offlineCommentsReadOnly =>
+      'This is the copy saved on your device. You cannot post while offline.';
+
+  @override
+  String get downloadToDevice => 'Save to this device';
+
+  @override
+  String get downloadedToDevice => 'Saved on this device';
+
+  @override
+  String get downloadCancel => 'Stop downloading';
+
+  @override
+  String get downloadKeepAppOpen =>
+      'Please keep the app open. Closing it stops the download.';
+
+  @override
+  String downloadProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get downloadDone => 'Saved to this device.';
+
+  @override
+  String get downloadFailed => 'Could not download this. Please try again.';
+
+  @override
+  String get downloadNeedsWifi =>
+      'Downloads run only while you are connected to Wi-Fi. You can also allow mobile data in settings.';
+
+  @override
+  String get downloadNotSupportedFile =>
+      'This file cannot be saved to your device. Only audio can be saved.';
+
+  @override
+  String get downloadPermissionLost =>
+      'You do not have permission to save audio from this list to your device.';
+
+  @override
+  String get downloadUnavailableHere =>
+      'Saving to this device is not available here.';
+
+  @override
+  String get downloadRemove => 'Remove from this device';
+
+  @override
+  String downloadRemoveBody(String title) {
+    return '“$title” will be removed from this device. The track and the list are not deleted, and you can download it again.';
+  }
+
+  @override
+  String get downloadPremiumOnly => 'Offline saving is a premium feature';
+
+  @override
+  String get downloadPremiumOnlyBody =>
+      'Saving tracks to your device and listening offline is available to premium members. Enter a coupon code in settings to use it.';
+
+  @override
+  String get downloadPremiumOnlyCta => 'Enter a coupon';
+
+  @override
+  String get downloadList => 'Save this list to this device';
+
+  @override
+  String downloadListEstimate(int total, int done, int count, String size) {
+    return '$done of $total tracks are already saved. This will download the remaining $count tracks, about $size.';
+  }
+
+  @override
+  String get downloadListNothing =>
+      'Every track in this list is already saved on this device.';
+
+  @override
+  String get downloadListStart => 'Start downloading';
+
+  @override
+  String downloadListProgress(int position, int total) {
+    return 'Track $position of $total';
+  }
+
+  @override
+  String downloadListDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Saved $count tracks to this device.',
+      one: 'Saved 1 track to this device.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String downloadListFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks could not be saved.',
+      one: '1 track could not be saved.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get downloadListStopped =>
+      'Downloading stopped. Whatever finished is still on your device.';
+
+  @override
+  String get downloadStop => 'Stop';
+
+  @override
+  String get downloadsSettingsTitle => 'Audio saved on this device';
+
+  @override
+  String get downloadsSettingsNone => 'No audio is saved on this device.';
+
+  @override
+  String get downloadsSettingsOpen => 'View downloads';
+
+  @override
+  String get downloadsRemoveAll => 'Remove everything from this device';
+
+  @override
+  String get downloadsRemoveAllBody =>
+      'All audio saved on this device will be removed. Your tracks, your lists and the files you uploaded are not deleted. You can still play them online, and download them again.';
+
+  @override
+  String get downloadsRemoveAllDone =>
+      'Removed the audio saved on this device. Your tracks and lists are still there.';
+
+  @override
+  String get downloadsAllowMobileData => 'Download over mobile data too';
+
+  @override
+  String get downloadsAllowMobileDataNote =>
+      'When this is off, downloads run only while you are connected to Wi-Fi.';
+
+  @override
+  String downloadSyncRemovedOne(String title) {
+    return '“$title” was deleted at the source, so it was removed from this device.';
+  }
+
+  @override
+  String downloadSyncRemovedMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count tracks were deleted at the source and removed from this device.',
+      one: '1 track was deleted at the source and removed from this device.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String downloadSyncReplaced(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks were replaced at the source and downloaded again.',
+      one: '1 track was replaced at the source and downloaded again.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get webDownloadNoticeTitle =>
+      'About downloading audio from your browser';
+
+  @override
+  String get webDownloadNoticeBody1 =>
+      'Downloading audio from a web browser will end. This will happen when the Android app is released.';
+
+  @override
+  String get webDownloadNoticeBody2 =>
+      'You can still play audio directly in your browser as before. Sheet music and other files can still be downloaded as before.';
+
+  @override
+  String get webDownloadNoticeBody3 =>
+      'Saving tracks to a device and listening offline is available in the iOS and Android apps (a premium feature).';
+
+  @override
+  String get webDownloadReplacement => 'To listen offline, please use the app.';
 }

@@ -8,6 +8,7 @@ export 'auth/reset_password_screen.dart';
 export 'auth/sign_in_screen.dart';
 export 'auth/sign_up_screen.dart';
 export 'auth/verify_email_screen.dart';
+export 'downloads_screen.dart';
 export 'home_screen.dart';
 export 'item_detail_screen.dart';
 export 'item_form_screen.dart';

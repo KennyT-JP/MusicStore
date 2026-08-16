@@ -157,6 +157,32 @@ Cloud Storage の料金は保存量に比例します。自動拡張は、
 
 ## 高
 
+### Web から音源のダウンロードを外す引き金を引く（2026-08-16）
+
+**コードは全部書いてあります。定数 1 つを `true` にするだけです。**
+
+```dart
+// lib/ui/downloads/download_support.dart
+const kWebAudioDownloadRemoved = false;   // ← Android の一般公開後に true
+```
+
+**引き金は「Google Play の一般公開」で、日付ではありません。** 依頼者の判断
+（2026-08-16）で、期限は切らないと決めました。理由と代償は
+[DOWNLOAD-DESIGN.md](DOWNLOAD-DESIGN.md) 7.3 にあります。
+
+**それまでは、Web から誰でも無料で音源を落とせる状態が続きます。**
+その間、「プレミアム限定」が実質的に成立するのは iOS のアプリ内だけです。
+**これは承知のうえの判断で、不具合ではありません。**
+
+引くときにやること:
+
+1. `kWebAudioDownloadRemoved` を `true` にする
+2. `test/ui/web_audio_download_test.dart` の「引き金はまだ引かれていない」を書き換える
+3. 告知は既に出ているので、文面の差し替えだけ（**日付は入れない**）
+
+> **iOS が出ただけで引かないこと。** Android 利用者に代わりが無いまま機能が
+> 消えます（[DOWNLOAD-DESIGN.md](DOWNLOAD-DESIGN.md) 10 節の危険 6）。
+
 ### AdSense の審査に出すまでに、依頼者しかできないこと（2026-08-13）
 
 **コード側の準備は終わっています**（広告をアプリの画面から外し、読み物の

@@ -50,6 +50,7 @@ class AppShell extends StatelessWidget {
     required this.onNavigate,
     this.isSiteAdmin = false,
     this.unreadNotificationCount = 0,
+    this.showDownloads = false,
     this.onTapAccount,
   });
 
@@ -62,6 +63,13 @@ class AppShell extends StatelessWidget {
 
   /// ベルアイコンとナビの通知に出す未読件数（14.1）。
   final int unreadNotificationCount;
+
+  /// 「ダウンロード済み」を出すか（docs/DOWNLOAD-DESIGN.md 6.1 / 6.5）。
+  ///
+  /// **Web では出さない。** 保存先が無く、開いても常に空になる。
+  /// 既定を false にしてあるのは、**入口を足すかどうかを呼ぶ側に決めさせる**
+  /// ため（判定は `lib/platform/downloads_supported.dart` の 1 か所）。
+  final bool showDownloads;
 
   final VoidCallback? onTapAccount;
 
@@ -146,6 +154,18 @@ class AppShell extends StatelessWidget {
       label: l10n.navNotifications,
       badgeCount: unreadNotificationCount,
     ),
+    // 端末に保存した音源（docs/DOWNLOAD-DESIGN.md 6.1）。
+    //
+    // **ナビに入口を置く。** 設定の奥に入れると、圏外のときに
+    // たどり着けない——設定は Firestore から自分の情報を読むので、
+    // オフラインでは読み込み中のまま止まる。
+    if (showDownloads)
+      AppNavDestination(
+        route: AppRoutes.downloads,
+        icon: Icons.cloud_download_outlined,
+        selectedIcon: Icons.cloud_download,
+        label: l10n.navDownloads,
+      ),
     AppNavDestination(
       route: AppRoutes.settings,
       icon: Icons.settings_outlined,

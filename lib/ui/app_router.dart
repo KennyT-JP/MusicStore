@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 
 import '../domain/permissions.dart';
 import '../domain/role.dart';
+import '../platform/downloads_supported.dart';
 import 'routes.dart';
 import 'screens/screens.dart';
 import 'shell/app_shell.dart';
@@ -131,6 +132,9 @@ GoRouter buildAppRouter({
               onNavigate: (route) => context.go(route),
               isSiteAdmin: auth.isSiteAdmin,
               unreadNotificationCount: auth.unreadNotificationCount,
+              // **Web には出さない**（docs/DOWNLOAD-DESIGN.md 6.5）。
+              // 保存先が無いので、開いても常に空の画面になる。
+              showDownloads: kDownloadsSupported,
               child: child,
             );
           },
@@ -147,6 +151,24 @@ GoRouter buildAppRouter({
           GoRoute(
             path: AppRoutes.settings,
             builder: (context, state) => const SettingsScreen(),
+          ),
+
+          // 端末に保存した音源（docs/DOWNLOAD-DESIGN.md 6.1）。
+          //
+          // **設定の並びに置く。** オフラインでも開ける画面なので、
+          // リストの下ではなくアプリ直下にある。
+          GoRoute(
+            path: AppRoutes.downloads,
+            builder: (context, state) => const DownloadsScreen(),
+            routes: [
+              GoRoute(
+                path: AppRoutes.downloadedItemPattern,
+                builder: (context, state) => DownloadedItemScreen(
+                  listId: state.pathParameters['listId']!,
+                  itemId: state.pathParameters['itemId']!,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: AppRoutes.myRequests,

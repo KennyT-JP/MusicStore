@@ -25,6 +25,16 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String settings = '/settings';
 
+  /// 端末に保存した音源の一覧（docs/DOWNLOAD-DESIGN.md 6.1）。
+  ///
+  /// **オフラインでも開ける画面。** ここから先は `index.json` だけで
+  /// 描けるようにしてある（Firestore を読むと圏外で真っ白になる）。
+  static const String downloads = '/downloads';
+
+  /// 端末に保存した 1 曲の詳細（曲の情報＋コメント／論点 8）。
+  static String downloadedItem(String listId, String itemId) =>
+      '/downloads/$listId/$itemId';
+
   /// 自分が出した申請の状態一覧（5.2.1）。
   static const String myRequests = '/my-requests';
 
@@ -86,6 +96,9 @@ class AppRoutes {
   static const String listJoinRequestsPattern = '/lists/:listId/join-requests';
   static const String listSettingsPattern = '/lists/:listId/settings';
   static const String shareLinkPattern = '/s/:linkId';
+
+  /// `/downloads` の子として登録するので、先頭に `/` を付けない。
+  static const String downloadedItemPattern = ':listId/:itemId';
 
   /// ログイン後に戻る先を保持するクエリパラメータ（3.1.1）。
   ///

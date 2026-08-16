@@ -1165,4 +1165,216 @@ class AppL10nJa extends AppL10n {
   @override
   String get functionErrorTooManyLists =>
       '一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。';
+
+  @override
+  String get navDownloads => 'ダウンロード済み';
+
+  @override
+  String get downloadsListLabel => 'リスト';
+
+  @override
+  String get downloadsTitle => 'ダウンロード済み';
+
+  @override
+  String get downloadsEmpty => '端末に保存した曲はまだありません。';
+
+  @override
+  String get downloadsEmptyHint =>
+      '曲の一覧やリストのメニューから、端末に保存できます。インターネットに繋がっていなくても聴けるようになります（プレミアムの機能です）。';
+
+  @override
+  String downloadsUsage(String size, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$size（$_temp0）';
+  }
+
+  @override
+  String downloadsPerList(String name, String size, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$name — $size（$_temp0）';
+  }
+
+  @override
+  String offlineNoticeExpiring(int days) {
+    return 'あと $days 日でオフライン再生が止まります。一度インターネットに接続してください。';
+  }
+
+  @override
+  String get offlineNoticeStopped =>
+      'オフラインで聴ける期間（30 日）が過ぎました。一度インターネットに接続すると、また聴けるようになります。端末のファイルは残っています。';
+
+  @override
+  String get offlineComments => 'コメント';
+
+  @override
+  String get offlineCommentsEmpty => 'この曲にコメントはありません。';
+
+  @override
+  String get offlineCommentsReadOnly => '端末に保存した写しです。オフラインでは書き込めません。';
+
+  @override
+  String get downloadToDevice => '端末に保存';
+
+  @override
+  String get downloadedToDevice => '端末に保存済み';
+
+  @override
+  String get downloadCancel => 'ダウンロードを中止';
+
+  @override
+  String get downloadKeepAppOpen => 'アプリを開いたままにしてください。閉じるとダウンロードは止まります。';
+
+  @override
+  String downloadProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get downloadDone => '端末に保存しました。';
+
+  @override
+  String get downloadFailed => 'ダウンロードできませんでした。もう一度お試しください。';
+
+  @override
+  String get downloadNeedsWifi =>
+      'Wi-Fi に接続しているあいだだけダウンロードします。設定でモバイル通信も許可できます。';
+
+  @override
+  String get downloadNotSupportedFile => 'このファイルは端末に保存できません。音源だけが対象です。';
+
+  @override
+  String get downloadPermissionLost => 'このリストの音源を端末に保存する権限がありません。';
+
+  @override
+  String get downloadUnavailableHere => 'この環境では端末に保存できません。';
+
+  @override
+  String get downloadRemove => '端末から削除';
+
+  @override
+  String downloadRemoveBody(String title) {
+    return '「$title」を端末から削除します。曲もリストも消えません。もう一度ダウンロードできます。';
+  }
+
+  @override
+  String get downloadPremiumOnly => 'オフライン保存はプレミアムの機能です';
+
+  @override
+  String get downloadPremiumOnlyBody =>
+      '端末に保存してオフラインで聴く機能は、プレミアムをご利用の方の機能です。設定でクーポンコードを入力すると、お使いいただけます。';
+
+  @override
+  String get downloadPremiumOnlyCta => 'クーポンを入力';
+
+  @override
+  String get downloadList => 'このリストを端末に保存';
+
+  @override
+  String downloadListEstimate(int total, int done, int count, String size) {
+    return '$total 曲中 $done 曲は保存済みです。残り $count 曲・約 $size をダウンロードします。';
+  }
+
+  @override
+  String get downloadListNothing => 'このリストの曲は、すべて端末に保存済みです。';
+
+  @override
+  String get downloadListStart => 'ダウンロードを始める';
+
+  @override
+  String downloadListProgress(int position, int total) {
+    return '$position / $total 曲目';
+  }
+
+  @override
+  String downloadListDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0を端末に保存しました。';
+  }
+
+  @override
+  String downloadListFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0を保存できませんでした。';
+  }
+
+  @override
+  String get downloadListStopped => 'ダウンロードを中止しました。保存が済んだぶんは端末に残っています。';
+
+  @override
+  String get downloadStop => '中止';
+
+  @override
+  String get downloadsSettingsTitle => '端末に保存した音源';
+
+  @override
+  String get downloadsSettingsNone => '端末に保存した音源はありません。';
+
+  @override
+  String get downloadsSettingsOpen => 'ダウンロード済みを見る';
+
+  @override
+  String get downloadsRemoveAll => '端末の保存をすべて削除';
+
+  @override
+  String get downloadsRemoveAllBody =>
+      '端末に保存した音源をすべて削除します。曲もリストも、アップロードしたファイルも消えません。これまでどおりオンラインで再生でき、もう一度ダウンロードできます。';
+
+  @override
+  String get downloadsRemoveAllDone => '端末に保存した音源を削除しました。曲もリストも残っています。';
+
+  @override
+  String get downloadsAllowMobileData => 'モバイル通信でもダウンロードする';
+
+  @override
+  String get downloadsAllowMobileDataNote =>
+      'オフのときは Wi-Fi に接続しているあいだだけダウンロードします。';
+
+  @override
+  String downloadSyncRemovedOne(String title) {
+    return '「$title」は元が削除されたため、端末からも削除しました。';
+  }
+
+  @override
+  String downloadSyncRemovedMany(int count) {
+    return '元が削除された $count 曲を、端末からも削除しました。';
+  }
+
+  @override
+  String downloadSyncReplaced(int count) {
+    return '差し替えられた $count 曲を、端末に落とし直しました。';
+  }
+
+  @override
+  String get webDownloadNoticeTitle => 'ブラウザからの音源のダウンロードについて';
+
+  @override
+  String get webDownloadNoticeBody1 =>
+      'Web ブラウザからの音源のダウンロードを、今後終了します。Android アプリの公開に合わせて実施します。';
+
+  @override
+  String get webDownloadNoticeBody2 =>
+      'これまでどおり、ブラウザでそのまま再生できます。楽譜やその他のファイルは、これまでどおりダウンロードできます。';
+
+  @override
+  String get webDownloadNoticeBody3 =>
+      '端末に保存してオフラインで聴く機能は、iOS / Android アプリでご利用いただけます（プレミアムの機能です）。';
+
+  @override
+  String get webDownloadReplacement => 'オフラインで聴くには、アプリをお使いください。';
 }

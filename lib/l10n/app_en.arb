@@ -557,5 +557,176 @@
   "functionErrorCouponCodeTaken": "That code is already in use. Please choose different text.",
   "functionErrorMonthsInvalid": "Months must be a whole number of 1 or more.",
   "functionErrorMaxUsesInvalid": "The number of people must be a whole number of 1 or more.",
-  "functionErrorTooManyLists": "You can check up to 50 lists at a time. Please reduce the number of lists you keep for offline use and try again."
+  "functionErrorTooManyLists": "You can check up to 50 lists at a time. Please reduce the number of lists you keep for offline use and try again.",
+
+  "navDownloads": "Downloads",
+
+  "downloadsListLabel": "List",
+  "downloadsTitle": "Downloaded",
+  "downloadsEmpty": "Nothing is saved on this device yet.",
+  "downloadsEmptyHint": "You can save tracks to this device from the track list or from a list's menu. They then play without an internet connection (a premium feature).",
+  "downloadsUsage": "{size} ({count, plural, =1{1 track} other{{count} tracks}})",
+  "@downloadsUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsPerList": "{name} — {size} ({count, plural, =1{1 track} other{{count} tracks}})",
+  "@downloadsPerList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "offlineNoticeExpiring": "{days, plural, =1{Offline playback stops in 1 day. Please connect to the internet once.} other{Offline playback stops in {days} days. Please connect to the internet once.}}",
+  "@offlineNoticeExpiring": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineNoticeStopped": "The 30-day offline period has passed. Connect to the internet once and you can listen again. The files are still on your device.",
+
+  "offlineComments": "Comments",
+  "offlineCommentsEmpty": "This track has no comments.",
+  "offlineCommentsReadOnly": "This is the copy saved on your device. You cannot post while offline.",
+
+  "downloadToDevice": "Save to this device",
+  "downloadedToDevice": "Saved on this device",
+  "downloadCancel": "Stop downloading",
+  "downloadKeepAppOpen": "Please keep the app open. Closing it stops the download.",
+  "downloadProgressBytes": "{done} / {total}",
+  "@downloadProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadDone": "Saved to this device.",
+  "downloadFailed": "Could not download this. Please try again.",
+  "downloadNeedsWifi": "Downloads run only while you are connected to Wi-Fi. You can also allow mobile data in settings.",
+  "downloadNotSupportedFile": "This file cannot be saved to your device. Only audio can be saved.",
+  "downloadPermissionLost": "You do not have permission to save audio from this list to your device.",
+  "downloadUnavailableHere": "Saving to this device is not available here.",
+
+  "downloadRemove": "Remove from this device",
+  "downloadRemoveBody": "“{title}” will be removed from this device. The track and the list are not deleted, and you can download it again.",
+  "@downloadRemoveBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+
+  "downloadPremiumOnly": "Offline saving is a premium feature",
+  "downloadPremiumOnlyBody": "Saving tracks to your device and listening offline is available to premium members. Enter a coupon code in settings to use it.",
+  "downloadPremiumOnlyCta": "Enter a coupon",
+
+  "downloadList": "Save this list to this device",
+  "downloadListEstimate": "{done} of {total} tracks are already saved. This will download the remaining {count} tracks, about {size}.",
+  "@downloadListEstimate": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadListNothing": "Every track in this list is already saved on this device.",
+  "downloadListStart": "Start downloading",
+  "downloadListProgress": "Track {position} of {total}",
+  "@downloadListProgress": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListDone": "{count, plural, =1{Saved 1 track to this device.} other{Saved {count} tracks to this device.}}",
+  "@downloadListDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListFailed": "{count, plural, =1{1 track could not be saved.} other{{count} tracks could not be saved.}}",
+  "@downloadListFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadListStopped": "Downloading stopped. Whatever finished is still on your device.",
+  "downloadStop": "Stop",
+
+  "downloadsSettingsTitle": "Audio saved on this device",
+  "downloadsSettingsNone": "No audio is saved on this device.",
+  "downloadsSettingsOpen": "View downloads",
+  "downloadsRemoveAll": "Remove everything from this device",
+  "downloadsRemoveAllBody": "All audio saved on this device will be removed. Your tracks, your lists and the files you uploaded are not deleted. You can still play them online, and download them again.",
+  "downloadsRemoveAllDone": "Removed the audio saved on this device. Your tracks and lists are still there.",
+  "downloadsAllowMobileData": "Download over mobile data too",
+  "downloadsAllowMobileDataNote": "When this is off, downloads run only while you are connected to Wi-Fi.",
+
+  "downloadSyncRemovedOne": "“{title}” was deleted at the source, so it was removed from this device.",
+  "@downloadSyncRemovedOne": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSyncRemovedMany": "{count, plural, =1{1 track was deleted at the source and removed from this device.} other{{count} tracks were deleted at the source and removed from this device.}}",
+  "@downloadSyncRemovedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadSyncReplaced": "{count, plural, =1{1 track was replaced at the source and downloaded again.} other{{count} tracks were replaced at the source and downloaded again.}}",
+  "@downloadSyncReplaced": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webDownloadNoticeTitle": "About downloading audio from your browser",
+  "webDownloadNoticeBody1": "Downloading audio from a web browser will end. This will happen when the Android app is released.",
+  "webDownloadNoticeBody2": "You can still play audio directly in your browser as before. Sheet music and other files can still be downloaded as before.",
+  "webDownloadNoticeBody3": "Saving tracks to a device and listening offline is available in the iOS and Android apps (a premium feature).",
+  "webDownloadReplacement": "To listen offline, please use the app."
 }
