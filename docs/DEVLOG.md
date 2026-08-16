@@ -6,6 +6,186 @@
 
 ---
 
+## 2026-08-16（5） — iOS のビルドを通した。**このリポジトリで初めて iOS の成果物ができた**
+
+`flutter build ios --release --no-codesign` が `Runner.app`（50.5MB）を作り、
+`xcode-project build-ipa` が **ipa まで到達し、App Store Connect へ上がった。**
+Xcode は **26.4.1 (17E202)**、Flutter は `codemagic.yaml` で **3.44.9** に固定してある。
+
+**Windows では一度も確かめられなかった領域が、初めて検証された。**
+`ios/Runner/AppDelegate.swift` に足したバックアップ除外の MethodChannel
+（`applicationRegistrar.messenger()` と `try url.setResourceValues(values)`）が
+**コンパイルできた。**
+
+> **言えるのはそこまでである。**
+> **ビルドが通った＝ Swift がコンパイルできた**、であって、
+> **実機で動いたことは、まだ何も言えない。**
+> [TEST-CASES.md](TEST-CASES.md) の M-21〜M-27 は 1 件も動かしていないので、
+> **今回「最終実施」を書き換えた行は無い。**
+
+**ここに残す価値があるのは成功のほうではない。真因に届くまでに 2 回外した、
+その外し方のほうである。**
+
+### 外し方 1：エラーが挙げた条件を、原因だと読んだ（**共有ドキュメント AP-72 の実物**）
+
+最初の失敗は archive で止まった。
+
+```
+"Runner" requires a provisioning profile with the Associated Domains and
+Sign In with Apple features. Select a provisioning profile in the
+Signing & Capabilities editor.
+```
+
+**こちらは「App ID の capability が足りない」と読んだ。外れだった。**
+
+**そう読んだ理由には、こちらの手順漏れがある。** App ID の作成手順として
+案内していたのは **`Sign in with Apple` だけ**で、**`Associated Domains` を
+書き落としていた**（[MOBILE-APP-DESIGN.md](MOBILE-APP-DESIGN.md) 5-6。
+`ios/Runner/Runner.entitlements` には App Links のために**入れてある**のに、
+Apple 側に足す手順のほうから抜けていた）。
+**エラーの文面が、こちらの落ち度と一致してしまった。**
+
+依頼者が App ID に `Associated Domains` を追加した。**それでも直らなかった。**
+**同じエラーで、2 回落ちた。**
+
+developer.apple.com の Profiles を見に行って分かったのは、次のことだった。
+**プロファイルは 1 件しかなく**、その中身は——
+
+```
+Name   : Session Concierge ios_app_store 1786773259
+App ID : Session Concierge (com.sessionconcierge.app)
+```
+
+**別アプリのものだった。音源創庫のプロファイルは 0 件。**
+
+**つまりあのエラーは「capability が足りない」ではなく、
+「該当するプロファイルが 1 件も無い」という意味だった。**
+AP-72 の回避策がそのまま効く形である——**「無い」と言われたら、
+まず対象が存在するかを数える。0 件なら、条件の話は始まっていない。**
+
+> **手順漏れ自体は本当の欠陥だったので、直したこと自体は無駄ではない。**
+> **だが、それは今回の失敗の原因ではなかった。**
+> **「自分の落ち度と符合するエラーほど、そこで調べるのをやめてしまう。」**
+
+### 外し方 2（真因）：秘密鍵が RSA 2048 ではなかった。**署名ステップは緑で終わっていた**（**共有ドキュメント AP-71 の実物**）
+
+`署名ファイルを用意する` ステップの出力（引用）:
+
+```
+Found 1 Bundle ID matching specified filters: identifier=jp.sessionconcierge.trackcabinet
+- Track Cabinet jp.sessionconcierge.trackcabinet (M8FUYFN8VG)
+
+Found 1 Signing Certificate matching specified filters: certificateType=DISTRIBUTION
+Did not find any Signing Certificates for given private key
+Creating new Signing Certificate: certificate type: DISTRIBUTION
+POST https://api.appstoreconnect.apple.com/v1/certificates returned 409:
+  An attribute in the provided entity has invalid value -
+  CSR algorithm/size incorrect. Expected: RSA(2048)
+...
+Did not find matching provisioning profiles for code signing!
+Generated options for exporting the project
+ - Method: ad-hoc
+ - Provisioning Profiles: []
+ - Signing Certificate:
+ - Signing Style: manual
+ - Team Id:
+```
+
+**Apple は配布用証明書の作成に RSA 2048 しか受け付けない。**
+登録してあった `CERTIFICATE_PRIVATE_KEY` が別の種類だったため
+**証明書を作れず、証明書が無いのでプロファイルも作れなかった。**
+`--create` が新しく作るはずなのに作られていなかったのは、これが理由である。
+
+**そして、このステップは緑で終わっている。**
+最後の 3 行（`Provisioning Profiles` / `Signing Certificate` / `Team Id`）が
+**すべて空**であることが、**唯一の証拠だった。**
+
+> **[MOBILE-APP-DESIGN.md](MOBILE-APP-DESIGN.md) 8-1 は、この形をすでに
+> 警告していた。** ただしそこに書いてある真因は
+> **「`--certificate-key` の指定漏れ」**で、**今回は指定してあった。**
+>
+> **同じ「3 行が空」に至る道が、少なくとも 2 本ある。**
+> **だから見るのは原因の候補ではなく、3 行のほうである。**
+> 原因を先に当てにいくと、今回のように 2 回外す。
+
+### 直し方——**新しい鍵を作らないほうが正しかった**
+
+**Session Concierge が使っている秘密鍵**
+（`C:\Users\mstak\Documents\SessionConcierge-signing\cert_key`）を
+`CERTIFICATE_PRIVATE_KEY` に入れ直した。
+
+**ログにヒントが出ていた。**
+
+```
+Found 1 Signing Certificate matching specified filters: DISTRIBUTION
+Did not find any Signing Certificates for given private key
+```
+
+**Apple 側には配布用証明書がすでに 1 つあり、渡した鍵とそれが対に
+なっていなかっただけ**である。**同じ鍵を渡せば既存の証明書がそのまま使え、
+配布用証明書の保有枠も消費しない。**
+
+新しく作る場合は **`openssl genrsa -out cert_key 2048`**。
+**RSA 2048 であること**が条件で、ここを外すと上の 409 に戻る。
+
+### 成功の判定基準は「3 行が埋まること」
+
+```
+ - Using profile "Track Cabinet ios_app_store 1786889588" for target "Runner"
+ - Method: app-store
+ - Provisioning Profiles:
+     - jp.sessionconcierge.trackcabinet: Track Cabinet ios_app_store 1786889588
+ - Signing Certificate: Apple Distribution
+ - Signing Style: manual
+ - Team Id: 65CJKM2SGX
+```
+
+**空だった 3 行が埋まった。ステップの色は、失敗時も成功時も緑だった。**
+
+### GitHub へ push していなかった（**`main` の意味が変わった**）
+
+そもそもの入口で、Codemagic が `No configuration file found` と表示した。
+**当然だった**——`codemagic.yaml` はローカルの `dev` にしかなく、
+**GitHub には今日の作業が 1 つも上がっていなかった**
+（`dev` が origin より 24 コミット、`main` が 19 コミット進んでいた）。
+
+**Codemagic は GitHub しか見られない。** 手元のブランチは存在しないのと同じである。
+
+依頼者の判断で **`dev` を `main` へマージし、両方 push した**（`dc2437f`）。
+
+> **`main` の意味が変わった。**
+> これまで `main` は「**検証環境で確認済み**」の印だったが、
+> **実機で一度も動かしていないものが入った。**
+> Codemagic が GitHub の `main` を見る以上、**iOS のビルドを始める唯一の方法**
+> だった。**代償を提示したうえでの判断**であり、事故ではない。
+
+### 確定した値
+
+| 項目 | 値 |
+| --- | --- |
+| Team ID | `65CJKM2SGX` |
+| Bundle ID | `jp.sessionconcierge.trackcabinet` |
+| App ID（Apple 側の内部 ID） | `M8FUYFN8VG` |
+| プロファイル名 | `Track Cabinet ios_app_store 1786889588` |
+| App ID の capability | **`Sign in with Apple` と `Associated Domains` の両方** |
+| Xcode（CI 側） | 26.4.1 (17E202) |
+| Flutter（CI 側） | 3.44.9（`codemagic.yaml` で固定） |
+
+**この表は [MOBILE-APP-DESIGN.md](MOBILE-APP-DESIGN.md) 1-5 にも入れた。**
+Codemagic の画面の実測（Teams が無いこと・統合は `Developer Portal` 1 つ・
+変数はアプリごと）も、同じ改訂で直してある。
+
+### まだ終わっていないこと
+
+| 残り | 状況 |
+| --- | --- |
+| **TestFlight での実機確認** | **ここから先が本番。** 内部テスターなら審査は要らない |
+| 手動テスト **M-21〜M-27**（7 件） | **全件未実施。** ipa ができたことは、この 7 件のどれの証拠にもならない |
+| 利用規約・ストア掲載文・スクリーンショット・審査用アカウント | **いずれも未作成。依頼者の指示で、いまは作らない** |
+| Play のクローズドテスト（12 人 × 14 日） | 変化なし（[MOBILE-APP-DESIGN.md](MOBILE-APP-DESIGN.md) 4-1） |
+
+---
+
 ## 2026-08-16（4） — Android のビルドを通し、Firebase へ登録した
 
 依頼者が署名鍵を作り、そこから先を CLI で進めた。

@@ -82,7 +82,17 @@
 > と決まり、端末のファイル領域を直接使えるためです。
 > Web からは、むしろ**音源のダウンロードを外します**（7 節）。
 
-**残っているのは認証のモバイル対応だけ**で、依頼者の作業（署名鍵・Firebase 登録）待ちです。
+~~**残っているのは認証のモバイル対応だけ**で、依頼者の作業（署名鍵・Firebase 登録）待ちです。~~
+
+**2026-08-16 に、この待ちは解消しました。** 署名鍵の作成・Firebase への
+android / iOS 登録・認証のモバイル対応がすべて済み、
+**Android の APK と iOS の ipa が両方できています**（[DEVLOG.md](DEVLOG.md)
+2026-08-16（4）・（5））。
+
+> **ただし「動く」はまだ言えません。** ビルドが通っただけで、
+> **実機での確認は 1 件も済んでいません**（[TEST-CASES.md](TEST-CASES.md)
+> M-21〜M-27 は全件「未実施」）。**とくに `file_picker` と `just_audio` の
+> モバイル動作には社内に前例がありません**（[MOBILE-APP-DESIGN.md](MOBILE-APP-DESIGN.md) 9 節）。
 
 #### 2-2. 申請なしでリストを作れる（上限つき）
 
@@ -686,8 +696,15 @@ Dart の文字列比較は文字コード順のため（佐藤 &lt; 田中 &lt; 
 
 ### ~~Android の release 署名~~ — 2026-08-15 に受け口だけ用意しました
 
-`android/key.properties` があればそれで署名し、無ければデバッグ用に倒します。
-**鍵は依頼者しか作れません**（作り方は `android/app/build.gradle.kts` の冒頭）。以下は経緯です。
+~~`android/key.properties` があればそれで署名し、無ければデバッグ用に倒します。~~
+**デバッグ署名へのフォールバックは 2026-08-16 に廃止しました。**
+`key.properties` が無いまま release を作ろうとすると
+`GradleException` で止まります（`android/app/build.gradle.kts:67-78`）。
+**デバッグ鍵の成果物が本番として配られる事故を避けるため**です。
+~~**鍵は依頼者しか作れません**（作り方は `android/app/build.gradle.kts` の冒頭）。~~
+**2026-08-16 に依頼者が鍵を作り、署名された release APK が出ています**
+（[DEVLOG.md](DEVLOG.md) 2026-08-16（4）。SHA-1 / SHA-256 は Firebase と
+`assetlinks.json` の値と一致することを `apksigner` で確認済み）。以下は経緯です。
 
 
 `android/app/build.gradle.kts` が debug 署名鍵のままです（Flutter テンプレートの TODO）。

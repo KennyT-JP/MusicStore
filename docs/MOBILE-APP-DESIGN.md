@@ -1,14 +1,22 @@
 # モバイルアプリ化（iOS / Android）設計（2026-08-16）
 
-**まだ何も着手していません。** これは「作る前に決めること」を並べ、
+これは「作る前に決めること」を並べ、
 決まった範囲の作り方と、着手の順序をまとめた文書です。
 
-いま本番で配信しているのは **Web だけ**です。`android/` と `ios/` は
-リポジトリに存在しますが、**中身はほぼ Flutter の初期生成のまま**で、
-**iOS のビルドは一度も走っていません**。
-つまり `android/` `ios/` があることを「動く」と読み替えないでください。
-[AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) 観点 2「**一度も成功していない経路**」
-そのものです。
+> **冒頭の前提は 2026-08-16 に変わりました。**
+> 執筆時点では「**まだ何も着手していない／ iOS のビルドは一度も走っていない**」
+> と書いてありましたが、**同日に土台を実装し、Android の APK と iOS の ipa が
+> 両方できました**（[DEVLOG.md](DEVLOG.md) の 2026-08-16（2）〜（5））。
+> **ipa は App Store Connect まで上がっています。**
+>
+> **ただし「動く」はまだ言えません。** 言えるのは
+> **「ビルドが通った＝コンパイルできた」まで**で、
+> **実機での確認は 1 件も済んでいません**（[TEST-CASES.md](TEST-CASES.md)
+> M-21〜M-27 は全件「未実施」）。
+> [AUDIT-CHECKLIST.md](AUDIT-CHECKLIST.md) 観点 2「**一度も成功していない経路**」は、
+> **CI から実機へ移っただけ**です。ここを読み替えないでください。
+
+いま本番で配信しているのは **Web だけ**です。
 
 **この文書は土台側だけを扱います。** ダウンロード（オフライン保存）機能は
 [DOWNLOAD-DESIGN.md](DOWNLOAD-DESIGN.md) が扱います。
@@ -113,9 +121,9 @@ App Store Connect へアップロードし、同日提出）。
 | 要るもの | 費用 | 状況 |
 | --- | --- | --- |
 | **Android の署名鍵（keystore）** | — | **音源創庫用に新規作成。** Session Concierge の鍵は流用しません（別アプリなので） |
-| **App ID / アプリレコードの追加登録** | — | developer.apple.com と App Store Connect、Play Console で**音源創庫のぶんを追加**します。**Sign in with Apple のチェックを App ID 作成時に入れること**（5-6） |
-| **App Store Connect の API キー（`.p8`）** | — | **ダウンロードは 1 回きり**。役割は **App Manager 以上**。Session Concierge のものを流用できるかは確認してください（同じ Team なら流用できるはずです） |
-| **Codemagic への音源創庫の登録** | **無料枠は未確認** | 下記 |
+| **App ID / アプリレコードの追加登録** | — | **2026-08-16 に済みました**（App ID `M8FUYFN8VG`）。**capability は `Sign in with Apple` と `Associated Domains` の両方**が要ります（5-6・1-5） |
+| **App Store Connect の API キー（`.p8`）** | — | **流用します。作りません**（1-4）。**キーは Apple のアカウントに紐づくもので、アプリごとではありません** |
+| **Codemagic への音源創庫の登録** | **無料枠は未確認** | **2026-08-16 に登録し、ビルドまで通しました**（下記） |
 
 > **Codemagic の無料枠だけが未確認です。**
 > **音源創庫用に別アプリを登録したとき、build minutes を Session Concierge と
@@ -125,6 +133,11 @@ App Store Connect へアップロードし、同日提出）。
 >
 > **iOS の初回ビルドは 4 回失敗する前提で見積もってください**（8-1）。
 > 成功したビルドは 8 分 28 秒でしたが、**失敗したビルドも minutes を消費します。**
+>
+> **音源創庫の実績（2026-08-16）: archive で 2 回落ちてから成功しました。**
+> **2 回とも同じエラー文で、しかも表示された条件は原因ではありませんでした**
+> （8-1 の追記）。**「同じエラーが 2 回出た＝直っていない」だけが正しい読みで、
+> 「同じ原因が残っている」は言えません。**
 
 ### 1.3 macOS は要りません
 
@@ -147,21 +160,91 @@ Session Concierge の開発ログにこう書かれています。
 **そして、手元で潰せる失敗を CI で踏むと、失敗ビルドを浪費します**
 （Session Concierge の初回 iOS ビルドは 4 回失敗しました。8-1 参照）。
 
-### 1.4 依頼者が Codemagic の画面で作るもの
+### 1.4 依頼者が Codemagic の画面で作るもの（**2026-08-16 に画面を実際に見て直しました**）
 
 **yaml には値を書きません。登録名を指すだけです。**
 
-| 作るもの | 場所 | 名前 |
+> # **`Teams` というメニューはありません。**
+>
+> **この口座は Personal Account です。**
+> Session Concierge の手順書は「Codemagic → **Teams** → Integrations」と
+> 書いていますが、**それは同じ場所を `Settings` から開いたもの**です。
+> URL はどちらも `/teams/<id>` で、**Personal Account が内部的に team として
+> 扱われている**だけでした。**「Teams が無いので手順が違う」ではありません。**
+>
+> **依頼者から「Teams がありません」と指摘があって、初めて見に行きました。**
+> **書き写した手順は、画面と照らすまで正しさが分かりません。**
+
+| 作るもの | 場所（**実際の画面**） | 押さえること |
 | --- | --- | --- |
-| **App Store Connect の Integration** | Teams → Integrations → App Store Connect | **`codemagic.yaml` の `app_store_connect:` と一字一句一致させること。** 違うと「integration not found」でビルドが始まりません |
-| **変数グループ `appstore`** | 環境変数 | 中に `CERTIFICATE_PRIVATE_KEY` を **Secure** で登録 |
+| **App Store Connect の API キー** | **`Settings` → Integrations → `Developer Portal`** | **`App Store Connect` という統合項目はありません。Apple 関連はこの 1 つです。** `codemagic.yaml` の `app_store_connect:` と**一字一句一致**させること（違うと「integration not found」でビルドが始まりません） |
+| **変数グループ `appstore`** | **アプリの `Environment variables` タブ**（アカウント全体ではありません） | 中に `CERTIFICATE_PRIVATE_KEY` を **Secure** で登録 |
+
+#### 変数は、アカウント全体ではなくアプリごとに置きます
+
+**Codemagic の画面にこう出ています（引用）。**
+
+> Global variables and secrets will be removed from personal accounts in the future.
+> Existing variables are now read-only and can only be deleted.
+> **Add your variables in app settings** or upgrade to a team account for global use.
+
+**アカウント側は実際に「No existing variables」でした。**
+**アプリを増やすたびに、そのアプリへ登録し直すことになります。**
+
+#### API キーは使い回します。**アプリごとに作りません**
+
+**App Store Connect の API キーは Apple のアカウントに紐づくもの**であって、
+アプリごとではありません。
+`codemagic.yaml` の `app_store_connect: SessionConcierge` は**誤りではなく、
+そのキーの識別子**を指しています（Key: `CHFAV8VT47`）。
+
+> **別のキーを作らないでください。** Apple は API キーの本数に上限があり、
+> **1 つ作るたびに枠を消費します。** 増やすほど「どれがどれか」も分からなくなります。
+> **名前はキーの識別子であって、アプリ名ではありません。**
+
+#### 証明書用の秘密鍵は **RSA 2048 でなければなりません**
 
 **証明書用の秘密鍵は、リポジトリの外に控えます。**
 Session Concierge は `C:\Users\mstak\Documents\SessionConcierge-signing\cert_key`
-に置いています。
+に置いており、**音源創庫もこれをそのまま使っています。**
+
+> # **鍵は `openssl genrsa -out cert_key 2048` で作ったものだけが通ります。**
+>
+> **Apple は配布用証明書の作成に RSA 2048 しか受け付けません。**
+> 別の種類を渡すと、証明書の作成が
+> `CSR algorithm/size incorrect. Expected: RSA(2048)` で 409 になり、
+> **証明書が作れず、プロファイルも作れません。**
+> **それでも署名ステップは緑で終わります**（8-1・2026-08-16 に実際に踏みました）。
 
 > **毎回同じ鍵を使ってください。** 鍵を変えると証明書が新規発行され、
 > **Apple の配布用証明書の保有上限にすぐ達します。**
+> **逆に、同じ鍵を渡せば Apple 側にある既存の証明書がそのまま使えて、
+> 枠を消費しません**（2026-08-16 に実測）。
+
+### 1.5 確定した値（**2026-08-16 の実測**）
+
+**推測ではありません。すべて成功したビルドのログと画面から取った値です。**
+
+| 項目 | 値 |
+| --- | --- |
+| Team ID | `65CJKM2SGX` |
+| Bundle ID | `jp.sessionconcierge.trackcabinet` |
+| App ID（Apple 側の内部 ID） | `M8FUYFN8VG` |
+| **App ID の capability** | **`Sign in with Apple` と `Associated Domains` の両方**（片方だけでは archive が通りません） |
+| プロファイル名 | `Track Cabinet ios_app_store 1786889588`（`fetch-signing-files --create` が作ったもの） |
+| App Store Connect の API キー | 名前 `SessionConcierge`・Key `CHFAV8VT47`（**Session Concierge と共用**） |
+| 証明書 | `Apple Distribution`（**既存のものを再利用**。新規発行していません） |
+| Xcode（CI 側） | **26.4.1 (17E202)**（`xcode: latest` の実体） |
+| Flutter（CI 側） | **3.44.9**（`codemagic.yaml` で固定） |
+| 成果物 | `Runner.app` **50.5MB** → ipa。**App Store Connect へアップロード済み** |
+
+> **`Associated Domains` は、当初の手順から抜け落ちていました。**
+> 5-6 の表は App ID の作成時に **`Sign in with Apple` だけ**を案内しており、
+> **`Associated Domains` を書いていませんでした**——
+> `ios/Runner/Runner.entitlements` には 5-8-2 の App Links のために
+> **入れてあるのに**、です。
+> **entitlements に書いたものは、App ID 側にも同じだけ要ります。**
+> **片方だけでは、署名の段階で止まります**（[DEVLOG.md](DEVLOG.md) 2026-08-16（5））。
 
 ---
 
@@ -699,7 +782,7 @@ try {
 | --- | --- |
 | パッケージ | **`sign_in_with_apple: ^8.1.0`** と **`crypto: ^3.0.7`**（nonce のハッシュ用） |
 | iOS の設定 | **`ios/Runner/Runner.entitlements`**（新規）に `com.apple.developer.applesignin` = `[Default]`。**この記述が無いと、実装しても呼んだ瞬間に失敗します**。**同じファイルに 5-8-2 の `com.apple.developer.associated-domains` も入ります**——**ファイルを作るのはここ 1 回だけです** |
-| Apple 側 | developer.apple.com の App ID 作成時に **`Sign in with Apple` にチェック**（**人の作業**） |
+| Apple 側 | developer.apple.com の App ID 作成時に **`Sign in with Apple` にチェック**（**人の作業**）。**`Associated Domains` も同時に入れること**（5-8-2 の App Links に要ります。**2026-08-16 まで、この表はこれを書き落としていました**。1-5） |
 | Firebase 側 | Apple プロバイダを有効化 |
 | 表示の判定 | **`isAppleSignInAvailable` を 1 箇所に閉じる**（3-2） |
 
@@ -1093,9 +1176,9 @@ cocoapods: default
 
 | 何を | どこから |
 | --- | --- |
-| App Store Connect API キー（Issuer ID / Key ID / `.p8`） | **Codemagic の Integrations**。`integrations: app_store_connect: <登録名>` と**登録名を指すだけ**。値は yaml に書かない |
-| 証明書用の秘密鍵 | **Codemagic の変数グループ（Secure）** `appstore` の `CERTIFICATE_PRIVATE_KEY`。`--certificate-key=@env:CERTIFICATE_PRIVATE_KEY` で渡す |
-| 証明書・プロファイル本体 | **その場で Apple 側に作る**（`fetch-signing-files --create`） |
+| App Store Connect API キー（Issuer ID / Key ID / `.p8`） | **Codemagic の `Settings` → Integrations → `Developer Portal`**。`integrations: app_store_connect: <登録名>` と**登録名を指すだけ**。値は yaml に書かない。**キーは Apple のアカウント単位なので、アプリごとに作らない**（1-4） |
+| 証明書用の秘密鍵 | **そのアプリの環境変数**（Secure）グループ `appstore` の `CERTIFICATE_PRIVATE_KEY`。`--certificate-key=@env:CERTIFICATE_PRIVATE_KEY` で渡す。**RSA 2048 でなければ通らない**（1-4） |
+| 証明書・プロファイル本体 | **その場で Apple 側に作る**（`fetch-signing-files --create`）。**同じ鍵を渡せば、既存の証明書を再利用して枠を消費しない** |
 
 > # **`environment.ios_signing:` を使ってはいけません。**
 >
@@ -1481,6 +1564,26 @@ Session Concierge の記録（2026-08-04）:
 | --- | --- |
 | **AP-71** | **緑になったステップを、成功したことにする** |
 | **AP-72** | **エラーメッセージが挙げた条件を、原因だと読む**。回避策：**「無い」と言われたら、まず対象が存在するかを数える。0 件なら、条件の話は始まっていない** |
+
+#### **音源創庫でも、同じ 2 つを踏みました（2026-08-16）**
+
+**この節を書いたうえで、両方踏みました。** 経緯は [DEVLOG.md](DEVLOG.md)
+2026-08-16（5）が正本です。要点だけ:
+
+| 踏んだもの | 音源創庫での形 |
+| --- | --- |
+| **AP-72** | `requires a provisioning profile with the Associated Domains and Sign In with Apple features` を「**capability 不足**」と読んだ。**実際は音源創庫のプロファイルが 0 件だっただけ**（Apple 側にあった 1 件は Session Concierge のもの） |
+| **AP-71** | **真因は `CERTIFICATE_PRIVATE_KEY` が RSA 2048 でなかったこと**（`CSR algorithm/size incorrect. Expected: RSA(2048)` の 409）。**署名ステップは緑で終わり、3 行が空なのが唯一の証拠だった** |
+
+> # **「3 行が空」に至る道は、1 本ではありません。**
+>
+> **上の表は真因を「`--certificate-key` の指定漏れ」と書いていますが、
+> 音源創庫では指定してありました。** 鍵の**種類**が違うだけで、
+> **まったく同じ「緑・3 行が空」になります。**
+>
+> **だから、原因の候補を先に当てにいかないでください。**
+> **見るのは 3 行です。** 空なら失敗、埋まっていれば成功——
+> **それだけが、原因を知らなくても使える判定です。**
 
 > **無害な警告:** 鍵束への取り込みで
 > `security: SecKeychainItemImport: Unable to decode the provided data.`

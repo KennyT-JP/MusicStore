@@ -1,4 +1,4 @@
-# iOS のビルドと App Store Connect への送信（仕様書 MOBILE-APP-DESIGN.md 5-8）
+# iOS のビルドと App Store Connect への送信（仕様書 MOBILE-APP-DESIGN.md 5-11）
 #
 # ## なぜクラウドか
 #
@@ -26,17 +26,40 @@
 # | 要るもの | 場所 | 状態 |
 # | --- | --- | --- |
 # | App Store Connect の API キー | Settings → Integrations → **Developer Portal** | **登録済み**（`SessionConcierge`・Key: CHFAV8VT47） |
-# | App ID（`Sign in with Apple` にチェック） | developer.apple.com → Identifiers | **要作成** |
-# | App Store Connect のアプリレコード | App Store Connect → マイ App | **要作成** |
-# | `CERTIFICATE_PRIVATE_KEY` | **このアプリの設定**の環境変数（グループ `appstore`） | **要登録** |
+# | App ID（capability は**下の 2 つとも**） | developer.apple.com → Identifiers | **作成済み**（`M8FUYFN8VG`） |
+# | App Store Connect のアプリレコード | App Store Connect → マイ App | **作成済み**（ipa が上がっているので存在する） |
+# | `CERTIFICATE_PRIVATE_KEY` | **このアプリの設定**の環境変数（グループ `appstore`） | **登録済み。ただし RSA 2048 であること**（下記） |
 #
 # **変数はアカウント全体ではなく、アプリごとに置く。** Codemagic の画面に
 # 「Global variables and secrets will be removed from personal accounts in the
 # future. Add your variables in app settings」と出ており、実際に
 # アカウント側は「No existing variables」だった。
 #
-# **App ID の `Sign in with Apple` を忘れると署名が通らない。** アプリ側の
-# entitlements（ios/Runner/Runner.entitlements）と**両方揃って初めて**動く。
+# ## App ID の capability は 2 つ要る（2026-08-16 の実測）
+#
+#   - Sign in with Apple
+#   - Associated Domains
+#
+# **アプリ側の entitlements（ios/Runner/Runner.entitlements）に書いたものは、
+# App ID 側にも同じだけ要る。** 片方だけだと archive がこう言って止まる。
+#
+#   "Runner" requires a provisioning profile with the Associated Domains and
+#   Sign In with Apple features.
+#
+# **ただし、このエラーを「capability 不足」と読むと外す。**
+# 2026-08-16 は capability を揃えても直らず、真因は
+# **プロファイルが 1 件も無かったこと**（＝下の署名ステップが失敗していた）
+# だった。**「無い」と言われたら、まず対象を数える。**
+# 経緯は docs/DEVLOG.md 2026-08-16（5）。
+#
+# ## 秘密鍵は RSA 2048 でなければならない（2026-08-16 の実測）
+#
+#   openssl genrsa -out cert_key 2048
+#
+# **Apple は配布用証明書の作成に RSA 2048 しか受け付けない。**
+# 別の種類だと証明書が作れず、プロファイルも作れない。
+# **同じ鍵を使い続ければ、Apple 側の既存の証明書を再利用でき、
+# 配布用証明書の保有枠も消費しない。**
 
 workflows:
   ios-release:
@@ -113,9 +136,18 @@ workflows:
           #
           #   Cannot save Signing Certificates without certificate private key
           #
+          # **渡してあっても、鍵が RSA 2048 でなければ同じことが起きる。**
+          # 2026-08-16 に実際に踏んだ（docs/DEVLOG.md 2026-08-16（5））。
+          #
+          #   POST https://api.appstoreconnect.apple.com/v1/certificates returned 409:
+          #     CSR algorithm/size incorrect. Expected: RSA(2048)
+          #
           # 成功しているときは、出力末尾の 3 行
           # （Provisioning Profiles / Signing Certificate / Team Id）が埋まる。
           # **空だったら失敗している。**（共有ドキュメント AP-71）
+          #
+          # **原因を先に当てにいかないこと。** 同じ「緑・3 行が空」に至る道が
+          # 少なくとも 2 本ある（指定漏れ／鍵の種類違い）。**見るのは 3 行。**
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_STORE \
