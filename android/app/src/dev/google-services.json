@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "928958401238",
+    "project_id": "music-storage-dev",
+    "storage_bucket": "music-storage-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928958401238:android:372674a05895e064b8d777",
+        "android_client_info": {
+          "package_name": "jp.sessionconcierge.trackcabinet.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "928958401238-m5d2pisib6d31nr8n02e5meprrb99i51.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "jp.sessionconcierge.trackcabinet.dev",
+            "certificate_hash": "8ef9770e79568756a1286ec584411e0a8e67f975"
+          }
+        },
+        {
+          "client_id": "928958401238-567v8q3cdcgs4bck6dophq5cs8uoi5bo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFbkVSXI8nqRSURDFiiaf4eznLbQcyAqk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928958401238-567v8q3cdcgs4bck6dophq5cs8uoi5bo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

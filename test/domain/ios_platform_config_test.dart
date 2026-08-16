@@ -5,7 +5,7 @@
 /// **手元で潰せる失敗を CI で踏むと、失敗ビルドを浪費する**（設計 5 節・8-1）
 /// ので、Windows の `flutter test` で機械的に見張れるものはここで止める。
 ///
-/// 見張るのは docs/MOBILE-APP-DESIGN.md 6 節の 4・5・6・7・8・9 番。
+/// 見張るのは docs/MOBILE-APP-DESIGN.md 6 節の 4・5・6・7・8・9・14 番。
 ///
 /// **「書いてあること」だけでなく「書いていないこと」も見張る。**
 /// `UIBackgroundModes` と `aps-environment` は、**書くと壊れる**側の項目
@@ -18,6 +18,12 @@
 /// 残っているせいで「書いてある」と誤判定する。**
 /// `test/domain/firebase_launchers_test.dart:19-24` がまったく同じ形で
 /// 一度空振りしている（docs/AUDIT-CHECKLIST.md 観点 4）。
+///
+/// **2026-08-16 に `GoogleService-Info.plist` を置いた**（設計 5-3）。
+/// それまで `Info.plist` の Google ログイン 2 項目は仮の値で、値そのものは
+/// 見張っていなかった。いまは実値なので、**`GoogleService-Info.plist` と
+/// 一字一句一致すること**まで見る。片方だけ取り直すと、**ビルドは通り、
+/// ログインも成功し、それでもアプリに戻らない。**
 library;
 
 import 'dart:io';
@@ -37,6 +43,16 @@ const _minimumDeploymentTarget = 15.0;
 const _pbxprojPath = 'ios/Runner.xcodeproj/project.pbxproj';
 const _infoPlistPath = 'ios/Runner/Info.plist';
 const _entitlementsPath = 'ios/Runner/Runner.entitlements';
+
+/// Firebase の iOS 設定（`flutterfire configure` / Firebase コンソールが配る）。
+///
+/// **本番のぶんだけ置く。** iOS には dev フレーバーを作らない（設計 3-4）。
+const _googleServicePlistPath = 'ios/Runner/GoogleService-Info.plist';
+
+/// このリポジトリが「未設定」を表すのに使う印。
+///
+/// `scripts/deploy.mjs` が Web の接続設定で同じ印を見張っている。
+const _placeholder = 'REPLACE_ME';
 
 /// `<!-- ... -->` を取り除く。
 ///
@@ -63,6 +79,12 @@ List<String> _plistStringArray(String plist, String name) {
       .map((m) => m.group(1)!.trim())
       .toList();
 }
+
+/// plist の `<key>[name]</key>` の直後にある `<string>` の中身を返す。
+String? _plistString(String plist, String name) => RegExp(
+  '<key>${RegExp.escape(name)}</key>\\s*<string>(.*?)</string>',
+  dotAll: true,
+).firstMatch(plist)?.group(1)?.trim();
 
 void main() {
   group('コメントの取り除き', () {
@@ -228,8 +250,23 @@ void main() {
               '利用者からは「固まった」ように見えます',
         );
       }
-      // 値そのものは GoogleService-Info.plist 待ちで、いまはプレースホルダ。
-      // **値を見張ると、実値を入れた瞬間に赤くなる**ので、ここでは見ない。
+    });
+
+    test('未設定の印が残っていない', () {
+      // **仮の値のまま出すと、認証は済むのにアプリへ戻ってこない。**
+      // ビルドも審査も通るので、**実機で試すまで誰も気づかない。**
+      //
+      // コメントを取り除いてから見る。「以前は仮の値だった」という説明を
+      // 「まだ仮の値だ」と読まないため。
+      final plist = _stripXmlComments(_read(_infoPlistPath));
+      expect(
+        plist,
+        isNot(contains(_placeholder)),
+        reason:
+            'Info.plist に $_placeholder が残っています。\n'
+            '$_googleServicePlistPath の REVERSED_CLIENT_ID と CLIENT_ID を\n'
+            '実値として写してください（設計 5-3 / 5-7）',
+      );
     });
 
     test('UIBackgroundModes を書いていない（逆向きの見張り）', () {
@@ -255,6 +292,111 @@ void main() {
             '（設計 5-7。「念のため書いておく」がいちばん悪い選択）',
       );
     });
+  });
+
+  group('GoogleService-Info.plist（設計 5-3）', () {
+    test('ファイルが置いてある', () {
+      // **無いと iOS の Firebase が起動時に落ちる**（設計 6 節の 14 番）。
+      // 5-3 で「設定ファイルはコミットする」と決めているので、
+      // CI でもここが成立する。
+      expect(
+        File(_googleServicePlistPath).existsSync(),
+        isTrue,
+        reason:
+            '$_googleServicePlistPath がありません。\n'
+            'scripts\\configure-firebase.cmd prod --platforms=web,android,ios\n'
+            'または Firebase コンソールから取得して置いてください（5-3）',
+      );
+    });
+
+    test('Xcode のビルドに含まれている（Resources ビルドフェーズ）', () {
+      // **置くだけでは製品に入らない。** project.pbxproj に登録しないと
+      // Runner.app へコピーされず、**実機で「設定ファイルが無い」と落ちる。**
+      //
+      // **Windows では `flutterfire configure` が pbxproj を触らない**
+      // （中で ruby と xcodeproj gem を呼ぶため macOS でしか動かない。
+      //   flutterfire_cli 1.4.1 の config.dart が `Platform.isMacOS` で
+      //   まるごと囲っている）。**だから手で登録した。消さないこと。**
+      final pbxproj = _read(_pbxprojPath);
+
+      expect(
+        pbxproj,
+        contains('/* GoogleService-Info.plist */'),
+        reason:
+            '$_pbxprojPath に GoogleService-Info.plist の登録がありません。\n'
+            '**ファイルを置いただけでは Runner.app に入りません**',
+      );
+
+      // Runner の Resources フェーズの中身を実際に見る。
+      // **ファイル参照だけだと Xcode のツリーに見えるだけで、
+      //   コピーはされない。**
+      final resources = RegExp(
+        r'/\* Resources \*/ = \{\s*isa = PBXResourcesBuildPhase;(.*?)\};',
+        dotAll: true,
+      )
+          .allMatches(pbxproj)
+          .map((m) => m.group(1)!)
+          .where((body) => body.contains('LaunchScreen.storyboard'))
+          .toList();
+      expect(
+        resources,
+        hasLength(1),
+        reason:
+            'Runner の Resources ビルドフェーズを特定できませんでした。\n'
+            'pbxproj の構造が変わったなら、この見張りも直してください',
+      );
+      expect(
+        resources.single,
+        contains('GoogleService-Info.plist in Resources'),
+        reason:
+            'Runner の Resources ビルドフェーズに GoogleService-Info.plist が\n'
+            'ありません。**ツリーに見えるだけでは製品に入りません**',
+      );
+    });
+
+    test('Bundle ID が決めた値と一致する', () {
+      final plist = _stripXmlComments(_read(_googleServicePlistPath));
+      expect(
+        _plistString(plist, 'BUNDLE_ID'),
+        _bundleId,
+        reason:
+            'GoogleService-Info.plist の BUNDLE_ID が project.pbxproj の\n'
+            'PRODUCT_BUNDLE_IDENTIFIER と違います。\n'
+            '**別のアプリの設定を置いていませんか**',
+      );
+    });
+
+    test('Info.plist の 2 つの値が GoogleService-Info.plist と一字一句同じ', () {
+      // **同じことを決める場所が 2 つある**（設計 6 節の 6 番と同じ形）。
+      // plist を取り直したのに Info.plist を直し忘れると、
+      // **ビルドは通り、ログインも成功し、それでもアプリに戻らない。**
+      // エラーは出ず、利用者からは「固まった」ように見える。
+      final service = _stripXmlComments(_read(_googleServicePlistPath));
+      final info = _stripXmlComments(_read(_infoPlistPath));
+
+      final reversed = _plistString(service, 'REVERSED_CLIENT_ID');
+      final clientId = _plistString(service, 'CLIENT_ID');
+      expect(reversed, isNotNull, reason: 'REVERSED_CLIENT_ID がありません');
+      expect(clientId, isNotNull, reason: 'CLIENT_ID がありません');
+
+      expect(
+        _plistStringArray(info, 'CFBundleURLSchemes'),
+        contains(reversed),
+        reason:
+            'Info.plist の CFBundleURLSchemes に REVERSED_CLIENT_ID\n'
+            '（$reversed）がありません。\n'
+            '**認証は済むのにアプリへ戻れません**（設計 5-7）',
+      );
+
+      expect(
+        _plistString(info, 'GIDClientID'),
+        clientId,
+        reason:
+            'Info.plist の GIDClientID が CLIENT_ID（$clientId）と\n'
+            '違います。**google_sign_in がここを読みます**（設計 5-7）',
+      );
+    });
+
   });
 
   group('Runner.entitlements', () {
