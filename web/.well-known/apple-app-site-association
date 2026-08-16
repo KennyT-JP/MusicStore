@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "65CJKM2SGX.jp.sessionconcierge.trackcabinet"
+        ],
+        "components": [
+          {
+            "/": "/",
+            "comment": "MOBILE-APP-DESIGN 5-8-2 plan B: the share URL is https://<host>/#/invite/xxx and iOS matches on the path only, so the path we claim is exactly '/'. The fragment is not matched here, but it is still handed to the app."
+          }
+        ]
+      }
+    ]
+  }
+}

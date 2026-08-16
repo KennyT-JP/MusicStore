@@ -5,6 +5,11 @@
  *   scripts\deploy.cmd            検証環境（dev の枝から）
  *   scripts\deploy.cmd prod      本番環境（main の枝から）
  *
+ *   node scripts\deploy.mjs [prod] --show-app-links
+ *       配信せずに、.well-known/ の 2 ファイル（App Links / Universal
+ *       Links）がその環境へどう出るかだけを表示する。
+ *
+
  * ## このスクリプトがやること（2026-08-08 に作り直した）
  *
  * 1. **変更のあった層だけを配信する。** 前回配信したコミット（git タグ
@@ -117,6 +122,171 @@ function fail(message, howToFix) {
   console.error(`\n[エラー] ${message}`);
   if (howToFix) console.error(`         → ${howToFix}`);
   process.exit(1);
+}
+
+// -------------------------------------------------------------------------
+// App Links / Universal Links の配信面（docs/MOBILE-APP-DESIGN.md 5-8-2）
+//
+// 共有リンクをスマホで叩いたときにアプリで開くために、ドメイン側へ
+// 2 つのファイルを置く。**中身が違っていてもエラーは出ない**——OS の
+// 照合が黙って失敗し、リンクがブラウザで開くだけになる。気づく手段が
+// 無いので、**ここで機械的に止める**のがこのブロックの目的。
+//
+// ## 原本は本番の値（index.html / robots.txt / sitemap.xml と同じ流儀）
+//
+// `web/.well-known/` の 2 ファイルは**本番の値のまま**置き、環境ごとの
+// 差し替えは**配信物（build/web）の側だけ**で行う。原本を書き換える形に
+// すると、検証環境へ出した直後の作業ツリーが「本番へ出してはいけない
+// 状態」になり、それを git で見分けられない。
+//
+// ## 環境ごとに何が違うか
+//
+// | | 本番 | 検証 |
+// | --- | --- | --- |
+// | ホスト | music-storage-d79b2.web.app | music-storage-dev.web.app |
+// | assetlinks の `package_name` | jp.sessionconcierge.trackcabinet | **同 + `.dev`**（Android のフレーバー・5-9） |
+// | assetlinks の SHA-256 | アップロード鍵＋**Play アプリ署名鍵** | アップロード鍵だけ（Play に出さない） |
+// | apple-app-site-association | 要る | **同じ中身のまま出す**（下記） |
+//
+// **ホストはファイルの中身に現れない。** どちらのファイルにも URL が
+// 無く、「どのホストで配られたか」がそのままホストの指定になる。
+// だから index.html のような URL の置換は要らない——**差し替えるのは
+// `package_name` と鍵の本数だけ**。
+//
+// **apple-app-site-association は環境で変わらない。** iOS には dev
+// フレーバーを作らない（3-4）ので Bundle ID は 1 つしかなく、Team ID も
+// 同じ Apple アカウントなので同じ。検証環境のホストへ出しても、アプリの
+// entitlement が本番のホストしか宣言していない以上 iOS は読みに来ない
+// （効かないだけで害も無い）。**環境ごとに消す・作り分ける必要は無い。**
+//
+// ## 止めるのは assetlinks.json だけ（**非対称にしてある。理由あり**）
+//
+// apple-app-site-association に要る値（Apple の Team ID）は**すでに
+// 分かっている**ので、プレースホルダが残る余地が無い。
+// assetlinks.json に要る 2 つの SHA-256 は **keystore がまだ無く、
+// 依頼者にしか作れない**。だから止める判定は assetlinks.json だけに要る。
+//
+//   **両方へ広げないこと。** AASA 側は永久に発火しない死んだ判定になる。
+//   **両方から外さないこと。** 間違った SHA-256 は黙って失敗する。
+//
+// 値が入れば判定は自然に通る。**判定を消す作業は発生しない。**
+
+const PLACEHOLDER = 'REPLACE_ME';
+/** 手元のアップロード鍵。**これだけは検証環境でも必須**（dev の apk を署名する鍵そのもの）。 */
+const UPLOAD_KEY_PLACEHOLDER = 'REPLACE_ME_UPLOAD_KEY_SHA256';
+/** Play アプリ署名鍵。**本番だけ必須**（Play に出さない検証環境には要らない）。 */
+const PLAY_KEY_PLACEHOLDER = 'REPLACE_ME_PLAY_APP_SIGNING_SHA256';
+const WELL_KNOWN = '.well-known';
+const ASSETLINKS = 'assetlinks.json';
+const AASA = 'apple-app-site-association';
+
+const HOW_TO_GET_UPLOAD_KEY =
+  'keytool -list -v -keystore <keystore のファイル> -alias <別名> の SHA-256';
+const HOW_TO_GET_PLAY_KEY =
+  'Play Console → テストとリリース → アプリの完全性 → アプリ署名 の SHA-256';
+const NEVER_GUESS =
+  '**それらしい値を書いてはいけません。** 間違った SHA-256 は照合が黙って失敗し、' +
+  'リンクがブラウザで開くだけになります（エラーは出ません）。';
+
+/**
+ * 配信物に書く 2 ファイルの中身を決める。**読むのは原本だけ**なので、
+ * 何度呼んでも同じ結果になる（配信物へ二重に適用されない）。
+ * 値が足りなければ、この中で止まる。
+ */
+function planAppLinks(alias) {
+  const readOriginal = (name) => {
+    const path = join(root, 'web', WELL_KNOWN, name);
+    if (!existsSync(path)) {
+      fail(`web/${WELL_KNOWN}/${name} がありません。`,
+           'App Links / Universal Links の配信面です（docs/MOBILE-APP-DESIGN.md 5-8-2）。無いと共有リンクがアプリで開きません');
+    }
+    try {
+      return JSON.parse(readFileSync(path, 'utf8'));
+    } catch (e) {
+      fail(`web/${WELL_KNOWN}/${name} が JSON として読めません（${e.message}）。`,
+           'Apple / Google はどちらも JSON として読みます。壊れていると黙って弾かれます');
+    }
+  };
+
+  const statements = readOriginal(ASSETLINKS);
+  const dropped = [];
+  for (const statement of statements) {
+    const target = statement.target;
+
+    // 検証環境の apk は applicationIdSuffix = ".dev" で別アプリになる。
+    // ここを直さないと、検証環境のリンクはどの端末でも開かない。
+    if (alias !== 'prod') target.package_name = `${target.package_name}.dev`;
+
+    const all = target.sha256_cert_fingerprints;
+
+    if (all.includes(UPLOAD_KEY_PLACEHOLDER)) {
+      fail(
+        `${WELL_KNOWN}/${ASSETLINKS} の手元の署名鍵の SHA-256 が未設定です（${UPLOAD_KEY_PLACEHOLDER}）。`,
+        `keystore を作り、その SHA-256 を web/${WELL_KNOWN}/${ASSETLINKS} に書いてください:\n` +
+          `             ${HOW_TO_GET_UPLOAD_KEY}\n` +
+          '             形は大文字 16 進のコロン区切り 32 バイト（AB:CD:…）。\n' +
+          `             ${NEVER_GUESS}`,
+      );
+    }
+
+    // **本番は 2 つとも要る。** Play が AAB を署名し直すので、端末に届く
+    // アプリの署名は手元の鍵ではない。手元の鍵だけを載せると、
+    // **ストアから入れた人だけリンクが開かない**（開発端末では動くので
+    // 気づけない。8-2 の Google ログインと同じ形の事故）。
+    if (alias === 'prod' && all.includes(PLAY_KEY_PLACEHOLDER)) {
+      fail(
+        `${WELL_KNOWN}/${ASSETLINKS} の Play アプリ署名鍵の SHA-256 が未設定です（${PLAY_KEY_PLACEHOLDER}）。`,
+        '本番は**手元のアップロード鍵と Play アプリ署名鍵の 2 つとも**要ります:\n' +
+          `             ① 手元のアップロード鍵: ${HOW_TO_GET_UPLOAD_KEY}\n` +
+          `             ② Play アプリ署名鍵: ${HOW_TO_GET_PLAY_KEY}\n` +
+          '             ② を落とすと、**ストアから入れた人だけ**リンクが開きません（Play が AAB を署名し直すため）。\n' +
+          `             ${NEVER_GUESS}`,
+      );
+    }
+
+    // 検証環境は Play に出さないので、Play アプリ署名鍵は要らない。
+    // **未設定のまま配ってはいけない**——プレースホルダの文字列が鍵の
+    // 一覧に混ざると、その一覧ごと壊れたものとして扱われうる。落とす。
+    const missing = all.filter((f) => f.includes(PLACEHOLDER));
+    if (missing.length > 0) {
+      target.sha256_cert_fingerprints = all.filter((f) => !f.includes(PLACEHOLDER));
+      dropped.push(...missing);
+    }
+  }
+
+  return { files: { [ASSETLINKS]: statements, [AASA]: readOriginal(AASA) }, dropped };
+}
+
+/** 決めた中身を配信物（build/web）へ書く。**原本は触らない。** */
+function writeAppLinks(plan) {
+  for (const [name, value] of Object.entries(plan.files)) {
+    const built = join(root, 'build', 'web', WELL_KNOWN, name);
+    // flutter build web は web/ の中身を丸ごと写す（.well-known も写る。
+    // 2026-08-16 に flutter_tools の WebReleaseBundle で確認）。
+    // 無いなら写せていない＝配信しても届かない。
+    if (!existsSync(built)) {
+      fail(`build/web/${WELL_KNOWN}/${name} がありません。`,
+           `web/${WELL_KNOWN}/${name} が消えていないか確認し、flutter build web をやり直してください`);
+    }
+    writeFileSync(built, `${JSON.stringify(value, null, 2)}\n`);
+  }
+  console.log(`    ${WELL_KNOWN}/ の 2 ファイルを ${target.alias} 向けに書き出しました`);
+  if (plan.dropped.length > 0) {
+    console.log(`      ※ 未設定の署名鍵を落としました: ${plan.dropped.join(', ')}`);
+    console.log('        （検証環境は Play に出さないので、Play アプリ署名鍵は無くて構いません）');
+  }
+}
+
+// **配信せずに中身だけ見る。** 実機に入れる前に「何が出るか」を確かめる
+// 唯一の手段（配信してからでは、間違いに気づく方法が無い）。
+if (argv.includes('--show-app-links')) {
+  const plan = planAppLinks(target.alias);
+  console.log(`==> ${target.label}へ配信される ${WELL_KNOWN}/ の中身（配信はしません）`);
+  for (const [name, value] of Object.entries(plan.files)) {
+    console.log(`\n----- ${WELL_KNOWN}/${name}`);
+    console.log(JSON.stringify(value, null, 2));
+  }
+  process.exit(0);
 }
 
 // -------------------------------------------------------------------------
@@ -292,6 +462,12 @@ function currentPlugins() {
   try { return readFileSync(pluginsFile, 'utf8'); } catch { return null; }
 }
 
+// App Links の値が揃っているか。**ビルドより前に見る。** 5 分かけて
+// ビルドしたあとに止まると、確かめ直すたびに 5 分を払うことになる。
+// （lib/env の REPLACE_ME 判定と同じ考え方。あちらは flutter clean の
+// 後ろに居るので、こちらはもう一段前に置いた。）
+const appLinks = layers.includes('hosting') ? planAppLinks(target.alias) : null;
+
 if (layers.includes('hosting') && !skipBuild) {
   // 部品の顔ぶれが変わっていたら作り直す。古い生成物が残っていると、
   // 足した部品が組み込まれないまま配信される（just_audio で実際に起きた）。
@@ -351,8 +527,17 @@ if (layers.includes('hosting') && !skipBuild) {
       }
     }
   }
+
+  // **App Links の 2 ファイルも、配信物の側だけ差し替える**（5-8-2）。
+  // 中身に URL は無いので、上の置換ではなく専用の作りになっている
+  // （差し替えるのは package_name と署名鍵の本数）。
+  writeAppLinks(appLinks);
 } else if (layers.includes('hosting') && skipBuild) {
   console.log('\n==> Flutter Web のビルドは省略（--no-build）。build/web がこの環境向けか確認してください');
+  // **ここでも書き直す。** --no-build は「前回のビルド結果をそのまま出す」
+  // であって、「前回の**配信先**のまま出す」ではない。検証環境向けに
+  // 差し替えた build/web を、そのまま本番へ出す事故を防ぐ。
+  writeAppLinks(appLinks);
 }
 
 // -------------------------------------------------------------------------

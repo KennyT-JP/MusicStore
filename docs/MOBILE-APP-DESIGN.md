@@ -342,8 +342,18 @@ static bool get isAppleSignInAvailable =>
 
 | | 値 | 役割 |
 | --- | --- | --- |
-| `namespace` | `jp.sessionconcierge.trackcabinet` | **Kotlin / R クラスの置き場。** 変えるとソースの参照が全部ずれます |
+| `namespace` | **`com.musiclist.music_list_app` のまま据え置く** | **Kotlin / R クラスの置き場。** 変えるとソースの参照が全部ずれます |
 | `applicationId` | `jp.sessionconcierge.trackcabinet`（本番）<br>`jp.sessionconcierge.trackcabinet.dev`（検証） | **ストアと端末が見るアプリの同一性。** 公開後は変更不可 |
+
+> **この表は 2026-08-16 に直しました。** 当初は `namespace` も
+> `jp.sessionconcierge.trackcabinet` に変えると書いていましたが、
+> **それでは両者が同じ値になり、この節の見出し（「分ける」）とも
+> 6 節の見張り 3 番（「別であること」）とも矛盾していました。**
+> 実装の担当がこの食い違いに気づき、正しい側（据え置き）に倒しています。
+>
+> **変えるのは `applicationId` だけです。** Session Concierge も
+> `namespace = com.sessionconcierge.session_concierge` /
+> `applicationId = com.sessionconcierge.app` と別のままにしています。
 
 **理由は Google ログインです。** Session Concierge の
 `android/app/build.gradle.kts:91-104` にこう書かれています。
@@ -519,12 +529,16 @@ static bool get isAppleSignInAvailable =>
 
 | 直す場所 | いまの値 | 変える値 |
 | --- | --- | --- |
-| `android/app/build.gradle.kts:34` `namespace` | `com.musiclist.music_list_app` | `jp.sessionconcierge.trackcabinet` |
-| `android/app/build.gradle.kts:44-45` `applicationId`（**TODO コメントごと消す**） | 同上 | `jp.sessionconcierge.trackcabinet` |
+| `android/app/build.gradle.kts` `namespace` | `com.musiclist.music_list_app` | **変えない**（3-4 のとおり据え置き） |
+| `android/app/build.gradle.kts` `applicationId`（**TODO コメントごと消す**） | `com.musiclist.music_list_app` | `jp.sessionconcierge.trackcabinet` |
 | `android/app/build.gradle.kts` に **`prod` / `dev` のフレーバー**を足す | 無し | `dev` は `applicationIdSuffix = ".dev"` |
-| `ios/…/project.pbxproj:385, 564, 586` | `com.musiclist.musicListApp` | `jp.sessionconcierge.trackcabinet` |
-| `ios/…/project.pbxproj:401, 418, 433`（テスト用） | `com.musiclist.musicListApp.RunnerTests` | `jp.sessionconcierge.trackcabinet.RunnerTests` |
-| Kotlin のパッケージ階層（`android/app/src/main/kotlin/…`） | `com/musiclist/music_list_app/` | `namespace` を変えるだけでビルドは通るが、**ディレクトリ名が古いままだと読む人が混乱する** |
+| `ios/…/project.pbxproj`（Runner の 3 箇所） | `com.musiclist.musicListApp` | `jp.sessionconcierge.trackcabinet` |
+| `ios/…/project.pbxproj`（RunnerTests の 3 箇所） | `com.musiclist.musicListApp.RunnerTests` | `jp.sessionconcierge.trackcabinet.RunnerTests` |
+| Kotlin のパッケージ階層（`android/app/src/main/kotlin/…`） | `com/musiclist/music_list_app/` | **移動しない**（`namespace` を据え置くので、いまのままで正しい） |
+
+> **`namespace` を据え置くので、Kotlin のディレクトリも動かしません。**
+> 当初この表は「`namespace` を変える」前提で書かれており、
+> ディレクトリ名の混乱まで心配していましたが、**その心配ごと消えました。**
 
 **フレーバーの形（Session Concierge の実物）:**
 

@@ -1,8 +1,24 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- バックアップは全面的に止める（docs/MOBILE-APP-DESIGN.md 5-9-1）。
+         **指定しないと Android の既定は allowBackup=true** で、アプリの
+         保存領域がまるごと Auto Backup の対象になる。Firebase Auth の
+         リフレッシュトークンは SharedPreferences に入っているため、それが
+         利用者の Google ドライブへ複製され、**別端末の復元でログイン状態ごと
+         持ち込まれる**。アカウントはメール／Google でいつでも入り直せるので、
+         復元の利便よりトークンを端末の外へ出さないことを優先する。
+
+         allowBackup=false はクラウドバックアップしか止めない。Android 12 以降
+         の端末間データ移行は dataExtractionRules 側で除外する
+         （res/xml/data_extraction_rules.xml のコメント参照）。
+         fullBackupContent（Android 11 以前）は allowBackup=false が全部を
+         止めるので不要。 -->
     <application
         android:label="音源創庫"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -24,7 +40,63 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- **共有リンクをアプリで開く（App Links・案 B）。**
+                 docs/MOBILE-APP-DESIGN.md 5-8-2。
+
+                 音源創庫の共有リンクは `https://<host>/#/invite/abc123` の形で、
+                 **OS は `#` から後ろを照合に使わない。** つまり OS から見た
+                 パスは `/` だけで、サイトのトップと区別が付かない。
+                 URL をパス方式へ変える案 A は採らず（すでに配ったリンクが
+                 動かなくなる）、**パス `/` を丸ごとアプリに渡す**案 B を採った。
+
+                 **代償**: サイトのトップ（`/`）を開こうとした人もアプリに飛ぶ。
+                 使い方ページ（`/help/...`）は別パスなので影響しない
+                 （AdSense の対象である読み物ページはブラウザで開いたまま）。
+
+                 **フラグメントはアプリに渡る。** OS の照合には使われないが、
+                 アプリには `#/invite/abc123` まで届く。受け取り口で読むこと。
+
+                 **ホストは本番と検証の両方。** 検証環境のアプリでも共有リンクを
+                 開けるようにする（applicationId は dev 側で分ける）。
+
+                 **`autoVerify="true"` の照合はインストール時に OS が行う。**
+                 `/.well-known/assetlinks.json` を後から直しても、すでに入って
+                 いる端末では自動で再照合されない。**配信を先に、インストールを
+                 後に。** assetlinks.json の設置は配信側の担当（5-8-2）。 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="music-storage-d79b2.web.app"
+                    android:path="/"/>
+                <data
+                    android:scheme="https"
+                    android:host="music-storage-dev.web.app"
+                    android:path="/"/>
+            </intent-filter>
         </activity>
+        <!-- **Firebase の自動初期化を止める（docs/MOBILE-APP-DESIGN.md 5-4）。**
+             Android は `google-services.json` を読んで、アプリの起動時に
+             `[DEFAULT]` の Firebase App を**勝手に作る**（この Provider が
+             その仕掛け）。本番と検証で環境を分けたビルドが Dart 側から
+             作り直そうとすると **`[core/duplicate-app]` で起動時に落ちる**
+             （画面には何も出ず、起動画面のまま止まる。エラーも警告も
+             見えないので、原因を探す場所がない）。
+
+             止めると、**初期化の向き先が Dart の 1 箇所
+             （`main()` の `Firebase.initializeApp(options: ...)`）に
+             一本化される。**
+
+             **`google-services.json` は消さない。** Google ログインが
+             `serverClientId` をこのファイルから読むほか、Gradle の
+             プラグインもビルド時に参照する。 -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            android:exported="false"
+            tools:node="remove" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

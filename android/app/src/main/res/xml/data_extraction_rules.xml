@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- アプリのデータを端末の外へ持ち出させないための宣言（Android 12 以降）。
+
+     なぜ必要か: `android:allowBackup="false"` は **クラウドバックアップ
+     （Auto Backup / Google ドライブ）しか止めない。** Android 12 以降の
+     「端末間データ移行（device-to-device）」は別系統で、こちらを止めるには
+     このファイルの device-transfer 側で除外する必要がある。
+
+     何が漏れるか: Firebase Auth のリフレッシュトークンは SharedPreferences
+     （sharedpref ドメイン）に置かれる。持ち出されると **別端末の復元で
+     ログイン状態ごと持ち込まれる**。アカウントはメール／Google でいつでも
+     入り直せるので、移行の利便よりトークンを端末の外へ出さないことを優先する。
+
+     **代償**: 全ドメインを除外する以上、端末に置いたダウンロード済み音源も
+     機種変更では移行されない（新しい端末では落とし直しになる）。
+     **これは依頼者が許容した**（2026-08-16。docs/MOBILE-APP-DESIGN.md 5-9-1）。
+
+     全ドメインを除外している（残したい領域が出てきたら include を足す）。 -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

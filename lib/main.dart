@@ -16,6 +16,7 @@
 library;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,7 +40,13 @@ Future<void> main() async {
 
   // 開いた URL を、最初の描画より前に控える（app.dart の説明を参照）。
   // Web のパスは `#/s/xxx` のようにフラグメントに入っている。
-  final fragment = Uri.base.fragment;
+  //
+  // **ネイティブ（iOS / Android）では、ここから起動 URL は取れない。**
+  // `Uri.base` は実行時のカレントディレクトリを指す `file:` 形式で、
+  // fragment は必ず空になる（落ちはしないが、常に `/` と同じ）。
+  // 起動時のディープリンクは App Links / Universal Links で受け取る口を
+  // 別途用意する（仕様書 5-8-2）。ここでは既定の `/` に倒しておく。
+  final fragment = kIsWeb ? Uri.base.fragment : '';
   final launchLocation = fragment.startsWith('/') ? fragment : '/';
 
   runApp(

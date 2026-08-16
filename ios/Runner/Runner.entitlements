@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- **このファイルは `project.pbxproj` の `CODE_SIGN_ENTITLEMENTS` から
+	     参照されていないと 1 行も効かない。** Runner ターゲットの
+	     Debug / Release / Profile の 3 つすべてに
+	     `CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;` を入れてある。
+	     test/domain/ios_platform_config_test.dart が数えている。 -->
+
+	<!-- Apple でサインイン。**この記述が無いと、実装しても呼んだ瞬間に
+	     失敗する**（capability が付いていない、という扱いになる）。
+	     審査ガイドライン 4.8 で必要（Google ログインを載せているため。
+	     設計 3-2 / 5-6）。
+	     **developer.apple.com の App ID 側でも `Sign in with Apple` に
+	     チェックが要る**（人の作業。設計 1-2）。片方だけでは通らない。 -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+
+	<!-- Universal Links（共有リンクをアプリで開く。設計 5-8-2・案 B）。
+	     **これが無いと、リンクを押しても Safari で開くだけ。エラーは出ない**
+	     ので、「動いている」と「アプリで開いている」を見分けるには実際に
+	     押して確かめるしかない。
+
+	     ホストは本番と検証の両方を並べてある。
+	     - `music-storage-d79b2.web.app` … 本番（`.firebaserc` の prod）
+	     - `music-storage-dev.web.app`  … 検証（同 staging）
+	     独自ドメインはまだ割り当てていない（仕様書 12.2 の将来検討）。
+	     **割り当てたら、ここに足すのを忘れないこと。**
+
+	     **対になる `/.well-known/apple-app-site-association` の配信が要る**
+	     （拡張子が無いので `firebase.json` の `headers` で
+	     `application/json` を明示しないと Apple に弾かれる。設計 5-8-2）。
+	     **その配信はまだ無い。** 宣言だけでは照合が始まらない。
+	     設計 5-8-2 は「iOS に dev フレーバーを作らない」ので検証側の
+	     AASA 配信は要らないと書いているが、**entitlement 側に検証ホストを
+	     残しておいても署名は通る**（照合が始まらないだけ）ので、
+	     手元検証の余地として両方置いてある。 -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:music-storage-d79b2.web.app</string>
+		<string>applinks:music-storage-dev.web.app</string>
+	</array>
+
+	<!-- **`aps-environment` は、まだ書かない。** 通知は今回やらない（7 節）。
+	     **書いたまま APNs 鍵が無いと署名が失敗する**——App ID 側で
+	     Push Notifications を有効にしていないと「プロビジョニング
+	     プロファイルに aps-environment が含まれていない」でビルドが止まる。
+	     **書かなければ、通知が届かないだけで済む。**
+
+	     通知を有効にするときは、次を対で行うこと（片方だけでは動かない）:
+	     1. developer.apple.com で APNs 認証キー（.p8）を作り、Firebase の
+	        「Apple アプリの構成」へ Key ID・Team ID とともに登録する
+	     2. App ID の Push Notifications を有効にする
+	     3. ここに `aps-environment` = `development` を足す
+	        （**`production` にしない**。App Store 側の再署名で差し替わる）
+	     4. Info.plist の `UIBackgroundModes` に `remote-notification` を足す -->
+</dict>
+</plist>

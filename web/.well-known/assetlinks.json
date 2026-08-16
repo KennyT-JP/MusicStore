@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "jp.sessionconcierge.trackcabinet",
+      "sha256_cert_fingerprints": [
+        "REPLACE_ME_UPLOAD_KEY_SHA256",
+        "REPLACE_ME_PLAY_APP_SIGNING_SHA256"
+      ]
+    }
+  }
+]

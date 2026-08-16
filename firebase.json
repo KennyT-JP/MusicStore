@@ -72,6 +72,31 @@
             "value": "no-cache, must-revalidate"
           }
         ]
+      },
+      {
+        "//": "④ App Links / Universal Links の 2 ファイル（MOBILE-APP-DESIGN 5-8-2）。**この 2 ブロックは必ず最後に置く**（後勝ち）。apple-app-site-association は **拡張子が無い**ため、Hosting は Content-Type を推測できず application/octet-stream で返る。**Apple は JSON 以外を受け取ると黙って弾く**（リンクはブラウザで開くだけになり、エラーは出ない）ので、ここで明示する。**② の `**/*.@(js|json)` より前に置くと、そちらの max-age=3600 が assetlinks.json に後勝ちして 1 時間の窓ができる。**",
+        "//2": "**`hosting.ignore` の `**/.*` に飲まれないことは実測済み（2026-08-16）。** firebase-tools 15.24.0 の lib/listFiles.js（deploy/hosting/deploy.js が実際に呼ぶ関数）へ、この firebase.json の ignore をそのまま渡して build/web を数えたところ、.well-known/assetlinks.json と .well-known/apple-app-site-association の 2 件とも配信対象に入った。glob の ignore は、**パターンが `/**` で終わらない限り、一致したディレクトリの中身までは除外しない**（`**/.*` が当たるのは `.well-known` というディレクトリ自身と、名前がドットで始まる**ファイル**だけ）。**この前提は test/domain/app_links_test.dart が固定している。**",
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "//": "④ 同上。assetlinks.json は拡張子があるので Content-Type は要らないが、**キャッシュは要る**。上の ② `**/*.@(js|json)` に一致してしまうため、ここで no-cache に戻す。**`autoVerify` の照合は端末へのインストール時に一度だけ行われる**ので、鍵を足して配信し直した直後に古い版が配られると、その端末では二度と自動照合されない（入れ直しか手動設定が要る）。**溜め込ませてはいけない。**",
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
       }
     ]
   },
