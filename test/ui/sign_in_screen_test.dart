@@ -3,6 +3,8 @@
 /// 画面が例外で真っ白になる類の事故をここで捕まえる。
 library;
 
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +26,9 @@ void main() {
       () => auth.signInWithGoogle(languageCode: any(named: 'languageCode')),
     ).thenAnswer((_) async {});
     when(
+      () => auth.signInWithApple(languageCode: any(named: 'languageCode')),
+    ).thenAnswer((_) async {});
+    when(
       () => auth.signInWithEmail(
         any(),
         any(),
@@ -31,6 +36,8 @@ void main() {
       ),
     ).thenAnswer((_) async {});
   });
+
+  tearDown(() => debugDefaultTargetPlatformOverride = null);
 
   Widget wrap(Widget child) => ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(auth)],
@@ -125,6 +132,55 @@ void main() {
         languageCode: 'ja',
       ),
     ).called(1);
+  });
+
+  // **Apple のボタンは iOS のアプリにだけ出す**
+  // （docs/MOBILE-APP-DESIGN.md 5-6・3-2）。
+  // 判定は AuthRepository.isAppleSignInAvailable の 1 箇所にあり、
+  // 規則そのものは test/domain/apple_sign_in_test.dart が見ている。
+  // ここで確かめるのは、**画面がその判定に従っていること**。
+  group('Apple のボタン', () {
+    // **`debugDefaultTargetPlatformOverride` は本文の中で戻すこと。**
+    // flutter_test は本文が終わった時点で「foundation の debug 変数が
+    // 元に戻っているか」を確かめるので、`tearDown` では間に合わない。
+    // 上の `tearDown` は、途中で落ちたときの後片付け用に残してある。
+    Future<void> pumpAs(WidgetTester tester, TargetPlatform platform) async {
+      debugDefaultTargetPlatformOverride = platform;
+      await tester.pumpWidget(wrap(const SignInScreen()));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('iOS には出す', (tester) async {
+      await pumpAs(tester, TargetPlatform.iOS);
+
+      expect(find.text('Apple で続ける'), findsOneWidget);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('Android には出さない', (tester) async {
+      // Android で出すには Apple 側に Services ID と戻り先 URL の登録が
+      // 別途要る。**押しても何も起きないボタンを置かない。**
+      await pumpAs(tester, TargetPlatform.android);
+
+      expect(find.text('Apple で続ける'), findsNothing);
+      // Google のほうは、どこでも出る。
+      expect(find.text('Google で続ける'), findsOneWidget);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('押すと、表示言語を渡して呼ぶ', (tester) async {
+      await pumpAs(tester, TargetPlatform.iOS);
+
+      // 画面のいちばん下にあるので、狭い画面では最初は見えていない。
+      await tester.ensureVisible(find.text('Apple で続ける'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apple で続ける'));
+      await tester.pumpAndSettle();
+
+      // 登録時の表示言語を、その人の設定として残す（2 章）。
+      verify(() => auth.signInWithApple(languageCode: 'ja')).called(1);
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 
   testWidgets('未入力なら送信しない', (tester) async {

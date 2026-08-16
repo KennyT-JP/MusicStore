@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/repositories/auth_repository.dart';
 import '../../../domain/help_links.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/app_providers.dart';
@@ -177,6 +178,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             icon: const GoogleMark(),
             label: Text(l10n.continueWithGoogle),
           ),
+          // **出すかどうかの判定は 1 箇所（AuthRepository）に閉じてある。**
+          // ここで `Platform.isIOS` を書くと `dart:io` が共通コードへ漏れ、
+          // `flutter build web` が落ちる（docs/MOBILE-APP-DESIGN.md 5-5）。
+          if (AuthRepository.isAppleSignInAvailable) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                      () => auth.signInWithApple(
+                        // 登録時の表示言語を、その人の設定として残す（2 章）。
+                        languageCode: Localizations.localeOf(
+                          context,
+                        ).languageCode,
+                      ),
+                    ),
+              icon: const AppleMark(),
+              label: Text(l10n.continueWithApple),
+            ),
+          ],
         ],
       ),
     );

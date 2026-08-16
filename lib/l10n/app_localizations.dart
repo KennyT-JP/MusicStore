@@ -505,6 +505,12 @@ abstract class AppL10n {
   /// **'Google で続ける'**
   String get continueWithGoogle;
 
+  /// No description provided for @continueWithApple.
+  ///
+  /// In ja, this message translates to:
+  /// **'Apple で続ける'**
+  String get continueWithApple;
+
   /// No description provided for @showPassword.
   ///
   /// In ja, this message translates to:

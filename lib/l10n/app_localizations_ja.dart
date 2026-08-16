@@ -225,6 +225,9 @@ class AppL10nJa extends AppL10n {
   String get continueWithGoogle => 'Google で続ける';
 
   @override
+  String get continueWithApple => 'Apple で続ける';
+
+  @override
   String get showPassword => 'パスワードを表示';
 
   @override

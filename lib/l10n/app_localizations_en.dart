@@ -233,6 +233,9 @@ class AppL10nEn extends AppL10n {
   String get continueWithGoogle => 'Continue with Google';
 
   @override
+  String get continueWithApple => 'Continue with Apple';
+
+  @override
   String get showPassword => 'Show password';
 
   @override

@@ -68,6 +68,7 @@
   "signUpPrompt": "New here? Create an account",
   "orSeparator": "or",
   "continueWithGoogle": "Continue with Google",
+  "continueWithApple": "Continue with Apple",
   "showPassword": "Show password",
   "hidePassword": "Hide password",
   "authPopupBlocked": "Your browser blocked the sign-in window. Allow pop-ups for this site and try again.",

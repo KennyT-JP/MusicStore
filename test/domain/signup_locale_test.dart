@@ -55,16 +55,20 @@ void main() {
       );
     });
 
-    test('users を作る 3 つの入口すべてが、言語を受け取る', () {
+    test('users を作る 4 つの入口すべてが、言語を受け取る', () {
       final source = File(
         'lib/data/repositories/auth_repository.dart',
       ).readAsStringSync();
 
-      // Google 連携・メールでのログイン・メールでの登録。
+      // Google 連携・Apple 連携・メールでのログイン・メールでの登録。
       // どれも「無ければ作る」を通るので、1 つでも漏れると
       // その入口から登録した人だけ言語が決まらない。
+      //
+      // **Apple は 2026-08-16 に増えた入口**
+      // （docs/MOBILE-APP-DESIGN.md 5-6）。増やすたびにここへ足すこと。
       for (final method in [
         'signInWithGoogle',
+        'signInWithApple',
         'signInWithEmail',
         'signUpWithEmail',
       ]) {

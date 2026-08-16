@@ -6,6 +6,100 @@
 
 ---
 
+## 2026-08-16（4） — Android のビルドを通し、Firebase へ登録した
+
+依頼者が署名鍵を作り、そこから先を CLI で進めた。
+**「依頼者しかできない」と見積もっていた作業のうち、2 件は CLI でできた。**
+
+### 「CLI に無い」と言ったものが、あった
+
+こちらは当初こう案内していた。
+
+> SHA-1 の登録は Firebase コンソールの操作です。**スクリプトはやってくれません。**
+
+**誤りだった。** `firebase apps:android:sha:create <appId> <sha>` がある。
+`apps:create` / `apps:sdkconfig` も揃っており、**登録から設定ファイルの取得まで
+全部 CLI で完結した。**
+
+さらに「Authentication の Google 有効化だけは CLI に無い」と言ったが、
+**そもそも既に有効だった**（Web の Google ログインが本番で動いている以上、
+当然のことだった）。生成された `google-services.json` に `oauth_client` が
+2 件入っていることで確認できた。
+
+**Session Concierge が踏んだ落とし穴**——「Google を有効化する**前**に
+ダウンロードしたファイルは `oauth_client` が 0 件」——は、この確認で回避した。
+
+### AGP 9 では、このアプリはビルドできない
+
+**初回の release ビルドが落ちた。**
+
+```
+GeneratedPluginRegistrant.java:39: シンボルを見つけられません
+  new com.mr.flutter.plugin.filepicker.FilePickerPlugin()
+```
+
+原因は `file_picker` の `android/build.gradle` にあった。
+
+```groovy
+def isAgp9OrAbove = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
+    .tokenize('.')[0].toInteger() >= 9
+if (!isAgp9OrAbove) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+```
+
+**AGP 9 では Kotlin プラグインを適用しない。** 実装は全部 Kotlin なので、
+**1 行もコンパイルされずクラスが生成されない。**
+
+`android.builtInKotlin=true` にすると、今度は `audio_session`（`just_audio` の
+依存）が落ちる——
+
+```
+The 'org.jetbrains.kotlin.android' plugin is no longer required for Kotlin support since AGP 9.0.
+```
+
+**このフラグはプロジェクト全体に効く 1 つのスイッチで、どちらに倒しても
+片方が壊れる。** 生態系が AGP 9 を境に割れている。
+
+**Session Concierge と同じ構成に下げた**（AGP 8.11.1 / Kotlin 2.2.20 /
+Gradle 8.14）。**推測ではなく、Play へ出荷している実物に合わせた。**
+
+> **次に触る人へ。** これは「古い版に留めている」のではなく、
+> **上げると必ず壊れる**状態です。`file_picker` と `audio_session` の**両方**が
+> AGP 9 に揃うまで上げられません。`test/domain/android_platform_test.dart` が
+> 版を見張っています。
+
+### 27 分を無駄にしないための確かめ方
+
+版を下げたあと、**ビルドを回す前に設定段階だけで確かめた。**
+
+```
+./gradlew :file_picker:tasks --all -q | grep compile.*Kotlin
+```
+
+`compileReleaseKotlin` が現れるかどうかで、**Kotlin が適用されたかが
+数秒で分かる。** 落ちた原因がまさに「Kotlin のコンパイル作業が存在しない」
+ことだったので、そこだけを見れば足りた。
+
+**フルビルドは 27 分かかる。** 直したつもりで回して落ちると、
+1 回の試行が 27 分になる。
+
+### 鍵・署名・登録が繋がっていることの確かめ方
+
+`keytool -printcert -jarfile` は「**署名付き JAR ファイルではありません**」と
+返した。**v1（JAR）署名しか読めない**ためで、最近の Android は v2 で署名する。
+`apksigner verify --print-certs` に切り替えて確認した。
+
+| 見たもの | 一致した先 |
+| --- | --- |
+| 証明書の DN | **`CN=Android Debug` ではない** ＝ `key.properties` が効いている |
+| SHA-1 | Firebase に登録した値 |
+| SHA-256 | `web/.well-known/assetlinks.json` に入れた値 |
+
+**道具が「読めない」と言ったとき、それを「無い」と読まないこと**（AP-41 の形）。
+
+---
+
 ## 2026-08-16（3） — ダウンロード機能を実装した
 
 サーバー・純ロジック・データ層・画面の 4 層。**認証のモバイル対応だけが、

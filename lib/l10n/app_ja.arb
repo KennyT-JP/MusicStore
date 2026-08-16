@@ -106,6 +106,7 @@
   "signUpPrompt": "はじめての方はこちら（新規登録）",
   "orSeparator": "または",
   "continueWithGoogle": "Google で続ける",
+  "continueWithApple": "Apple で続ける",
   "showPassword": "パスワードを表示",
   "hidePassword": "パスワードを隠す",
   "authPopupBlocked": "ログイン用のウィンドウがブラウザにブロックされました。このサイトのポップアップを許可してから、もう一度お試しください。",
