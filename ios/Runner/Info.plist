@@ -16,6 +16,19 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>Track Cabinet</string>
+	<!-- **これが無いと、日本語の端末でも英語で起動する。** iOS は
+	     `preferredLanguages` を「アプリが対応している言語」で絞ってから
+	     Flutter へ渡すので、未記載だと開発言語（en）しか候補に残らない。
+	     **Flutter 側の `supportedLocales`（lib/l10n/app_localizations.dart）は
+	     OS の判断に効かない。** Android では起きない形の落とし穴。
+	     `l10n.yaml`（arb-dir: lib/l10n）の言語と揃えること——
+	     いまは `app_ja.arb` / `app_en.arb` の 2 つ。
+	     test/domain/ios_platform_config_test.dart が突き合わせている。 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ja</string>
+		<string>en</string>
+	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,6 +39,66 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- **輸出コンプライアンスの質問を毎回出さないため。** 独自の暗号は
+	     持たず、HTTPS しか使っていないので false でよい。書かないと
+	     App Store Connect が**アップロードのたびに**同じ質問を出す
+	     （設計 5-7・5-17：これを入れてあるので提出物としては「不要」扱い）。 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- ##### ここから 2 つは `ios/Runner/GoogleService-Info.plist` の写し #####
+
+	     Google ログインの戻り先。**Google のサインイン画面から戻ってこられる
+	     のは、この URL Scheme が登録されているときだけ**——無いと、認証は
+	     済んでいるのにアプリへ制御が返らず、利用者からは「固まった」ように
+	     見える（設計 5-5 / 5-7）。
+
+	     **値は `ios/Runner/GoogleService-Info.plist` の `REVERSED_CLIENT_ID` と
+	     一字一句同じでなければならない**（2026-08-16 に実値を入れた。それまでは
+	     このリポジトリが「未設定」を表すのに使う印を挟んだ仮の値だった）。
+
+	     **同じことを決める場所が 2 つある。** plist を取り直したのに
+	     こちらを直し忘れると、**ビルドは通り、ログインも成功し、それでも
+	     アプリに戻らない**という、いちばん探しにくい壊れ方をする。
+	     `test/domain/ios_platform_config_test.dart` が
+	     `GoogleService-Info.plist` と突き合わせて見張っている。
+
+	     **本番の値だけを置く。** iOS には dev フレーバーを作らない
+	     （設計 3-4。Android は `applicationIdSuffix` で分けられるが、iOS は
+	     Xcode の configuration と scheme を増やす必要がある）。 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.856522879081-otvorfggatqof527q15ijjp8hj05do1d</string>
+			</array>
+		</dict>
+	</array>
+	<!-- `google_sign_in` が読む iOS 用のクライアント ID。
+	     `GoogleService-Info.plist` の `CLIENT_ID` と同じ値にする。
+	     **上と同じく、片方だけ直しても戻れない。** -->
+	<key>GIDClientID</key>
+	<string>856522879081-otvorfggatqof527q15ijjp8hj05do1d.apps.googleusercontent.com</string>
+	<!-- ##### 写しはここまで #####
+
+	     **意図的に書いていないもの**（設計 5-7・7 節）。
+	     「念のため書いておく」がいちばん悪い選択なので、消さないこと。
+
+	     - `UIBackgroundModes`
+	       使わない背景動作を宣言したまま出すと、審査で用途の説明を
+	       求められる。**バックグラウンド再生は今回やらない**（7 節）。
+	       通知も今回やらない（`remote-notification` も書かない）。
+	     - `NSCameraUsageDescription`
+	       カメラを使わない。使わない権限を書くと審査で用途を訊かれる。
+	     - `NSPhotoLibraryUsageDescription`
+	       写真を選ばない。`file_picker` は UIDocumentPicker を使うので
+	       権限宣言が要らない**はず**——**社内に前例が無い**（9 節）ので、
+	       実機で確かめるまで断定しない。要ると分かってから足すこと。
+	     - `NSMicrophoneUsageDescription` / `NSUserTrackingUsageDescription` /
+	       `NSAppTransportSecurity` / `LSApplicationQueriesSchemes`
+	       いずれも使っていない。広告 SDK を同梱していないので ATT も不要。 -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

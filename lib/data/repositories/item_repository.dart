@@ -74,6 +74,81 @@ class ItemRepository {
             : null,
       );
 
+  /// [fetchItemsByIds] が 1 回のクエリに詰める ID の数。
+  ///
+  /// **Firestore の `whereIn` には上限がある。** いまの上限は 30 だが、
+  /// **10 にしてある。** 読み取りの課金は「返ったドキュメントの数」で
+  /// 決まるので、分割を細かくしても**費用は 1 円も変わらない**
+  /// （増えるのは往復の回数だけ）。上限の解釈を間違えたときの代償
+  /// ——本番でクエリごと失敗する——のほうがはるかに高い。
+  static const int _idsPerQuery = 10;
+
+  /// 同期のために、前に見たときより新しい項目だけを読む
+  /// （docs/DOWNLOAD-DESIGN.md 4.4）。
+  ///
+  /// **`status` で絞らないこと。** 同期は「消えたものを端末からも消す」
+  /// ために使う。`status == 'active'` を足すと**ソフト削除された項目が
+  /// クエリから消え**、端末には落としたものが永遠に残る（論点 11）。
+  ///
+  /// **`orderBy` を足さないこと。** いまは `updatedAt` 1 つの範囲だけなので
+  /// Firestore の自動索引で足りるが、並び替えや 2 つ目の絞り込みを足すと
+  /// **合成索引が要る**。エミュレータは索引を強制しないので、
+  /// 足りないことに統合テストでは気づけず、**本番だけが落ちる**
+  /// （10 節の危険 7。2026-08-10 にユーザー削除で実際に起きた）。
+  /// この形を `test/domain/download_sync_query_test.dart` が見張っている。
+  ///
+  /// **無い項目はここでは分からない。** 消えたドキュメントは「更新された
+  /// ドキュメント」として上がってこない。存在の確認は [fetchItemsByIds]。
+  Future<List<ListItem>> fetchItemsUpdatedAfter(
+    String listId,
+    DateTime since,
+  ) async {
+    final snapshot = await _db
+        .collection(FirestorePaths.listItems(listId))
+        .where('updatedAt', isGreaterThan: Timestamp.fromDate(since))
+        .get();
+    return snapshot.docs
+        .map((doc) => ListItem.fromDoc(doc, registrantDisplayName: ''))
+        .toList();
+  }
+
+  /// ID を並べて項目を読む（4.4 の「ドキュメントが無い」の判定）。
+  ///
+  /// **返るのは見つかったものだけ。** 呼ぶ側は「返ってこなかった ID」を
+  /// **消えた**と読む。ドキュメントごと消える経路は実在する——
+  /// アカウント削除（`functions/src/callable/user_admin.ts` の
+  /// `deleteSiteUser`）は、その人が登録した曲を `doc.ref.delete()` で
+  /// 物理削除する。**`updatedAt` は動かないので、
+  /// [fetchItemsUpdatedAfter] には一生上がってこない。**
+  ///
+  /// ドキュメント ID による絞り込みなので、**索引は要らない**
+  /// （キーの索引は Firestore が必ず持っている）。
+  Future<List<ListItem>> fetchItemsByIds(
+    String listId,
+    Iterable<String> itemIds,
+  ) async {
+    final ids = itemIds.where((id) => id.isNotEmpty).toSet().toList();
+    if (ids.isEmpty) return const [];
+
+    final collection = _db.collection(FirestorePaths.listItems(listId));
+    final found = <ListItem>[];
+    for (var from = 0; from < ids.length; from += _idsPerQuery) {
+      final to = from + _idsPerQuery;
+      final snapshot = await collection
+          .where(
+            FieldPath.documentId,
+            whereIn: ids.sublist(from, to > ids.length ? ids.length : to),
+          )
+          .get();
+      found.addAll(
+        snapshot.docs.map(
+          (doc) => ListItem.fromDoc(doc, registrantDisplayName: ''),
+        ),
+      );
+    }
+    return found;
+  }
+
   /// URL の項目を追加する（仕様書 6.1）。
   ///
   /// 連番はトランザクションで採番し、重複しないようにする（仕様書 6.2）。

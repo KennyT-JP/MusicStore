@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "856522879081",
+    "project_id": "music-storage-d79b2",
+    "storage_bucket": "music-storage-d79b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:856522879081:android:0cdd0eedd4d9be1fbc32f8",
+        "android_client_info": {
+          "package_name": "jp.sessionconcierge.trackcabinet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "856522879081-us214ekrkko9hkubgc43b384adv77unf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "jp.sessionconcierge.trackcabinet",
+            "certificate_hash": "8ef9770e79568756a1286ec584411e0a8e67f975"
+          }
+        },
+        {
+          "client_id": "856522879081-eiab9hed5f5n405e8d6juttr5m8257c9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNc6yWj30w2T9mmNPqpm4fURN1XQj7fZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "856522879081-eiab9hed5f5n405e8d6juttr5m8257c9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "856522879081-otvorfggatqof527q15ijjp8hj05do1d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "jp.sessionconcierge.trackcabinet"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

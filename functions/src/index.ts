@@ -20,6 +20,7 @@
  * | クーポンの発行・変更・一覧・使用者 | createCoupon / updateCoupon / listCoupons / listCouponRedemptions |
  * | クーポンの引き換え | redeemCoupon |
  * | プレミアム期限の延長・短縮 | extendPremium |
+ * | オフライン用ダウンロードの権限確認 | verifyDownloadAccess |
  * | 退会 | withdrawAccount |
  * | 定期実行（1 日 1 回） | purgeDeletedFiles |
  *
@@ -79,6 +80,7 @@ export {
   redeemCoupon,
 } from './callable/coupons';
 export { extendPremium } from './callable/premium';
+export { verifyDownloadAccess } from './callable/downloads';
 export { replaceItemFile } from './callable/items';
 export {
   createSiteUser,

@@ -11,6 +11,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_list_app/env/app_environment.dart';
 import 'package:music_list_app/ui/format.dart';
 import 'package:music_list_app/ui/share_url.dart';
 
@@ -47,6 +48,62 @@ void main() {
         buildShareUrl('/invite/a', base: Uri.parse('https://example.test/app/')),
         'https://example.test/app/#/invite/a',
       );
+    });
+  });
+
+  group('共有・招待 URL（ネイティブ）', () {
+    // このテストは VM 上（kIsWeb == false）で走る。つまり
+    // **モバイル実機とまったく同じ経路**を通る。
+    // `Uri.base` が `file:` 形式になるのも同じ。
+
+    test('前提：Uri.base は file: 形式で、origin を読むと例外になる', () {
+      // ここが崩れると以下のテストが「ネイティブの想定」でなくなる。
+      // モバイルで起きることを、この前提の上で確かめている。
+      expect(Uri.base.isScheme('file'), isTrue);
+      expect(() => Uri.base.origin, throwsStateError);
+    });
+
+    test('base を渡さなくても例外にならず、招待 URL を組み立てられる', () {
+      // **これがこの修正の主眼。** 直前まで、モバイルではここで
+      // StateError が飛び、招待リンクを 1 本も作れなかった。
+      expect(() => buildShareUrl('/invite/abc123'), returnsNormally);
+      expect(
+        buildShareUrl('/invite/abc123'),
+        '${AppEnvironment.current.shareOrigin}/#/invite/abc123',
+      );
+    });
+
+    test('URL の形を変えない（ハッシュ方式のまま）', () {
+      // パス方式へ変えると、すでに配ったリンクが動かなくなる。
+      final url = Uri.parse(buildShareUrl('/invite/abc123'));
+
+      expect(url.scheme, 'https');
+      expect(url.path, '/');
+      expect(url.fragment, '/invite/abc123');
+    });
+
+    test('固定ドメインは環境ごとに 1 か所で決まる', () {
+      // 検証環境のアプリが本番の招待 URL を配ると、受け取った人は
+      // 本番のリストに入ろうとして入れない。
+      expect(
+        AppEnvironment.production.shareOrigin,
+        'https://music-storage-d79b2.web.app',
+      );
+      expect(
+        AppEnvironment.staging.shareOrigin,
+        'https://music-storage-dev.web.app',
+      );
+      expect(
+        AppEnvironment.production.shareOrigin,
+        isNot(AppEnvironment.staging.shareOrigin),
+      );
+    });
+
+    test('既定の土台は、いま選ばれている環境の固定ドメイン', () {
+      // `--dart-define=APP_ENV=` を指定しないので検証環境になる。
+      expect(AppEnvironment.current, AppEnvironment.staging);
+      expect(defaultShareBase.origin, 'https://music-storage-dev.web.app');
+      expect(defaultShareBase.path, '/');
     });
   });
 

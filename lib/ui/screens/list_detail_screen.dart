@@ -17,10 +17,15 @@ import '../../domain/playback.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/playback_provider.dart';
+import '../../providers/download_provider.dart';
+import '../downloads/bulk_download.dart';
+import '../downloads/download_support.dart';
 import '../routes.dart';
+import '../widgets/download_button.dart';
 import '../widgets/item_external_action.dart';
 import '../widgets/async_view.dart';
 import '../widgets/error_message.dart';
+import '../widgets/web_download_notice.dart';
 import 'requests_screens.dart';
 
 /// 一覧の絞り込み・並び替えの状態。
@@ -148,9 +153,16 @@ class ListDetailScreen extends ConsumerWidget {
           }
           return Column(
             children: [
+              // **外すより先に知らせる**（7.3）。既存利用者の機能削減に
+              // あたるので、代わりが無いまま消さない。閉じられる。
+              const WebDownloadNotice(),
               _Header(listId: listId, name: musicList.name),
               const Divider(height: 1),
-              Expanded(child: _ItemList(listId: listId)),
+              Expanded(
+                child: _ItemList(listId: listId, listName: musicList.name),
+              ),
+              // 一括ダウンロードの進捗と中止（6.3・論点 20）。
+              BulkDownloadBanner(listId: listId),
             ],
           );
         },
@@ -214,6 +226,16 @@ class _Header extends ConsumerWidget {
     final notifier = ref.read(itemQueryProvider(listId).notifier);
     final access = ref.watch(listAccessProvider(listId));
 
+    // 一括ダウンロードの入口（6.3）。**出し分けは 6.5 と同じ**——
+    // 閲覧者とメンバーでないサイト管理者には出さず、プレミアムでない人には
+    // 出して押すと案内を出す（`confirmBulkDownload` が判定する）。
+    // **判定が届く前は出さない**（6.5）——読み込み中に出すと、
+    // プレミアムの人にも一瞬「使えません」の案内が出うる。
+    final showsBulkDownload =
+        ref.watch(audioDownloadSupportedProvider) &&
+        ref.watch(showsDownloadButtonProvider(listId)) &&
+        ref.watch(canDownloadProvider(listId)).hasValue;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
@@ -240,16 +262,32 @@ class _Header extends ConsumerWidget {
               // （仕様書 5.4／監査 第2回）。
               if (Permissions.canManageMembers(access) ||
                   Permissions.canLeaveList(access) ||
-                  Permissions.canStopViewing(access))
+                  Permissions.canStopViewing(access) ||
+                  showsBulkDownload)
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.settings_outlined),
                   onSelected: (value) => switch (value) {
                     _leaveAction => _confirmLeave(context, ref, listId),
-                    _stopViewingAction =>
-                      _confirmStopViewing(context, ref, listId),
+                    _stopViewingAction => _confirmStopViewing(
+                      context,
+                      ref,
+                      listId,
+                    ),
+                    _downloadListAction => confirmBulkDownload(
+                      context,
+                      ref,
+                      listId: listId,
+                      listName: name,
+                    ),
                     _ => context.go(value),
                   },
                   itemBuilder: (context) => [
+                    // **上限は置かず、押したら見積もりを出す**（6.3・論点 20）。
+                    if (showsBulkDownload)
+                      PopupMenuItem(
+                        value: _downloadListAction,
+                        child: Text(l10n.downloadList),
+                      ),
                     if (Permissions.canManageMembers(access)) ...[
                       PopupMenuItem(
                         value: AppRoutes.listMembers(listId),
@@ -336,6 +374,7 @@ class _Header extends ConsumerWidget {
 /// メニューの値。ルートのパスと混ざらない文字列にする。
 const String _leaveAction = '#leave';
 const String _stopViewingAction = '#stop-viewing';
+const String _downloadListAction = '#download-list';
 
 /// 自分からリストを抜ける（仕様書 5.4）。
 Future<void> _confirmLeave(
@@ -457,9 +496,13 @@ class _SortChip extends ConsumerWidget {
 }
 
 class _ItemList extends ConsumerWidget {
-  const _ItemList({required this.listId});
+  const _ItemList({required this.listId, required this.listName});
 
   final String listId;
+
+  /// **オフラインで「どのリストのものか」を出すために端末へ持つ**（論点 8）。
+  /// 行から `listProvider` を引き直すと、行の数だけ購読が増える。
+  final String listName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -480,7 +523,9 @@ class _ItemList extends ConsumerWidget {
             icon: query.keyword.isEmpty
                 ? Icons.library_music_outlined
                 : Icons.search_off,
-            title: query.keyword.isEmpty ? l10n.noItemsYet : l10n.noSearchResults,
+            title: query.keyword.isEmpty
+                ? l10n.noItemsYet
+                : l10n.noSearchResults,
             description: query.keyword.isEmpty && Permissions.canAddItem(access)
                 ? l10n.noItemsHint(l10n.addItem)
                 : null,
@@ -495,8 +540,12 @@ class _ItemList extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 96),
           itemCount: filtered.length,
           separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) =>
-              _ItemRow(listId: listId, item: filtered[index], isWide: isWide),
+          itemBuilder: (context, index) => _ItemRow(
+            listId: listId,
+            listName: listName,
+            item: filtered[index],
+            isWide: isWide,
+          ),
         );
       },
     );
@@ -506,11 +555,13 @@ class _ItemList extends ConsumerWidget {
 class _ItemRow extends StatelessWidget {
   const _ItemRow({
     required this.listId,
+    required this.listName,
     required this.item,
     required this.isWide,
   });
 
   final String listId;
+  final String listName;
   final ListItem item;
   final bool isWide;
 
@@ -558,7 +609,15 @@ class _ItemRow extends StatelessWidget {
       // 種類が分かる印は、その操作のアイコンが兼ねる（ダウンロード／
       // 新しいタブ）。飾りのアイコンを別に並べると、押せるものと
       // 押せないものが隣り合って紛らわしい。
-      trailing: ItemExternalAction(item: item),
+      // **「端末に保存」を左、「外部で開く」を右**（6.2）。
+      // 同じ絵で違う動きをさせないよう、アイコンは別のものにしてある。
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ItemDownloadButton(listId: listId, listName: listName, item: item),
+          ItemExternalAction(item: item),
+        ],
+      ),
       isThreeLine: !isWide && subtitle.length > 40,
       onTap: () => context.go(AppRoutes.item(listId, item.id)),
     );

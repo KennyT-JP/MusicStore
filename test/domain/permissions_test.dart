@@ -345,4 +345,77 @@ void main() {
       expect(Permissions.canAccessSiteAdmin(outsider), isFalse);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.2 / 8.1）
+  // -----------------------------------------------------------------------
+  group('ダウンロードの可否（DOWNLOAD-DESIGN 5.2・論点 9 / 12 / 18）', () {
+    const viewer = ListAccess(isSiteAdmin: false, role: null, isViewer: true);
+
+    // **サイト管理者でメンバーでもある人。** ここが 2 行に分かれるのが要点
+    // （8.1 の表）。「サイト管理者は不可」と読んで `!isSiteAdmin && …` と
+    // 書くと、この人が落ちる。**外すのは例外であって、その人ではない。**
+    const siteAdminMember = ListAccess(
+      isSiteAdmin: true,
+      role: ListRole.readOnly,
+    );
+
+    test('Read Only のメンバーはダウンロードできる（論点 9）', () {
+      // 「メンバーのみ（Read Only を含む）」。ここを
+      // `hasAtLeast(superUser)` にすると、Read Only が落ちる。
+      expect(Permissions.canDownload(readOnly, isPremium: true), isTrue);
+    });
+
+    test('Super User・リスト管理者もできる', () {
+      expect(Permissions.canDownload(superUser, isPremium: true), isTrue);
+      expect(Permissions.canDownload(listAdmin, isPremium: true), isTrue);
+    });
+
+    test('閲覧者はできない（論点 9）', () {
+      // **共有リンクが回った先の人が端末に音源を残す経路を塞ぐ**のが
+      // 論点 9 の狙い。`access.canView` で判定すると、
+      // `canView` は `effectiveRole != null || isViewer` なので閲覧者が通る。
+      expect(viewer.canView, isTrue, reason: '前提：閲覧者は中身を見られる');
+      expect(Permissions.canDownload(viewer, isPremium: true), isFalse);
+    });
+
+    test('メンバーでもなんでもない人はできない', () {
+      expect(Permissions.canDownload(outsider, isPremium: true), isFalse);
+    });
+
+    test('サイト管理者でメンバーではない人はできない（論点 18）', () {
+      // **`hasAtLeast(readOnly)` へ戻すと、この行だけが落ちる。**
+      // `ListAccess.siteAdmin()` は effectiveRole が listAdmin になるため。
+      //
+      // 通してしまうと、サーバー側（verifyDownloadAccess）は members の
+      // 存在だけで判定するので `notMember` を返し、
+      // **落とせたのに次の起動で端末から消える。**
+      expect(
+        siteAdmin.hasAtLeast(ListRole.readOnly),
+        isTrue,
+        reason: '前提：サイト管理者は effectiveRole が listAdmin になる',
+      );
+      expect(Permissions.canDownload(siteAdmin, isPremium: true), isFalse);
+    });
+
+    test('サイト管理者でメンバーでもある人はできる（論点 18）', () {
+      // 役割を持っているのでメンバーとして通る。
+      // **行きすぎた修正（`!access.isSiteAdmin && …`）でこの行が落ちる。**
+      expect(Permissions.canDownload(siteAdminMember, isPremium: true), isTrue);
+    });
+
+    test('プレミアムが切れていたら、誰もできない（論点 12・18）', () {
+      // **「ダウンロードは機能であって資産ではない」**（2.1）。
+      // 失効したら機能が止まる。曲もリストも残る。
+      expect(Permissions.canDownload(readOnly, isPremium: false), isFalse);
+      expect(Permissions.canDownload(superUser, isPremium: false), isFalse);
+      expect(Permissions.canDownload(listAdmin, isPremium: false), isFalse);
+      expect(Permissions.canDownload(viewer, isPremium: false), isFalse);
+      // **サイト管理者にも例外を作らない**（論点 18）。
+      expect(
+        Permissions.canDownload(siteAdminMember, isPremium: false),
+        isFalse,
+      );
+    });
+  });
 }

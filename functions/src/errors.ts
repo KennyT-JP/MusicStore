@@ -69,6 +69,8 @@ export const ERROR_CODES = [
   'couponCodeTaken',
   'monthsInvalid',
   'maxUsesInvalid',
+  // --- オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.1） ---
+  'tooManyLists',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -125,6 +127,8 @@ const FALLBACK: Record<ErrorCode, string> = {
   couponCodeTaken: 'そのコードはすでに使われています。',
   monthsInvalid: '月数を正しく入力してください。',
   maxUsesInvalid: '使用できる人数は 1 以上で指定してください。',
+  tooManyLists:
+    '一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。',
 };
 
 /**

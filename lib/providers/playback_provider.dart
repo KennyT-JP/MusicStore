@@ -12,6 +12,7 @@ import '../data/audio_player_handle.dart';
 import '../data/models/list_item.dart';
 import '../domain/playback.dart';
 import 'app_providers.dart';
+import 'download_provider.dart';
 
 /// 音を鳴らす先。テストでは差し替える。
 final audioPlayerHandleProvider = Provider<AudioPlayerHandle>((ref) {
@@ -19,6 +20,19 @@ final audioPlayerHandleProvider = Provider<AudioPlayerHandle>((ref) {
   ref.onDispose(handle.dispose);
   return handle;
 });
+
+/// オフラインで聴ける期間（30 日）が過ぎたまま圏外にいる
+/// （docs/DOWNLOAD-DESIGN.md 4.3・論点 13b）。
+///
+/// **ファイルは消していない。** 画面には
+/// 「オフラインで聴ける期間が過ぎました。一度オンラインにしてください」と
+/// 出し、**「削除しました」とは書かないこと**（2.1）。
+class OfflinePlaybackExpiredException implements Exception {
+  const OfflinePlaybackExpiredException();
+
+  @override
+  String toString() => 'OfflinePlaybackExpiredException';
+}
 
 /// Storage のパスから、再生できる URL を取り出す。
 ///
@@ -93,6 +107,10 @@ class PlaybackController extends Notifier<PlaybackState> {
   /// 再生ボタンを押した。
   ///
   /// 同じ曲を一時停止していたならその位置から、それ以外は先頭から。
+  ///
+  /// **どこから鳴らすかは `PlaybackPolicy.resolve` が決める**
+  /// （docs/DOWNLOAD-DESIGN.md 4.3）。再生の入口はここ 1 か所なので、
+  /// ここを通せばオフラインの上限（論点 13b）が漏れない。
   Future<void> play(ListItem item) async {
     final file = item.file;
     // ファイルを持たない項目（URL の項目）はここでは扱わない。
@@ -109,10 +127,46 @@ class PlaybackController extends Notifier<PlaybackState> {
         await handle.resume();
         return;
       }
-      final url =
-          _urls[item.id] ??=
-              await ref.read(downloadUrlResolverProvider)(file.storagePath);
-      await handle.playFrom(url);
+
+      // **目録にあり、実体もあるときだけ localPath が返る**（4.3）。
+      final localPath = await ref
+          .read(downloadsProvider.notifier)
+          .localAudioPath(item.id);
+
+      final source = PlaybackPolicy.resolve(
+        localPath: localPath,
+        isPlayableOffline: ref.read(isPlayableOfflineProvider),
+        isOnline: ref.read(isOnlineProvider),
+      );
+
+      switch (source) {
+        case PlaybackSource.local:
+          // **落としてあるなら、オンラインでもローカルを使う**（4.3）。
+          // 落としたのに通信するのでは、落とした意味がない。
+          //
+          // **`file:` の URI にして渡す。** `just_audio` の
+          // `setFilePath(p)` は `AudioSource.uri(Uri.file(p))` と等価で
+          // （`just_audio.dart` の `AudioSource.file`）、`playFrom` が
+          // 呼ぶ `setUrl` も同じ `AudioSource.uri` に行き着く。
+          // **URL と同じキー空間で衝突しない**——`https:` と `file:` は
+          // 決して同じ文字列にならない。
+          await handle.playFrom(Uri.file(localPath!).toString());
+
+        case PlaybackSource.remote:
+          // **`_urls` のキャッシュは remote のときだけ使う**（4.3）。
+          final url = _urls[item.id] ??= await ref.read(
+            downloadUrlResolverProvider,
+          )(file.storagePath);
+          await handle.playFrom(url);
+
+        case PlaybackSource.blocked:
+          // オフラインで、猶予（30 日）も過ぎている。**ファイルは消さない**
+          // （論点 13b）。画面には「一度オンラインにしてください」と出す。
+          state = PlaybackPolicy.stop(state).state;
+          ref
+              .read(playbackErrorProvider.notifier)
+              .report(const OfflinePlaybackExpiredException());
+      }
     } catch (error) {
       // 取得や読み込みに失敗したら、鳴っている表示のままにしない。
       // 次に押したときに取り直せるよう、覚えた URL も捨てる。

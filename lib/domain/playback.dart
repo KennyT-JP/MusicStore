@@ -5,6 +5,24 @@
 /// 端末の音を鳴らさずに確かめられる。ここに置いて回帰テストで固定する。
 library;
 
+/// 鳴らせる音源の拡張子。
+///
+/// **白リストは 1 か所に置く。** ダウンロード機能の対象判定
+/// （`download_target.dart` / docs/DOWNLOAD-DESIGN.md 3.3）もここを参照する。
+/// 別の集合を書くと、「一覧に再生ボタンが出るのに落とせない曲」ができる。
+const Set<String> kPlayableAudioExtensions = {
+  'mp3',
+  'm4a',
+  'wav',
+  'flac',
+  'ogg',
+  'aac',
+};
+
+/// ファイル名の拡張子（小文字・ドットなし）。拡張子が無ければ空文字。
+String fileExtension(String fileName) =>
+    fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+
 /// そのファイルを、この画面で鳴らせるか。
 ///
 /// **ファイルの種類は登録時に制限していない（仕様書 7.1）。** 画像や書類も
@@ -17,10 +35,7 @@ library;
 bool isPlayableAudio({required String contentType, required String fileName}) {
   if (contentType.toLowerCase().startsWith('audio/')) return true;
 
-  final ext = fileName.contains('.')
-      ? fileName.split('.').last.toLowerCase()
-      : '';
-  return const {'mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac'}.contains(ext);
+  return kPlayableAudioExtensions.contains(fileExtension(fileName));
 }
 
 /// いまの再生の状況。
@@ -88,9 +103,44 @@ class PlaybackTransition {
   final PlaybackCommand command;
 }
 
+/// どこから鳴らすか（docs/DOWNLOAD-DESIGN.md 4.3）。
+enum PlaybackSource {
+  /// 端末に落としてあるファイルから。
+  local,
+
+  /// サーバーからのストリーミング。
+  remote,
+
+  /// 鳴らせない。オフラインで、猶予も過ぎている。
+  blocked,
+}
+
 /// 押したときの移り変わりを決める（仕様 5〜7）。
 class PlaybackPolicy {
   const PlaybackPolicy._();
+
+  /// どこから鳴らすか（docs/DOWNLOAD-DESIGN.md 4.3）。
+  ///
+  /// **オフラインの上限（論点 13b）はここで効かせる。** 再生の入口が
+  /// 1 か所（`PlaybackController.play`）なので、ここを通せば漏れない。
+  ///
+  /// - **ダウンロード済みなら、オンラインでもローカルを使う。**
+  ///   落としたのに通信するのでは、落とした意味がない。
+  /// - **猶予を過ぎたら [local] を返さない。** そのときオンラインなら
+  ///   [remote] に落ちる——論点 12 のとおり、**ストリーミング再生は
+  ///   これまで通りできる。**
+  ///
+  /// [localPath] は `index.json` にあり、**実体もある**ときだけ渡すこと。
+  /// [isPlayableOffline] は `OfflineAccessPolicy.isPlayableOffline` の結果。
+  static PlaybackSource resolve({
+    required String? localPath,
+    required bool isPlayableOffline,
+    required bool isOnline,
+  }) {
+    if (localPath != null && isPlayableOffline) return PlaybackSource.local;
+    if (isOnline) return PlaybackSource.remote;
+    return PlaybackSource.blocked;
+  }
 
   /// 再生ボタンを押した。
   ///

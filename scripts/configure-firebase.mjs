@@ -107,6 +107,27 @@ console.log('    途中で確認を求められたら、そのまま応答して
     `--project=${projectId}`,
     `--out=${target.out}`,
     `--platforms=${platforms}`,
+    // **検証環境のパッケージ名を明示する（2026-08-16 に追加）。**
+    //
+    // `android/app/build.gradle.kts` にフレーバーを入れ、検証環境は
+    // `applicationIdSuffix = ".dev"` が付くようにした。ところが
+    // **flutterfire は `applicationId`（接尾辞なし＝本番の値）を既定に使う。**
+    //
+    // 明示しないまま検証環境へ流すと、**検証プロジェクトに「本番と同じ
+    // パッケージ名」のアプリが新しく作られる。** しかもエラーにならない
+    // ——作成に成功してしまうので、気づくのは「Google ログインが検証環境で
+    // 動かない」と分かったときになる（パッケージ名＋SHA-1 の組み合わせは
+    // プロジェクトをまたいで一意なので、本番が押さえている側が勝つ）。
+    //
+    // **接尾辞は build.gradle.kts が正本。** ここに書き写した値がずれると
+    // 同じ事故が起きるので、`test/domain/android_platform_test.dart` が
+    // 両者の一致を見張っている。
+    ...(platforms.includes('android') && !wantsProd
+      ? ['--android-package-name=jp.sessionconcierge.trackcabinet.dev']
+      : []),
+    // **無人で流せるようにする。** 生成物の上書き確認で止まると、
+    // 自動で回している経路（配信前の準備など）が無言で固まる。
+    '--yes',
   );
   if (code !== 0) {
     fail(

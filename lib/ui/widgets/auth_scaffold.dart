@@ -130,6 +130,24 @@ class OrDivider extends StatelessWidget {
   }
 }
 
+/// Apple のボタンに置くマーク。
+///
+/// **Material の `Icons.apple` を使う。** 画像を持ち込むと配布の条件が
+/// 別に付くのは Google と同じで、こちらは Flutter が字形として持っている。
+/// **色は文字色に合わせる**（Apple の指定は白地なら黒）。
+class AppleMark extends StatelessWidget {
+  const AppleMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.apple,
+      size: 18,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+  }
+}
+
 /// Google のボタンに置く「G」。
 ///
 /// **画像を持ち込まない。** ロゴの画像は配布の条件が別にあるため、
