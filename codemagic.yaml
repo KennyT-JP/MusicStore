@@ -1,0 +1,146 @@
+# iOS のビルドと App Store Connect への送信（仕様書 MOBILE-APP-DESIGN.md 5-8）
+#
+# ## なぜクラウドか
+#
+# **Xcode は macOS でしか動かない。** 開発は Windows で行っているため、
+# iOS のビルドと署名だけをクラウドの macOS に任せる。
+#
+# **Mac 実機は要らない。** 同じ作者の Session Concierge が、
+# この方式で Windows だけから App Store まで出している（2026-08-14）。
+# 署名チームの選択も証明書の発行も、Xcode の画面ではなく CLI で行う。
+#
+# ## Android はここに無い
+#
+# **意図的です。** Android は手元の Windows で
+# `flutter build appbundle --release --flavor prod` を実行し、
+# Play Console へ手で上げる。CI 化していないのは、
+# **署名鍵を CI に渡さずに済ませる**ため。
+#
+# ## 動かす前に必要なもの（依頼者の作業）
+#
+# 1. App Store Connect でアプリのレコードを作る（Bundle ID: jp.sessionconcierge.trackcabinet）
+# 2. App Store Connect の API キー（.p8）を発行し、Codemagic の
+#    Teams → Integrations に「MusicStore」という名前で登録する
+# 3. 証明書用の秘密鍵を作り、Codemagic の変数グループ「appstore」に
+#    CERTIFICATE_PRIVATE_KEY という名前で登録する（Secure にする）
+# 4. developer.apple.com の Identifiers で App ID を作り、
+#    **Sign in with Apple にチェックを入れる**
+#
+# **4 を忘れると署名が通らない。** アプリ側の entitlements
+# （ios/Runner/Runner.entitlements）と**両方揃って初めて**動く。
+
+workflows:
+  ios-release:
+    name: iOS リリース（App Store Connect へ送る）
+    # M シリーズのインスタンス。Flutter の iOS ビルドはここが一番速い。
+    instance_type: mac_mini_m2
+    # Session Concierge の初回成功は 8 分 28 秒だった。
+    # 60 分あれば、初回に依存の取得から走っても足りる。
+    max_build_duration: 60
+
+    integrations:
+      # **Codemagic の画面で付けた登録名と一字一句同じにすること。**
+      # 違うと「integration not found」でビルドが始まらない。
+      app_store_connect: MusicStore
+
+    environment:
+      groups:
+        # CERTIFICATE_PRIVATE_KEY が入っているグループ。
+        - appstore
+      vars:
+        # 秘密ではない（アプリのバイナリにも入る値）。
+        BUNDLE_ID: jp.sessionconcierge.trackcabinet
+      # **版を固定する。** `stable` にすると、Codemagic 側が新しい版に
+      # 上がった日から、こちらが何も変えていないのにビルドの中身が変わる。
+      # ここは**手元で 1,318 件の検証を通した版**（2026-08-16）。
+      # 上げるときは、先に手元で上げて全部通してから合わせること。
+      #
+      # **Xcode は固定しない。** Apple は「この版以降の SDK で
+      # ビルドしたもの」しか受け付けず、**その下限が定期的に上がる**。
+      # 固定すると、ある日突然アップロードを拒否される。
+      flutter: 3.44.9
+      xcode: latest
+      cocoapods: default
+
+      # **注意: environment.ios_signing はここに書かない。**
+      #
+      # あれは「Apple 側にある署名ファイルを取ってくる」設定で、
+      # **無いものを作りはしない。** まだ 1 つも証明書を作っていない
+      # 段階で使うと、次のエラーで止まる。
+      #
+      #   No matching profiles found for bundle identifier ... "app_store"
+      #
+      # 下の「署名ファイルを用意する」で --create を使って作らせる。
+
+    scripts:
+      - name: 依存を取得する
+        script: flutter pub get
+
+      - name: 自動テストを流す
+        # **ビルドの前に流す。**
+        # 送信してから気づくと、版番号を上げ直して出し直すことになる
+        # （App Store は同じ番号を受け取らない）。
+        script: flutter test
+
+      - name: 署名ファイルを用意する
+        script: |
+          keychain initialize
+          # --create で、証明書とプロビジョニングプロファイルを
+          # **その場で Apple 側に作らせる。**
+          #
+          # **--certificate-key を絶対に省かないこと。**
+          # 秘密鍵を渡さないと証明書を作れないが、
+          # **ログに 1 行出すだけで、このステップは成功扱いで終わる。**
+          #
+          #   Cannot save Signing Certificates without certificate private key
+          #
+          # 成功しているときは、出力末尾の 3 行
+          # （Provisioning Profiles / Signing Certificate / Team Id）が埋まる。
+          # **空だったら失敗している。**（共有ドキュメント AP-71）
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          # Xcode の画面で署名チームを選ぶ操作に相当する。
+          xcode-project use-profiles
+
+      - name: ipa を作る
+        script: |
+          # **2 段に分ける。**
+          # flutter build ipa は署名まで自分でやろうとし、その前段で
+          # **開発用**証明書が鍵束にあるかを確かめる。
+          # 配布用ビルドに開発用証明書は要らないのに落ちるので、
+          # 署名しないビルドと ipa 化を分ける。
+          flutter build ios --release --no-codesign
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # **どちらも false のまま。**
+        #
+        # submit_to_testflight: true は「**外部テスト**への提出」を意味し、
+        # フィードバック用メール・審査連絡先・Apple のベータ審査が要る。
+        # 未登録だと**ビルドの処理が終わった後**に落ちる（バイナリは無事）。
+        #
+        # **false でも TestFlight にビルドは出る。**
+        # 内部テスター（チームのメンバー・最大 100 人）はそのまま入れる。
+        # 審査が要るのは外部テスターへ配るときだけ。
+        submit_to_testflight: false
+        submit_to_app_store: false
+
+      email:
+        recipients:
+          # **ビルドは非同期なので、画面を見ていないと落ちたことに気づかない。**
+          - support@session-concierge.jp
+        notify:
+          success: true
+          failure: true
