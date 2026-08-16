@@ -18,16 +18,25 @@
 #
 # ## 動かす前に必要なもの（依頼者の作業）
 #
-# 1. App Store Connect でアプリのレコードを作る（Bundle ID: jp.sessionconcierge.trackcabinet）
-# 2. App Store Connect の API キー（.p8）を発行し、Codemagic の
-#    Teams → Integrations に「MusicStore」という名前で登録する
-# 3. 証明書用の秘密鍵を作り、Codemagic の変数グループ「appstore」に
-#    CERTIFICATE_PRIVATE_KEY という名前で登録する（Secure にする）
-# 4. developer.apple.com の Identifiers で App ID を作り、
-#    **Sign in with Apple にチェックを入れる**
+# **2026-08-16 に Codemagic の画面を実際に見て確かめた。** この口座は
+# **Personal Account** なので、**Teams というメニューは無い**（Session Concierge の
+# 手順書は「Teams → Integrations」と書いているが、それは同じ場所を指している。
+# URL も `/teams/<id>` で、Personal Account が内部的に team として扱われている）。
 #
-# **4 を忘れると署名が通らない。** アプリ側の entitlements
-# （ios/Runner/Runner.entitlements）と**両方揃って初めて**動く。
+# | 要るもの | 場所 | 状態 |
+# | --- | --- | --- |
+# | App Store Connect の API キー | Settings → Integrations → **Developer Portal** | **登録済み**（`SessionConcierge`・Key: CHFAV8VT47） |
+# | App ID（`Sign in with Apple` にチェック） | developer.apple.com → Identifiers | **要作成** |
+# | App Store Connect のアプリレコード | App Store Connect → マイ App | **要作成** |
+# | `CERTIFICATE_PRIVATE_KEY` | **このアプリの設定**の環境変数（グループ `appstore`） | **要登録** |
+#
+# **変数はアカウント全体ではなく、アプリごとに置く。** Codemagic の画面に
+# 「Global variables and secrets will be removed from personal accounts in the
+# future. Add your variables in app settings」と出ており、実際に
+# アカウント側は「No existing variables」だった。
+#
+# **App ID の `Sign in with Apple` を忘れると署名が通らない。** アプリ側の
+# entitlements（ios/Runner/Runner.entitlements）と**両方揃って初めて**動く。
 
 workflows:
   ios-release:
@@ -41,7 +50,17 @@ workflows:
     integrations:
       # **Codemagic の画面で付けた登録名と一字一句同じにすること。**
       # 違うと「integration not found」でビルドが始まらない。
-      app_store_connect: MusicStore
+      #
+      # **名前が `SessionConcierge` なのは誤りではない。**
+      # App Store Connect の API キーは **Apple のアカウントに紐づく**もので、
+      # アプリごとではない。Session Concierge を出したときに登録した
+      # キー（Codemagic の Settings → Integrations → Developer Portal、
+      # Key: CHFAV8VT47）が、そのまま音源創庫でも使える。
+      #
+      # **わざわざ別のキーを作らない。** Apple は API キーの本数に上限があり、
+      # 増やすほど「どれがどれか」が分からなくなる。
+      # 名前はキーの識別子であって、アプリ名ではない。
+      app_store_connect: SessionConcierge
 
     environment:
       groups:
