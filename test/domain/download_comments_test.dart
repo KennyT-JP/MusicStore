@@ -88,34 +88,53 @@ void main() {
       () => lists.fetchUsers(any()),
     ).thenAnswer((_) async => users);
 
+    // **購読は張らない。ここが要。**
+    //
+    // `offlineCommentsLoaderProvider` はリポジトリを直に呼ぶ
+    // （`itemRepositoryProvider` / `listRepositoryProvider`）。
+    // 画面用の `itemCommentsProvider` / `listMembersProvider` は
+    // **autoDispose** なので、`ref.read(….future)` で読むと
+    // **ほかに誰も見ていないときに、最初の値が届く前に捨てられる**
+    // （`The provider … was disposed during loading state`）。
+    // そしてダウンロード側の catch がそれを握りつぶし、**コメント 0 件の
+    // まま端末に保存される**（一覧からの単曲と一括がこれに当たる）。
+    //
+    // だからこの器には購読を 1 本も張らない。**プロバイダ経由に戻したら、
+    // ここのテストが落ちる**——それが目的である。
     container = ProviderContainer.test(
       overrides: [
         itemRepositoryProvider.overrideWithValue(items),
         listRepositoryProvider.overrideWithValue(lists),
       ],
     );
-
-    // **購読を張ってから読む。**
-    //
-    // `offlineCommentsLoaderProvider` は `ref.read(…​.future)` で
-    // `itemCommentsProvider` / `listMembersProvider` を読む。どちらも
-    // `autoDispose` なので、**ほかに誰も見ていないと、最初の値が届く前に
-    // 捨てられる**（`The provider … was disposed during loading state`）。
-    //
-    // 画面（項目詳細）はコメントもメンバーも購読しているので、そこから
-    // 落とすかぎり値は届く。ここではその状態を作っている。
-    // **購読していない場所から落としたときの挙動は、この機能の持ち主へ
-    // 申し送り済み**（一括ダウンロードがそれに当たる）。
-    container.listen(
-      itemCommentsProvider((listId: _listId, itemId: _itemId)),
-      (_, _) {},
-    );
-    container.listen(listMembersProvider(_listId), (_, _) {});
   }
 
   Future<List<OfflineComment>> load() => container.read(
     offlineCommentsLoaderProvider,
   )(listId: _listId, itemId: _itemId, withdrawnLabel: _withdrawn);
+
+  test('誰もそのコメントを購読していなくても authorName が埋まる', () async {
+    arrange(
+      comments: [_comment(id: 'c1', createdBy: 'u1')],
+      memberUids: const ['u1'],
+      users: const {
+        'u1': AppUser(uid: 'u1', displayName: '山田', isWithdrawn: false),
+      },
+    );
+
+    final comments = await load();
+
+    expect(
+      comments.single.authorName,
+      '山田',
+      reason:
+          '項目詳細から落とすときは画面がコメントとメンバーを購読しているので、'
+          'autoDispose のプロバイダ経由でも値が届く。**届かないのは一覧からの'
+          '単曲と一括**（誰も見ていない）で、そこでは 0 件のまま保存されていた。'
+          'この器はどのプロバイダも購読していないので、リポジトリを直に'
+          '呼ばない実装に戻すとここが落ちる（DOWNLOAD-DESIGN.md 3.5・論点 8）。',
+    );
+  });
 
   test('いまもメンバーなら、その人の表示名が入る', () async {
     arrange(
