@@ -1217,4 +1217,8 @@ class AppL10nEn extends AppL10n {
   @override
   String get functionErrorMaxUsesInvalid =>
       'The number of people must be a whole number of 1 or more.';
+
+  @override
+  String get functionErrorTooManyLists =>
+      'You can check up to 50 lists at a time. Please reduce the number of lists you keep for offline use and try again.';
 }

@@ -644,5 +644,6 @@
   "functionErrorCouponAlreadyUsed": "このクーポンはすでにお使いです。同じクーポンは一度だけ使えます。",
   "functionErrorCouponCodeTaken": "そのコードはすでに使われています。別の文字列を指定してください。",
   "functionErrorMonthsInvalid": "月数は 1 以上の整数で指定してください。",
-  "functionErrorMaxUsesInvalid": "使える人数は 1 以上の整数で指定してください。"
+  "functionErrorMaxUsesInvalid": "使える人数は 1 以上の整数で指定してください。",
+  "functionErrorTooManyLists": "一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。"
 }

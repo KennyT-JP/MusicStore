@@ -1614,6 +1614,175 @@ if (!listId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// オフライン用ダウンロードの権限確認（docs/DOWNLOAD-DESIGN.md 5.1 / 8.2）
+//
+// **この関数の答えは、端末のファイル削除に直結する**（10 節の危険 4）。
+// 判断の中身は functions/test/downloads.test.ts が境界ごとに固定している。
+// ここで確かめるのは、実際の Auth と Firestore を通したときに
+// **同じ答えが返ること**と、**符号を取り違えていないこと**。
+//
+// **とくに「プレミアムでないことを例外にしていない」ことを実物で見る。**
+// 例外にすると、呼び出し側は圏外・タイムアウトと区別できず、
+// 電波の悪い場所で 1 回失敗しただけで全曲が消える。
+// ---------------------------------------------------------------------------
+{
+  const codeOf = (res) => res.body?.error?.details?.code;
+  let r;
+
+  const dlMember = await signUp('dlmem');
+  const dlViewer = await signUp('dlview');
+  const dlUnverified = await signUpUnverified('dlunv');
+
+  // --- 土台：Read Only のメンバーで、プレミアムの人 ---
+  //
+  // **Read Only で作る。** 論点 9 は「メンバーのみ（Read Only を含む）」
+  // なので、いちばん弱い役割で通ることを確かめる側に倒す。
+  r = await call('addListMember',
+                 { listId, uid: dlMember.localId, role: 'readOnly' },
+                 siteAdmin.idToken);
+  check('土台：Read Only のメンバーを用意できる（論点 9）', r.status === 200,
+        JSON.stringify(r.body).slice(0, 80));
+
+  r = await call('extendPremium', { uid: dlMember.localId, months: 12 },
+                 siteAdmin.idToken);
+  check('土台：その人をプレミアムにできる',
+        r.body?.result?.premiumUntil > Date.now(),
+        JSON.stringify(r.body).slice(0, 80));
+
+  // --- 土台：閲覧者（viewers に居て、members に居ない人） ---
+  //
+  // `acceptShareLink` が書くのと同じ形を直接置く。**members には入れない。**
+  await setDoc(`lists/${listId}/viewers/${dlViewer.localId}`,
+               { uid: { stringValue: dlViewer.localId } });
+  const viewerRow = await doc(`lists/${listId}/viewers/${dlViewer.localId}`);
+  const viewerMember = await doc(`lists/${listId}/members/${dlViewer.localId}`);
+  check('土台：閲覧者が viewers に居て、members に居ない（論点 9）',
+        sv(viewerRow, 'uid') === dlViewer.localId &&
+          (viewerMember === null || viewerMember.fields === undefined),
+        `${sv(viewerRow, 'uid')} / ${JSON.stringify(viewerMember?.fields ?? null).slice(0, 40)}`);
+
+  // **閲覧者もプレミアムにしておく。** プレミアムが無いまま確かめると、
+  // 「閲覧者だから notMember」ではなく「プレミアムでないから」で
+  // 落ちていても緑になる（AUDIT-CHECKLIST 観点 4）。
+  r = await call('extendPremium', { uid: dlViewer.localId, months: 12 },
+                 siteAdmin.idToken);
+  check('土台：閲覧者もプレミアムにできる（判定を混ぜないため）',
+        r.body?.result?.premiumUntil > Date.now(),
+        JSON.stringify(r.body).slice(0, 80));
+
+  // --- メンバーかつプレミアムなら許可（論点 9・12） ---
+  const before = Date.now();
+  r = await call('verifyDownloadAccess', { listIds: [listId] }, dlMember.idToken);
+  const after = Date.now();
+  check('メンバーかつプレミアムなら許可（premiumActive: true / member）',
+        r.status === 200 &&
+          r.body?.result?.premiumActive === true &&
+          r.body?.result?.lists?.[listId] === 'member',
+        JSON.stringify(r.body).slice(0, 160));
+
+  check('verifiedAt はサーバーの時刻（呼び出し前後に挟まれる／4.2）',
+        typeof r.body?.result?.verifiedAt === 'number' &&
+          r.body.result.verifiedAt >= before &&
+          r.body.result.verifiedAt <= after,
+        `${before} <= ${r.body?.result?.verifiedAt} <= ${after}`);
+
+  // --- 閲覧者は不許可（論点 9）。**例外ではない。** ---
+  r = await call('verifyDownloadAccess', { listIds: [listId] }, dlViewer.idToken);
+  check('閲覧者は notMember（viewers に居ても members に無い／論点 9）',
+        r.status === 200 && r.body?.result?.lists?.[listId] === 'notMember',
+        JSON.stringify(r.body).slice(0, 160));
+  check('閲覧者でも例外は投げない（プレミアムの答えも返る）',
+        r.body?.error === undefined && r.body?.result?.premiumActive === true,
+        JSON.stringify(r.body?.error ?? r.body?.result).slice(0, 120));
+
+  // --- サイト管理者でも、そのリストのメンバーでなければ不許可 ---
+  //
+  // **論点 18・10 節の危険 8。初稿はここに例外を入れていた。**
+  // `isSiteAdmin ||` を足すと判定が 2 つになり、クライアント側と
+  // 食い違ったときに端末のファイルが消える。**例外が無いことを見張る。**
+  const adminMember = await doc(`lists/${listId}/members/${siteAdmin.localId}`);
+  check('土台：サイト管理者は members に居ない（roles.ts の説明どおり）',
+        adminMember === null || adminMember.fields === undefined,
+        JSON.stringify(adminMember?.fields ?? null).slice(0, 60));
+
+  r = await call('verifyDownloadAccess', { listIds: [listId] }, siteAdmin.idToken);
+  check('サイト管理者でも、メンバーでなければ notMember（論点 18）',
+        r.status === 200 && r.body?.result?.lists?.[listId] === 'notMember',
+        JSON.stringify(r.body).slice(0, 160));
+
+  // --- プレミアムが切れたら不許可。**例外ではない**（危険 4） ---
+  r = await call('extendPremium', { uid: dlMember.localId, months: -24 },
+                 siteAdmin.idToken);
+  check('土台：期限を切らせる',
+        r.body?.result?.premiumUntil < Date.now(),
+        JSON.stringify(r.body).slice(0, 100));
+
+  r = await call('verifyDownloadAccess', { listIds: [listId] }, dlMember.idToken);
+  check('プレミアムが切れても 200 で返る（premiumRequired を投げない／危険 4）',
+        r.status === 200 && r.body?.error === undefined,
+        `${r.status} / ${codeOf(r)}`);
+  check('切れていたら premiumActive: false（正常応答の中身／論点 12）',
+        r.body?.result?.premiumActive === false,
+        JSON.stringify(r.body?.result).slice(0, 160));
+  check('切れても「メンバーであること」は member のまま返る',
+        r.body?.result?.lists?.[listId] === 'member',
+        JSON.stringify(r.body?.result?.lists).slice(0, 120));
+
+  // --- 符号を取り違えていないこと（8.2） ---
+  //
+  // **「未ログイン」と「権限なし」を混ぜない。** 端末は例外を
+  // 「オフライン」として扱うので、どの符号かで案内の出し方が変わる。
+  r = await call('verifyDownloadAccess', { listIds: [listId] });
+  check('未ログインは signInRequired（premiumRequired と区別する）',
+        codeOf(r) === 'signInRequired', codeOf(r));
+
+  r = await call('verifyDownloadAccess', { listIds: [listId] },
+                 dlUnverified.idToken);
+  check('メール未確認は emailNotVerified（signInRequired ではない）',
+        codeOf(r) === 'emailNotVerified', codeOf(r));
+
+  // --- listIds の境界（8.2） ---
+  const manyIds = (count) =>
+    Array.from({ length: count }, (_, i) => `${listId}-${i}`);
+
+  r = await call('verifyDownloadAccess', { listIds: manyIds(50) },
+                 dlMember.idToken);
+  check('50 件ちょうどは通る（境界／8.2）',
+        r.status === 200 &&
+          Object.keys(r.body?.result?.lists ?? {}).length === 50,
+        `${r.status} / ${Object.keys(r.body?.result?.lists ?? {}).length} 件`);
+  check('持っていないリストは notMember',
+        r.body?.result?.lists?.[`${listId}-0`] === 'notMember',
+        String(r.body?.result?.lists?.[`${listId}-0`]));
+
+  r = await call('verifyDownloadAccess', { listIds: manyIds(51) },
+                 dlMember.idToken);
+  check('51 件は断る（境界／8.2）',
+        // **符号は tooManyLists**（5.1）。以前は l10n を対で足せない都合で
+        // fieldTooLong を代用していたが、専用の符号に付け替えた。
+        // どの入力が悪いのかは details.field から読む。
+        codeOf(r) === 'tooManyLists' &&
+          r.body?.error?.details?.field === 'listIds',
+        JSON.stringify(r.body?.error?.details ?? r.body).slice(0, 100));
+
+  r = await call('verifyDownloadAccess', { listIds: 'not-an-array' },
+                 dlMember.idToken);
+  check('配列でなければ missingField', codeOf(r) === 'missingField', codeOf(r));
+
+  r = await call('verifyDownloadAccess', { listIds: [`${listId}/items/x`] },
+                 dlMember.idToken);
+  check('ドキュメント ID として不正な値を断る（別の場所を指させない）',
+        codeOf(r) === 'missingField', codeOf(r));
+
+  r = await call('verifyDownloadAccess', { listIds: [] }, dlMember.idToken);
+  check('1 曲も持っていない端末にも答える（lists は空・premiumActive は返る）',
+        r.status === 200 &&
+          Object.keys(r.body?.result?.lists ?? {}).length === 0 &&
+          typeof r.body?.result?.premiumActive === 'boolean',
+        JSON.stringify(r.body?.result).slice(0, 120));
+}
+
 // どこで時間を使ったかの内訳（調べるときの手がかり。判定には使わない）。
 {
   const sec = (ms) => `${Math.round(ms / 1000)}s`;

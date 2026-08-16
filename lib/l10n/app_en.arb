@@ -556,5 +556,6 @@
   "functionErrorCouponAlreadyUsed": "You have already used this coupon. Each coupon can be used once per person.",
   "functionErrorCouponCodeTaken": "That code is already in use. Please choose different text.",
   "functionErrorMonthsInvalid": "Months must be a whole number of 1 or more.",
-  "functionErrorMaxUsesInvalid": "The number of people must be a whole number of 1 or more."
+  "functionErrorMaxUsesInvalid": "The number of people must be a whole number of 1 or more.",
+  "functionErrorTooManyLists": "You can check up to 50 lists at a time. Please reduce the number of lists you keep for offline use and try again."
 }

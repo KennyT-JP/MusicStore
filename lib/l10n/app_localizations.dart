@@ -2154,6 +2154,12 @@ abstract class AppL10n {
   /// In ja, this message translates to:
   /// **'使える人数は 1 以上の整数で指定してください。'**
   String get functionErrorMaxUsesInvalid;
+
+  /// No description provided for @functionErrorTooManyLists.
+  ///
+  /// In ja, this message translates to:
+  /// **'一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。'**
+  String get functionErrorTooManyLists;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -9,6 +9,17 @@ environment:
 dependencies:
   cloud_firestore: ^6.8.0
   cloud_functions: ^6.3.6
+  # 回線の種別（docs/DOWNLOAD-DESIGN.md 4.6・論点 11b）。
+  #
+  # ダウンロードの既定を「Wi-Fi のときだけ」にするために要る。
+  # **これは「従量課金を避けられる保証」ではない**——返るのは
+  # どの種類の回線に繋がっているかであって、その回線が従量制かどうかでは
+  # ない（テザリングは Wi-Fi に見える）。画面の文言もそう書くこと。
+  #
+  # **Android には `ACCESS_NETWORK_STATE` が要る。**
+  # `android/app/src/main/AndroidManifest.xml` は別の担当の持ち物なので、
+  # ここでは足していない（4.6）。
+  connectivity_plus: ^7.0.0
   # Flutter が「その環境らしい見た目」に切り替える部品（戻る矢印など）が
   # CupertinoIcons を参照する。Mac や iPhone のブラウザで開いたときに
   # これが無いとアイコンが豆腐（□）になるため入れている。
@@ -27,6 +38,16 @@ dependencies:
   # flutter_localizations が固定するバージョンに合わせる
   intl: ^0.20.2
   just_audio: ^0.10.6
+  # 端末の保存先（docs/DOWNLOAD-DESIGN.md 3.1）。
+  #
+  # **もともと `just_audio` の推移依存として入っていただけ**なので、
+  # 直接依存に上げる（1.3 の表）。使うのは
+  # `getApplicationSupportDirectory()` **だけ**——
+  # `getApplicationDocumentsDirectory()` は iOS で `UIFileSharingEnabled` を
+  # 1 行足された瞬間にファイル App から丸見えになり、
+  # `getTemporaryDirectory()` は OS が容量不足で勝手に消す（3.1）。
+  # **どちらも使わないことを test/domain/download_storage_test.dart が見張る。**
+  path_provider: ^2.1.6
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
 

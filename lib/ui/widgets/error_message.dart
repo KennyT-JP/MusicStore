@@ -290,6 +290,8 @@ String describeFunctionsError(
     'couponCodeTaken' => l10n.functionErrorCouponCodeTaken,
     'monthsInvalid' => l10n.functionErrorMonthsInvalid,
     'maxUsesInvalid' => l10n.functionErrorMaxUsesInvalid,
+    // オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.1）。
+    'tooManyLists' => l10n.functionErrorTooManyLists,
     // まだ翻訳を用意していない符号。サーバーの文を出す。
     // サーバーが文を返さなかったときは、一般的な文言に倒す。
     // ここで日本語を書き足すと、英語表示でも日本語が出る。

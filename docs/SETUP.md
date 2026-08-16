@@ -272,7 +272,7 @@ Cloud Build の失敗などで途中まで進んだ場合、作成後の設定�
 > 配信ログの `create` / `update` を見れば予測できます。
 > 失敗した直後の再実行が `update` になっていたら、この症状を疑ってください。
 
-**対象は `onCall` の 28 件だけです。** トリガー（`onFileUploaded` など）と
+**対象は `onCall` の 31 件だけです。** トリガー（`onFileUploaded` など）と
 定期実行は利用者が直接呼ばないので、呼び出しの許可とは無関係です。
 消す必要はありません。
 
@@ -292,7 +292,8 @@ for f in submitListRequest approveListRequest rejectListRequest \
          listSiteUsers setListQuota assignListAdmin addListMember \
          createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
          createListDirectly setUserQuota extendPremium replaceItemFile runPurgeNow \
-         createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon; do
+         createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon \
+         verifyDownloadAccess; do
   gcloud functions add-invoker-policy-binding "$f" \
     --region="$REGION" --member=allUsers --project="$PROJECT"
 done
@@ -313,6 +314,7 @@ firebase functions:delete submitListRequest approveListRequest rejectListRequest
   createSiteUser disableSiteUser enableSiteUser deleteSiteUser \
   createListDirectly setUserQuota extendPremium replaceItemFile runPurgeNow \
   createCoupon updateCoupon listCoupons listCouponRedemptions redeemCoupon \
+  verifyDownloadAccess \
   --region asia-northeast1 --project music-storage-d79b2 --force
 
 ./scripts/deploy.sh prod --no-build --only=functions

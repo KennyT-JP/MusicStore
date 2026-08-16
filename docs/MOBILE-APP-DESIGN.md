@@ -60,6 +60,27 @@ App Store Connect へアップロードし、同日提出）。
 > 実物を確かめませんでした。** 以降、この文書で「無いと動かない」と
 > 書いてあるものは、**Session Concierge の実物で確かめたものだけ**です。
 
+> **同じ形の間違いを、この日にもう 1 回やりました。**
+> `firebase.json` の `ignore` に `**/.*` があるのを見て「`.well-known` は
+> ドット始まりだから配信されない」と言いましたが、**誤りでした。**
+> firebase-tools の `listFiles.js`（配信が実際に呼ぶ関数）へこの `ignore` を
+> そのまま渡して数えたら、2 ファイルとも含まれていました。
+> glob の `ignore` は、**パターンが `/**` で終わらない限り、一致した
+> ディレクトリの中身までは除外しません。**
+>
+> **Android の権限は、まずパッケージの manifest を読むこと。**
+> プラグインは自分に要る権限を自分で宣言し、それがマージで入ります。
+> 実例：
+>
+> | 権限 | 宣言している場所 | こちらで書く必要 |
+> | --- | --- | --- |
+> | `INTERNET` | Firebase 各プラグイン | **無し** |
+> | `ACCESS_NETWORK_STATE` | `connectivity_plus/android/src/main/AndroidManifest.xml` | **無し**（2026-08-16 に実物を確認） |
+> | `POST_NOTIFICATIONS` | どこにも無い | **要る**（通知を入れるとき） |
+>
+> 確かめ方は `~/AppData/Local/Pub/Cache/hosted/pub.dev/<パッケージ>/android/src/main/AndroidManifest.xml`
+> を読むだけです。**推測より速い。**
+
 > **作業ブランチについて。** 執筆中は `main` に居ましたが、**`dev` へ移して
 > コミット済みです**（2026-08-16）。配信は「dev へコミット → 検証環境へ配信
 > → 依頼者の確認 → main へマージ → 本番へ配信」の順で、**検証環境と本番へ

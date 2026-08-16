@@ -181,4 +181,82 @@ void main() {
       expect(none.isActive(_a), isFalse);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // どこから鳴らすか（docs/DOWNLOAD-DESIGN.md 4.3 / 8.1）
+  // -----------------------------------------------------------------------
+  group('再生元の決定（DOWNLOAD-DESIGN 4.3）', () {
+    const path = 'L1/I1/audio-1755200000000.wav';
+
+    test('ダウンロード済みで猶予内なら、オンラインでもローカル', () {
+      // **落としたのに通信するのでは、落とした意味がない。**
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: path,
+          isPlayableOffline: true,
+          isOnline: true,
+        ),
+        PlaybackSource.local,
+      );
+    });
+
+    test('ダウンロード済みで猶予内、オフラインでもローカル', () {
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: path,
+          isPlayableOffline: true,
+          isOnline: false,
+        ),
+        PlaybackSource.local,
+      );
+    });
+
+    test('猶予を過ぎていて、オンラインなら remote（論点 12）', () {
+      // **30 日を超えたら local を返さない。** そのときオンラインなら
+      // ストリーミングに落ちる——**論点 12 のとおり、ストリーミング再生は
+      // これまで通りできる。** ここを blocked にすると、
+      // 「オンラインなのに聴けない」という、仕様に無い止め方になる。
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: path,
+          isPlayableOffline: false,
+          isOnline: true,
+        ),
+        PlaybackSource.remote,
+      );
+    });
+
+    test('猶予を過ぎていて、オフラインなら blocked', () {
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: path,
+          isPlayableOffline: false,
+          isOnline: false,
+        ),
+        PlaybackSource.blocked,
+      );
+    });
+
+    test('落としていなければ、オンラインで remote', () {
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: null,
+          isPlayableOffline: true,
+          isOnline: true,
+        ),
+        PlaybackSource.remote,
+      );
+    });
+
+    test('落としておらず、オフラインなら blocked', () {
+      expect(
+        PlaybackPolicy.resolve(
+          localPath: null,
+          isPlayableOffline: true,
+          isOnline: false,
+        ),
+        PlaybackSource.blocked,
+      );
+    });
+  });
 }

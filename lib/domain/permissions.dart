@@ -155,6 +155,33 @@ class Permissions {
       access.isViewer && access.role == null;
 
   // ---------------------------------------------------------------------
+  // オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.2）
+  // ---------------------------------------------------------------------
+
+  /// ダウンロードできるか（docs/DOWNLOAD-DESIGN.md 論点 9・12・18）。
+  ///
+  /// **メンバーのみ。Read Only は可。閲覧者（viewer）もサイト管理者も不可。**
+  ///
+  /// **[ListAccess.hasAtLeast] ではなく `role != null` を見る。**
+  /// サイト管理者はメンバー登録を持たないが、`effectiveRole` は
+  /// `listAdmin` を返す（role.dart:89-92）ので、`hasAtLeast` を使うと
+  /// サイト管理者が通る。**サーバー側（`verifyDownloadAccess`）は
+  /// `members` ドキュメントの存在だけで判定する**ので、通してしまうと
+  /// 「落とせるのに、次の起動で消される」ことになる。
+  /// **判定は 1 つだけにする（論点 18）。**
+  ///
+  /// **[ListAccess.canView] も使わない。** `canView` は
+  /// `effectiveRole != null || isViewer` なので（role.dart:99）、
+  /// **閲覧者が通る**（論点 9）。
+  ///
+  /// **プレミアムが要る（論点 12・18）。** 切れたら false になり、
+  /// 端末のファイルは 4.5 の流れで削除される。
+  static bool canDownload(ListAccess access, {required bool isPremium}) {
+    if (!isPremium) return false;
+    return access.role != null;
+  }
+
+  // ---------------------------------------------------------------------
   // サイト管理（11.1）
   // ---------------------------------------------------------------------
 

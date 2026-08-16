@@ -1161,4 +1161,8 @@ class AppL10nJa extends AppL10n {
 
   @override
   String get functionErrorMaxUsesInvalid => '使える人数は 1 以上の整数で指定してください。';
+
+  @override
+  String get functionErrorTooManyLists =>
+      '一度に確認できるリストは 50 件までです。オフラインに保存するリストを減らしてから、もう一度お試しください。';
 }
