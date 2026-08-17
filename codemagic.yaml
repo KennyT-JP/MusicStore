@@ -164,7 +164,11 @@ workflows:
           # **開発用**証明書が鍵束にあるかを確かめる。
           # 配布用ビルドに開発用証明書は要らないのに落ちるので、
           # 署名しないビルドと ipa 化を分ける。
-          flutter build ios --release --no-codesign
+          #
+          # **APP_ENV=prod を必ず渡す。** 無いと Dart は既定の staging に倒れ、
+          # 本番のはずの ipa が検証 Firebase・テスト広告・検証共有オリジンで
+          # 出来てしまう（Android の build-android.mjs と同じ理由）。
+          flutter build ios --release --no-codesign --dart-define=APP_ENV=prod
           xcode-project build-ipa \
             --workspace ios/Runner.xcworkspace \
             --scheme Runner

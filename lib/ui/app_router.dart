@@ -17,6 +17,7 @@ import '../platform/downloads_supported.dart';
 import 'routes.dart';
 import 'screens/screens.dart';
 import 'shell/app_shell.dart';
+import 'widgets/ad_banner_slot.dart';
 
 /// 認証の状態。リダイレクト判定に必要な最小限だけを持つ。
 class AuthState {
@@ -135,6 +136,12 @@ GoRouter buildAppRouter({
               // **Web には出さない**（docs/DOWNLOAD-DESIGN.md 6.5）。
               // 保存先が無いので、開いても常に空の画面になる。
               showDownloads: kDownloadsSupported,
+              // **全主要画面共通のバナー広告（下部ナビの上）。**
+              // この外枠は全シェル画面で1度だけ組まれるので、ここへ1か所
+              // 注入すれば全画面に出る。出す・出さないの判断は AdBannerSlot が
+              // 持つ（Android / iOS の非プレミアムのときだけ）。ここは
+              // ProviderScope 配下なので ConsumerWidget を置ける。
+              bottomBanner: const AdBannerSlot(),
               child: child,
             );
           },

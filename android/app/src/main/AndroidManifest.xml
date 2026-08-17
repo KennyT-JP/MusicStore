@@ -97,12 +97,32 @@
             android:authorities="${applicationId}.firebaseinitprovider"
             android:exported="false"
             tools:node="remove" />
+        <!-- **AdMob のアプリ ID（docs/PREMIUM-DESIGN.md の広告）。**
+             値は `lib/config/ads.dart` の `kAndroidAdMobAppId` と**一字一句
+             同じ**であること（`test/domain/ad_banner_test.dart` が突き合わせる）。
+             片方だけ直すと、Android は起動時に SDK が落ちるか広告が出ない
+             （どちらもエラーが画面に出ない）。**これは常に本番の実値**——
+             テスト用に切り替えるのは広告ユニット ID だけで、アプリ ID は
+             切り替えない（テスト用にすると本番の広告が出ない）。 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3984824596223175~4349292169" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- **広告の読み込みには通信が要る。** release ビルドの main マニフェスト
+         には INTERNET 権限が明示されていなかった（デバッグビルドでは Flutter
+         のツールが自動で足すが、release では足さない）。AdMob が広告を取りに
+         行けるよう、ここで明示する。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

@@ -298,11 +298,16 @@ async function main() {
   }
 
   // ビルド + 検査。既定は AAB、--apk なら APK。
+  //
+  // **`--dart-define=APP_ENV=prod` を必ず付ける。** これが無いと Dart 側は
+  // 既定の staging に倒れ、native（`--flavor prod` の google-services.json）は
+  // 本番、という食い違いになる（Firebase 接続先・広告ユニット・共有オリジンが
+  // すべて検証側に落ちる）。ストアへ出すのは本番の設定でなければならない。
   const wantsApk = argv.includes('--apk');
   const kind = wantsApk ? 'APK' : 'AAB';
   const buildArgs = wantsApk
-    ? ['build', 'apk', '--release', '--flavor', 'prod']
-    : ['build', 'appbundle', '--release', '--flavor', 'prod'];
+    ? ['build', 'apk', '--release', '--flavor', 'prod', '--dart-define=APP_ENV=prod']
+    : ['build', 'appbundle', '--release', '--flavor', 'prod', '--dart-define=APP_ENV=prod'];
   const artifact = wantsApk
     ? join(root, 'build', 'app', 'outputs', 'flutter-apk', 'app-prod-release.apk')
     : join(root, 'build', 'app', 'outputs', 'bundle', 'prodRelease', 'app-prod-release.aab');

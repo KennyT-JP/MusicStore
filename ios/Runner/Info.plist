@@ -45,6 +45,15 @@
 	     （設計 5-7・5-17：これを入れてあるので提出物としては「不要」扱い）。 -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- **AdMob のアプリ ID（docs/PREMIUM-DESIGN.md の広告）。**
+	     この宣言が無い／食い違うと、**iOS は起動直後に落ちる**（AdMob SDK が
+	     起動時にこの値を読みに行く）。値は `lib/config/ads.dart` の
+	     `kIosAdMobAppId` と**一字一句同じ**であること
+	     （`test/domain/ad_banner_test.dart` が突き合わせる）。
+	     **常に本番の実値。** テスト用に切り替えるのは広告ユニット ID だけ
+	     （plist のアプリ ID は切り替えない）。 -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3984824596223175~4636232623</string>
 	<!-- ##### ここから 2 つは `ios/Runner/GoogleService-Info.plist` の写し #####
 
 	     Google ログインの戻り先。**Google のサインイン画面から戻ってこられる
@@ -98,7 +107,11 @@
 	       実機で確かめるまで断定しない。要ると分かってから足すこと。
 	     - `NSMicrophoneUsageDescription` / `NSUserTrackingUsageDescription` /
 	       `NSAppTransportSecurity` / `LSApplicationQueriesSchemes`
-	       いずれも使っていない。広告 SDK を同梱していないので ATT も不要。 -->
+	       いずれも使っていない。**広告 SDK（google_mobile_ads）は同梱するが、
+	       非パーソナライズ広告に固定している**（`AdRequest(nonPersonalizedAds:
+	       true)`）ので、IDFA も追跡も使わず ATT（`NSUserTrackingUsageDescription`）
+	       は不要。UMP 同意フォームも入れない。**ここに ATT を足すと、使わない
+	       権限で審査の説明を求められる。** -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

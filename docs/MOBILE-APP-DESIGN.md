@@ -1791,3 +1791,66 @@ Session Concierge が通知チャンネルの調査で踏んだ形です。
 | `C:\Codes\共有ドキュメント\ナレッジベース.md` S-6 | ストア審査（Apple / Google） |
 | `C:\Codes\共有ドキュメント\ナレッジベース.md` S-1 | 認証の設計。**Apple サインインは iOS だけに出す** |
 | `C:\Codes\共有ドキュメント\アンチパターン集.md` AP-71 / AP-72 / AP-41 / AP-42 | **緑を成功と読む・条件を原因と読む・既定が選ばれる・別プラットフォームへそのまま持ち込む** |
+
+---
+
+## 11. 広告（AdMob・2026-08-17）
+
+**SessionConcierge と同じ作りでモバイルにバナー広告を入れた。** 依頼者に 1 問ずつ確認して決めた（2026-08-17）。
+
+### 決めたこと
+- **バナーのみ**（320×50）。全主要画面の下部（`AppShell` の下部ナビの上）に常設。
+- **Android・iOS 両方**に出す。**SessionConcierge は Android のみだったが、音源創庫はまだ審査提出前なので両方に入れる**（依頼者判断）。
+- **プレミアムは非表示**。既存 `isPremiumProvider`（`AsyncValue<bool>`）を読み、**読み込み中も出さない**（「プレミアムでない」と「まだ不明」を混ぜない規約）。
+- **非パーソナライズ広告に固定**（`AdRequest(nonPersonalizedAds: true)`）。**UMP 同意フォームは入れない。ATT プロンプトも出さない**（IDFA を使わないため iOS でも不要）。
+- **遅延初期化**（広告を出すときだけ `MobileAds.initialize`。Web・プレミアムでは SDK に触れない）。
+
+### AdMob の値（発行者 `pub-3984824596223175`・依頼者発行）
+| 種別 | 値 | 置き場所 |
+| --- | --- | --- |
+| Android アプリ ID | `ca-app-pub-3984824596223175~4349292169` | `AndroidManifest.xml` の meta-data ＋ `lib/config/ads.dart` |
+| iOS アプリ ID | `ca-app-pub-3984824596223175~4636232623` | `Info.plist` の `GADApplicationIdentifier` ＋ `ads.dart` |
+| Android バナー（本番） | `ca-app-pub-3984824596223175/1132101886` | `ads.dart` |
+| iOS バナー（本番） | `ca-app-pub-3984824596223175/2343598436` | `ads.dart` |
+| バナー（テスト・Google 公式） | Android `…/6300978111`・iOS `…/2934735716` | `ads.dart` |
+
+- **本番/テストの出し分けは `AppEnvironment.current.isProduction`（=`APP_ENV=prod`）**。本番ユニットに切り替わるのは `APP_ENV=prod` のときだけ。
+- **⚠ ストア向けビルドは必ず `--dart-define=APP_ENV=prod` を渡すこと。** 無いと Dart 側が既定の staging に倒れ、`--flavor prod`（native は本番）と食い違い、本番のはずのアプリが**検証 Firebase・テスト広告・検証共有オリジン**で出来る。`scripts/build-android.mjs`（Android）と `codemagic.yaml`（iOS）に `APP_ENV=prod` を追加済み。
+- `web/app-ads.txt`（`google.com, pub-3984824596223175, DIRECT, f08c47fec0942fa0`）を Web ホスティングで配信。
+
+### ファイル
+- `lib/config/ads.dart` — ID・`shouldShowBanner({platform,isPremium})`・`adsSupportedOn`・`bannerAdUnitId`・`isGoogleSampleAdId`
+- `lib/ui/widgets/ad_banner_slot.dart`（`isPremiumProvider` を `.when` で受ける）／`ad_banner_box.dart`（条件付き import）／`ad_banner_box_mobile.dart`（唯一 `google_mobile_ads` を import・遅延初期化・10 秒タイムアウト）／`ad_banner_box_stub.dart`（Web は空）
+- `lib/ui/shell/app_shell.dart`＋`app_router.dart`（`bottomBanner` 注入。AppShell を ConsumerWidget にしない＝ProviderScope 無しの既存テストを壊さないため）
+- `test/domain/ad_banner_test.dart`（ID 一致・表示条件・非パーソナライズ 1 か所・本番/テスト切替を固定）
+- Web はバナーを出さない（AdSense は別系統で従来どおり）。`google_mobile_ads: ^9.1.0`。minSdk は Flutter 既定 24（要求 23 を満たす）。
+
+### ローカルの Android release ビルドに `cmdline-tools` が要る（2026-08-17 に判明）
+
+**広告 SDK を足したら `flutter build appbundle` が失敗するようになった。**
+メッセージは「Release app bundle failed to strip debug symbols from native
+libraries」だが、**真因は別**（AP-72：示された条件は原因ではない）。verbose で
+見ると本当のエラーは：
+
+```
+Failed to find cmdline-tools when checking final appbundle for debug symbols.
+```
+
+Flutter は**ビルド後に成果物のネイティブライブラリのデバッグシンボルを検査**し、
+その工程で Android SDK の `cmdline-tools` を使う。この環境には未インストール
+（`flutter doctor` も「cmdline-tools component is missing」と出していた）。
+**広告なしの初回 AAB が通ったのは、第三者ネイティブライブラリが無く検査自体が
+走らなかったため。** 広告 SDK（＋推移依存の jni / webview 系）でネイティブ
+ライブラリが入り、検査が走って失敗する。**バンドル自体は正しく組み上がる**
+（`build-android.mjs --verify` で中身検査は合格）——止まるのは検査ゲートだけ。
+
+**直し方**：Android Studio → SDK Manager → **SDK Tools** タブ →
+**「Android SDK Command-line Tools (latest)」にチェック → Apply**。一度入れれば
+`node scripts/build-android.mjs` が通る。iOS の Codemagic（クラウド macOS）は
+cmdline-tools を持っているので影響しない。
+
+### リリース前に依頼者がやること（未対応）
+- **Android の `cmdline-tools` を入れる**（上記。ローカルで store AAB を作るのに必須）。
+- **Play のデータセーフティ申告**更新（AdMob は非パーソナライズでも広告 ID 等を収集）。
+- **App Store のプライバシー**申告（トラッキングなし・データ収集の申告）。
+- **ストアに出すのは `APP_ENV=prod` で作り直した新しい AAB / ipa**（Play 内部テストに上げた初回 AAB は広告が入っていない・staging 相当）。

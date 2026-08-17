@@ -52,6 +52,7 @@ class AppShell extends StatelessWidget {
     this.unreadNotificationCount = 0,
     this.showDownloads = false,
     this.onTapAccount,
+    this.bottomBanner = const SizedBox.shrink(),
   });
 
   final Widget child;
@@ -72,6 +73,16 @@ class AppShell extends StatelessWidget {
   final bool showDownloads;
 
   final VoidCallback? onTapAccount;
+
+  /// 全画面共通で下部に置くバナー広告（下部ナビの上）。
+  ///
+  /// **AppShell は provider に触らない外枠のまま保つ**ため、広告の実体は
+  /// ここへ**注入**する（既定は `SizedBox.shrink()` ＝何も出さない）。出す・
+  /// 出さないの判断を持つ `AdBannerSlot`（ConsumerWidget）は、ProviderScope
+  /// 配下の `ui/app_router.dart` から渡す。こうすると、この外枠を
+  /// ProviderScope 無しで描くテスト（`test/ui/app_shell_test.dart`）を
+  /// 壊さずに済む。
+  final Widget bottomBanner;
 
   @override
   Widget build(BuildContext context) {
@@ -120,9 +131,22 @@ class AppShell extends StatelessWidget {
               ],
             )
           : child,
-      bottomNavigationBar: isWide
-          ? null
-          : NavigationBar(
+      // **全画面共通で下部にバナー広告を置く（下部ナビの上）。**
+      //
+      // 出す・出さないの判断は注入された [bottomBanner]（＝`AdBannerSlot`）が
+      // 一手に持つ（Android / iOS かつ非プレミアムのときだけ。Web・プレミアム・
+      // 読み込み中・非対応は `SizedBox.shrink()`）。**ここでは条件分岐しない**
+      // ——判定を画面側に散らさないため（`config/ads.dart` の方針）。
+      //
+      // **ワイド幅（サイドバー表示）では下部ナビが無い**ので、バナーだけを
+      // 下部に置く。広告を出さないときは `Column` が高さ 0 になり、
+      // `bottomNavigationBar` は実質無いのと同じ（空の帯は残らない）。
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          bottomBanner,
+          if (!isWide)
+            NavigationBar(
               selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
               onDestinationSelected: (i) => onNavigate(destinations[i].route),
               destinations: [
@@ -137,6 +161,8 @@ class AppShell extends StatelessWidget {
                   ),
               ],
             ),
+        ],
+      ),
     );
   }
 

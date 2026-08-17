@@ -46,6 +46,15 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.4.2
   go_router: 17.4.0
+  # アプリ内バナー広告（docs/PREMIUM-DESIGN.md の広告）。
+  #
+  # **import してよいのは lib/ui/widgets/ad_banner_box_mobile.dart の1か所だけ。**
+  # このパッケージの Dart は `dart:io` を使うので、Web ビルドに含めると
+  # コンパイルが通らない（条件つき import で Web は stub を選ぶ）。
+  # 設定・表示判定は lib/config/ads.dart に集約し、
+  # test/domain/ad_banner_test.dart が「import は1か所」「広告要求は
+  # 非パーソナライズ1か所」「ネイティブと Dart の ID 一致」を見張る。
+  google_mobile_ads: ^9.1.0
   # モバイルでの Google ログイン（docs/MOBILE-APP-DESIGN.md 5-5）。
   #
   # **`signInWithPopup` は Web 専用**なので、ネイティブでは
