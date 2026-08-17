@@ -106,6 +106,12 @@ dev_dependencies:
   mocktail: ^1.0.5
   sign_in_with_apple_platform_interface: ^2.0.0
 
+  # アプリのランチャーアイコンを生成する（Android の mipmap / adaptive と
+  # iOS の AppIcon）。**本番アプリには要らない生成ツールなので dev_dependencies。**
+  # 元画像はブランドアイコン（web/brand）。生成した成果物（res/mipmap-* と
+  # ios の AppIcon.appiconset）はコミットする。設定は末尾の flutter_launcher_icons。
+  flutter_launcher_icons: ^0.14.1
+
 flutter:
   uses-material-design: true
   generate: true
@@ -144,3 +150,17 @@ flutter:
     - assets/brand/logo-vertical-dark.png
     - assets/brand/logo-inline-light.png
     - assets/brand/logo-inline-dark-notile.png
+
+# アプリのランチャーアイコン生成の設定（dart run flutter_launcher_icons で実行）。
+# 元画像はブランドアイコン（web/brand）。iOS 用に icon.svg から起こした 1024、
+# Android の adaptive 前景は maskable（セーフゾーン設計）、背景はブランドの
+# ネイビー。生成物（res/mipmap-* と AppIcon.appiconset）はコミットする。
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "web/brand/png/icon-1024.png"
+  remove_alpha_ios: true
+  background_color_ios: "#071426"
+  adaptive_icon_background: "#0F3560"
+  adaptive_icon_foreground: "web/brand/png/icon-maskable-512.png"
+  min_sdk_android: 24
