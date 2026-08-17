@@ -241,6 +241,8 @@
 
 <p>The sign-in screen puts <span class="ui">Email address</span> and <span class="ui">Password</span> at the top, then an <span class="ui">or</span> divider, then <span class="ui">Continue with Google</span> below it. Sign in the same way you signed up. The eye icon at the end of the password field toggles between <span class="ui">Show password</span> and <span class="ui">Hide password</span>.</p>
 
+<p><strong>In the iOS app</strong>, <span class="ui">Continue with Apple</span> appears alongside <span class="ui">Continue with Google</span>. Press it to sign in with your Apple account. <strong>This button appears only in the iOS app</strong> — not in a web browser and not in the Android app. Signing in with Apple for the first time also creates your account, and, like Google, it needs no email verification because Apple has already verified the address.</p>
+
 <p>Once you sign in, you stay signed in. Next time you open the app, you land straight back where you were.</p>
 
 <p>If you have forgotten your password, tap <span class="ui">Forgot your password?</span> just below the password field. Enter your email address, press <span class="ui">Reset password</span>, and a reset link is sent to you.</p>
@@ -385,11 +387,11 @@
 
 <p><span class="ui">Edit</span> on the track's screen reopens the same form. The title, artist, date and comment can all be changed and saved.</p>
 
+<p><strong>You can also swap the file itself.</strong> Choose a new file while editing and save, and the audio is replaced. <strong>The number stays the same</strong> — only the contents change.</p>
+
 <div class="note">
-  <span class="label">Not available yet</span>
-  <p><strong>Swapping an already-uploaded file for a different one is not possible yet.</strong> Choosing a new file while editing stops the save and shows this:</p>
-  <div class="msg">Replacing the file is not implemented yet. You can still change the title, artist and date.</div>
-  <p>To replace the audio itself, add the recording as a new track and delete the old one. The new track gets a new number, and the old number stays behind as a gap.</p>
+  <span class="label">The old file after a swap</span>
+  <p>The file you replaced is <strong>not deleted right away; it is kept for a while (30 days by default)</strong> and counts toward your usage during that time. After the period passes it is removed automatically.</p>
 </div>
 
 <p>If someone else updates the same track while you are editing it, your save is stopped rather than allowed to overwrite theirs:</p>
@@ -680,6 +682,33 @@
   <li><span class="ui">Withdraw from the service</span></li>
 </ul>
 
+<h3>Premium and coupons</h3>
+
+<p><span class="ui">Settings</span> has a <span class="ui">Premium</span> section. With Premium you can:</p>
+
+<ul>
+  <li><strong>Create a list without a request.</strong> Without Premium you submit a request and wait for a site admin to approve it (see <a href="#list-request">Requesting a new list</a>); with Premium you create one on the spot from <span class="ui">Create a list</span>.</li>
+  <li><strong>Use more storage.</strong></li>
+  <li><strong>In the app, save audio to your device and listen offline</strong> (see <a href="#playback">Playback</a>).</li>
+</ul>
+
+<p>To go Premium, <strong>enter a coupon code.</strong> Type the code you received into the <span class="ui">Coupon code</span> field and press <span class="ui">Redeem coupon</span>. Once it is accepted, the screen shows how long your Premium lasts: <span class="ui">Premium is active until {date}.</span> when it is active, or <span class="ui">You are not on Premium at the moment.</span> when it is not.</p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p><strong>When Premium expires, the audio and lists you saved are not removed.</strong> <span class="ui">Without Premium, everything you have already saved stays as it is. You simply cannot create a new list without submitting a request.</span></p>
+  <p>If a code is refused, the wording depends on why. A typo is fixed by entering it again, but a disabled or expired coupon is one to raise with whoever gave it to you.</p>
+</div>
+
+<h3>Audio saved on this device (app)</h3>
+
+<p><strong>This section appears only in the iOS and Android apps.</strong> A web browser has nowhere to save audio, so it is not shown there. <span class="ui">Audio saved on this device</span> shows how much is currently stored on the device. When there is nothing, it reads <span class="ui">No audio is saved on this device.</span> Use <span class="ui">View downloads</span> to reach the list of saved tracks (see <a href="#playback">Playback</a>).</p>
+
+<ul>
+  <li><span class="ui">Download over mobile data too</span> — off at first. <span class="ui">When this is off, downloads run only while you are connected to Wi-Fi.</span> Turn it on to save over mobile data as well.</li>
+  <li><span class="ui">Remove everything from this device</span> — clears all audio saved on the device at once. <strong>Your tracks, your lists and the files you uploaded are not deleted.</strong> You can still play them online, and download them again.</li>
+</ul>
+
 <h3>Withdrawing</h3>
 
 <div class="msg">Your items and comments stay in the lists after you leave. Your name will be shown as "Former member".</div>
@@ -698,7 +727,7 @@
 
 <h2 id="site-admin">Site administration</h2>
 
-<p><span class="ui">Site admin</span> appears <strong>only for site admins</strong> — for everyone else the navigation entry is simply absent. It has four parts.</p>
+<p><span class="ui">Site admin</span> appears <strong>only for site admins</strong> — for everyone else the navigation entry is simply absent. It has five parts.</p>
 
 <h3>List requests</h3>
 
@@ -727,6 +756,24 @@
   <p><span class="ui">Disable</span> — the person can no longer sign in and is removed from the lists they belonged to, but their tracks, audio files and comments are kept. <span class="ui">Re-enable</span> restores their access, though <strong>it does not put them back into their lists</strong> — invite them again if they need to be there. Disabled accounts are tagged <span class="ui">Disabled</span>.</p>
   <p><span class="ui">Delete</span> — removes the account along with the tracks and audio files that person added. <strong>Their comments are kept, shown as <span class="ui">Former member</span>.</strong> There are no backups, so this cannot be undone.</p>
   <p>You cannot disable or delete your own account here. To close your own account, use <span class="ui">Withdraw from the service</span> in <span class="ui">Settings</span>. Nor can the only remaining site admin be demoted or deleted.</p>
+</div>
+
+<h3>Coupons</h3>
+
+<p><span class="ui">Coupons</span> is where you issue and manage the coupons that grant members Premium. Create one from <span class="ui">Issue a coupon</span>. You decide:</p>
+
+<ul>
+  <li><span class="ui">Months granted</span> — how long the coupon's Premium lasts.</li>
+  <li><span class="ui">Number of people</span> — how many people can use it.</li>
+  <li><span class="ui">Coupon expiry</span> — choose <span class="ui">No expiry</span> or <span class="ui">Set an expiry</span>.</li>
+  <li>The code can be <span class="ui">Generate automatically</span> or <span class="ui">Specify the text</span>.</li>
+</ul>
+
+<p>Issued coupons are listed, and each row's menu offers <span class="ui">Disable</span>, <span class="ui">Change the number of people</span> and <span class="ui">See who used it</span>. When there are none, it reads <span class="ui">There are no coupons yet.</span></p>
+
+<div class="note">
+  <span class="label">Worth knowing</span>
+  <p>A memorable code you set with <span class="ui">Specify the text</span> is also easier for others to guess. <strong>Always set the number of people and an expiry.</strong></p>
 </div>
 
 <h3>Site settings</h3>

@@ -1,7 +1,21 @@
 # オフライン用ダウンロード機能 実装検討（2026-08-16）
 
-**まだ実装していません。** これは「作る前に決めること」を並べ、
-決まった範囲の作り方をまとめた文書です。
+> **⚠️ この文書は「作る前に決めること」を並べたものですが、
+> 内容は 2026-08-16 に実装済みです。**
+> 冒頭に「まだ実装していません」と書いてありましたが、**文書が古いだけ**でした
+> （ゼロベース監査 第 5 回で検出・2026-08-17 に修正）。実際には次が動いています。
+>
+> | 実装済み | 場所 |
+> | --- | --- |
+> | 権限確認（プレミアム＋メンバー判定） | `functions/src/callable/downloads.ts` `verifyDownloadAccess` |
+> | 目録・保存・writeToFile | `lib/data/downloads/` `lib/data/repositories/download_repository.dart` |
+> | 同期・回線判定・残り日数 | `lib/domain/download_sync.dart` `download_network.dart` `offline_access.dart` |
+> | ダウンロード済み画面・設定 | `lib/ui/downloads/` `lib/ui/screens/downloads_screen.dart` |
+>
+> **「未実装」の記述は書いた瞬間から腐ります**（共有ドキュメント S-9）。
+> `PREMIUM-DESIGN.md` も同じ腐り方をしていた（8/16 に修正済み）。
+
+以下は、決めるときに並べた内容です。
 
 **この機能は iOS / Android アプリの上に乗ります。** アプリ化そのもの
 （Firebase の接続設定、署名、ストア申請、Sign in with Apple、アプリ ID）は

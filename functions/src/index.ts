@@ -15,14 +15,15 @@
  * | 参加申請の提出・承認・却下 | submitJoinRequest / approveJoinRequest / rejectJoinRequest |
  * | 共有リンクの発行・受け入れ・取消 | createShareLink / acceptShareLink / revokeShareLink |
  * | サイト管理者の昇格・降格 | grantSiteAdmin / revokeSiteAdmin |
- * | ユーザー一覧・容量上限・管理者の指名 | listSiteUsers / setListQuota / setUserQuota / assignListAdmin |
+ * | ユーザー一覧・容量上限・管理者の指名・メンバー追加 | listSiteUsers / setListQuota / setUserQuota / assignListAdmin / addListMember |
  * | ユーザーの追加・無効化・有効化・削除 | createSiteUser / disableSiteUser / enableSiteUser / deleteSiteUser |
  * | クーポンの発行・変更・一覧・使用者 | createCoupon / updateCoupon / listCoupons / listCouponRedemptions |
  * | クーポンの引き換え | redeemCoupon |
- * | プレミアム期限の延長・短縮 | extendPremium |
+ * | プレミアム期限の延長（負の月数で短縮も可） | extendPremium |
+ * | 項目のファイル差し替え | replaceItemFile |
  * | オフライン用ダウンロードの権限確認 | verifyDownloadAccess |
  * | 退会 | withdrawAccount |
- * | 定期実行（1 日 1 回） | purgeDeletedFiles |
+ * | 定期実行（1 日 1 回）・手動起動 | purgeDeletedFiles / runPurgeNow |
  *
  * **users ドキュメントの初期化はここに含めていない。**
  * firebase-functions v2 には Auth のユーザー作成トリガーがなく、

@@ -24,7 +24,7 @@ void main() {
     });
 
     test('active で storagePath が違う → replace（論点 11）', () {
-      // 差し替えは必ず別名でアップロードされる（item_repository.dart:204-212）。
+      // 差し替えは必ず別名でアップロードされる（item_repository.dart:282）。
       // **パスの一致だけで検出できる。**
       expect(
         _decide(

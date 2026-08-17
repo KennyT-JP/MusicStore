@@ -27,7 +27,8 @@ class DownloadSyncPolicy {
   /// この 1 件をどうするか。
   ///
   /// **`storagePath` の一致だけで差し替えを検出できる。** 差し替えは必ず
-  /// 別名でアップロードされ（`item_repository.dart:204-212`）、
+  /// 別名（時刻を頭に付けた名前）でアップロードされ
+  /// （`item_repository.dart:282` の `uploadReplacementFile`）、
   /// **同じパスへの上書きは `storage.rules:91,100` が禁じている**ので、
   /// パスが同じなら中身も同じ。
   ///
