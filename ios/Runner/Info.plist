@@ -92,26 +92,30 @@
 	<string>856522879081-otvorfggatqof527q15ijjp8hj05do1d.apps.googleusercontent.com</string>
 	<!-- ##### 写しはここまで #####
 
-	     **意図的に書いていないもの**（設計 5-7・7 節）。
-	     「念のため書いておく」がいちばん悪い選択なので、消さないこと。
+	     **リンクした SDK が参照する API のための用途説明**（Apple ITMS-90683）。
+	     アプリ自身はカメラ・写真・位置情報を使わないが、`file_picker` や
+	     `google_mobile_ads` などの SDK バイナリがこれらの API を参照するため、
+	     **実際に使わなくても Apple は Info.plist の説明文を必須にする**
+	     （2026-08-18 の提出で、写真・カメラが必須、位置情報が推奨として
+	     ITMS-90683 で通知された）。**当初は「使わない権限は書かない」方針で
+	     外していたが、Apple の静的解析で必須化されたので足した。** 文言は
+	     利用者にも表示されるので、ファイル選択に紐づく素直な説明にしてある。 -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>音源や楽譜などのファイルを選ぶときに、写真ライブラリ内のファイルにアクセスする場合があります。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ファイルを選ぶ機能でカメラを利用する場合があります。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ネットワーク状態の確認や広告の配信に関連して、位置情報が参照される場合があります。位置情報の追跡は行いません。</string>
 
-	     - `UIBackgroundModes`
-	       使わない背景動作を宣言したまま出すと、審査で用途の説明を
-	       求められる。**バックグラウンド再生は今回やらない**（7 節）。
-	       通知も今回やらない（`remote-notification` も書かない）。
-	     - `NSCameraUsageDescription`
-	       カメラを使わない。使わない権限を書くと審査で用途を訊かれる。
-	     - `NSPhotoLibraryUsageDescription`
-	       写真を選ばない。`file_picker` は UIDocumentPicker を使うので
-	       権限宣言が要らない**はず**——**社内に前例が無い**（9 節）ので、
-	       実機で確かめるまで断定しない。要ると分かってから足すこと。
-	     - `NSMicrophoneUsageDescription` / `NSUserTrackingUsageDescription` /
-	       `NSAppTransportSecurity` / `LSApplicationQueriesSchemes`
-	       いずれも使っていない。**広告 SDK（google_mobile_ads）は同梱するが、
-	       非パーソナライズ広告に固定している**（`AdRequest(nonPersonalizedAds:
-	       true)`）ので、IDFA も追跡も使わず ATT（`NSUserTrackingUsageDescription`）
-	       は不要。UMP 同意フォームも入れない。**ここに ATT を足すと、使わない
-	       権限で審査の説明を求められる。** -->
+	<!-- **これらは引き続き意図的に書いていない**（設計 5-7・7 節）。
+	     「念のため書いておく」がいちばん悪い選択なので、消さないこと。
+	     - `UIBackgroundModes`：バックグラウンド再生・通知は今回やらない（7 節）。
+	     - `NSMicrophoneUsageDescription`：録音は端末側で行い、アプリはしない。
+	     - `NSUserTrackingUsageDescription`（ATT）：広告は非パーソナライズ固定
+	       （`AdRequest(nonPersonalizedAds: true)`）で IDFA も追跡も使わないため
+	       不要。UMP 同意フォームも入れない。**ここに ATT を足すと、使わない
+	       権限で審査の説明を求められる。**
+	     - `NSAppTransportSecurity` / `LSApplicationQueriesSchemes`：使っていない。 -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

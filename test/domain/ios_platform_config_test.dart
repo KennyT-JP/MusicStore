@@ -281,16 +281,47 @@ void main() {
       );
     });
 
-    test('使わない権限を書いていない（逆向きの見張り）', () {
+    test('SDK が要求する用途説明を書いている（Apple ITMS-90683）', () {
+      // **アプリ自身はカメラ・写真・位置情報を使わないが、file_picker /
+      // google_mobile_ads などの SDK が API を参照するため、Apple が
+      // Info.plist の用途説明を必須にする**（2026-08-18 の提出で、写真・
+      // カメラが必須、位置情報が推奨として ITMS-90683 で通知された）。
+      // これが無いとアップロードが弾かれる。
       final plist = _stripXmlComments(_read(_infoPlistPath));
-      expect(
-        plist,
-        isNot(contains('<key>NSCameraUsageDescription</key>')),
-        reason:
-            'NSCameraUsageDescription が書かれています。\n'
-            'カメラは使いません。**使わない権限を書くと審査で用途を訊かれます**\n'
-            '（設計 5-7。「念のため書いておく」がいちばん悪い選択）',
-      );
+      for (final key in const [
+        'NSPhotoLibraryUsageDescription',
+        'NSCameraUsageDescription',
+        'NSLocationWhenInUseUsageDescription',
+      ]) {
+        expect(
+          plist,
+          contains('<key>$key</key>'),
+          reason:
+              '$key がありません。**リンクした SDK が参照する API のため、'
+              'Apple が用途説明を必須にしています**（ITMS-90683）。'
+              '実際に使わなくても Info.plist に書く必要があります。',
+        );
+      }
+    });
+
+    test('本当に使わない権限は書いていない（逆向きの見張り）', () {
+      // **ATT とマイクは足さない。** 広告は非パーソナライズ固定で IDFA も
+      // 追跡も使わないため ATT は不要（足すと審査で用途を訊かれる）。録音は
+      // 端末側で行い、アプリはマイクを触らない。上の用途説明とは違い、
+      // これらは SDK も参照していないので Apple から要求されていない。
+      final plist = _stripXmlComments(_read(_infoPlistPath));
+      for (final key in const [
+        'NSUserTrackingUsageDescription',
+        'NSMicrophoneUsageDescription',
+      ]) {
+        expect(
+          plist,
+          isNot(contains('<key>$key</key>')),
+          reason:
+              '$key が書かれています。**使わない権限を書くと審査で用途を'
+              '訊かれます**（設計 5-7。「念のため書いておく」がいちばん悪い選択）',
+        );
+      }
     });
   });
 
