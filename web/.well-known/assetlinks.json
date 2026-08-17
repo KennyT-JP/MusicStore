@@ -7,8 +7,7 @@
       "namespace": "android_app",
       "package_name": "jp.sessionconcierge.trackcabinet",
       "sha256_cert_fingerprints": [
-        "77:80:EB:BA:3D:6E:FC:9A:12:0D:FA:6D:4B:7B:7B:1F:14:1F:92:E9:57:71:53:06:58:4E:2E:9A:D3:E5:38:00",
-        "REPLACE_ME_PLAY_APP_SIGNING_SHA256"
+        "77:80:EB:BA:3D:6E:FC:9A:12:0D:FA:6D:4B:7B:7B:1F:14:1F:92:E9:57:71:53:06:58:4E:2E:9A:D3:E5:38:00"
       ]
     }
   }
