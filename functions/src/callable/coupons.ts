@@ -6,14 +6,20 @@
  * 発行・一覧・停止はサイト管理者だけ、引き換えは本人だけがここを通す。
  */
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
-import { onCall } from 'firebase-functions/v2/https';
+import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
 import { REGION, paths } from '../config';
 import {
+  type CouponAttemptState,
+  type ManualCodeRejection,
+  MANUAL_CODE_MIN_LENGTH,
   evaluateCouponRedemption,
   generateCouponCode,
   hashCouponCode,
+  isCouponRateLimited,
+  nextCouponFailureState,
   normalizeCouponCode,
+  validateManualCouponCode,
 } from '../domain/coupon';
 import { extendedPremiumUntil } from '../domain/premium';
 import { fail } from '../errors';
@@ -22,9 +28,72 @@ import { requireSiteAdmin, requireString, requireUid } from './access';
 /** 付与できる月数の上限。桁を 1 つ間違えても 100 年にならないための歯止め。 */
 const MAX_MONTHS = 120;
 
-/** 指定コードの長さの範囲。短すぎるものは総当たりで当てられる。 */
-const MIN_CODE_LENGTH = 4;
+/** 指定コードの長さの上限。長さの下限は domain の validateManualCouponCode が持つ。 */
 const MAX_CODE_LENGTH = 64;
+
+/**
+ * 引き換えの失敗をこの回数まで許す（総当たり対策・監査 第5回・群B・S1）。
+ *
+ * 手動指定コードは短くしうるため、当て推量を無制限に繰り返せると
+ * 総当たりで通せてしまう。uid ごとに数えて、この回数を超えたら
+ * 一時的に断る。
+ */
+const REDEEM_MAX_FAILURES = 10;
+
+/**
+ * 失敗回数を数える時間窓。過ぎれば自然に回復する（S1）。
+ *
+ * ロックは概ねこの長さで解ける方式にしている（別途の後片付けが要らない）。
+ */
+const REDEEM_FAILURE_WINDOW_MS = 60 * 60 * 1000; // 1 時間
+
+/**
+ * 引き換えの失敗回数を数える置き場（本人しか触れない／S1）。
+ *
+ * **`state` とは別のドキュメントにする。** `users/{uid}/private/state` は
+ * 本人が locale などを書き換えられる（firestore.rules）ので、そこに数を
+ * 置くと本人がロックを解ける。private 配下は `docId == 'state'` 以外
+ * クライアントから書けないルールなので、別ドキュメントにすれば
+ * サーバー（Admin SDK）だけが書ける形になり、ルールの変更も要らない。
+ */
+function couponGuardPath(uid: string): string {
+  return `${paths.user(uid)}/private/couponGuard`;
+}
+
+/** 失敗回数の保存値を、判定に使う形へ読み替える。 */
+function readAttemptState(data: FirebaseFirestore.DocumentData | undefined): CouponAttemptState {
+  const windowStartMs =
+    typeof data?.windowStartMs === 'number' && Number.isFinite(data.windowStartMs)
+      ? data.windowStartMs
+      : null;
+  const failCount =
+    typeof data?.failCount === 'number' && Number.isFinite(data.failCount)
+      ? data.failCount
+      : 0;
+  return { windowStartMs, failCount };
+}
+
+/** 失敗として数える引き換えの拒否理由（fail() が details.code に載せる符号）。 */
+const REDEEM_FAILURE_CODES: ReadonlySet<string> = new Set([
+  'couponNotFound',
+  'couponDisabled',
+  'couponExpired',
+  'couponUsedUp',
+  'couponAlreadyUsed',
+]);
+
+/**
+ * この例外を「引き換えの失敗」として数えてよいか。
+ *
+ * **通信断などの一時的な失敗は数えない。** 数えるのはコードの当て推量に
+ * 効く拒否（couponNotFound など）だけ。Firestore の内部エラーで利用者を
+ * ロックすると、本人に非が無いのに閉め出すことになる。
+ */
+function isRedeemFailure(err: unknown): boolean {
+  if (!(err instanceof HttpsError)) return false;
+  const code = (err.details as { code?: unknown } | undefined)?.code;
+  return typeof code === 'string' && REDEEM_FAILURE_CODES.has(code);
+}
 
 /**
  * クーポンを発行する（D1 / D2 / D8）。
@@ -48,8 +117,14 @@ export const createCoupon = onCall({ region: REGION }, async (request) => {
     : normalizeCouponCode(
         requireString(data, 'code', { maxLength: MAX_CODE_LENGTH })
       );
-  if (requested !== null && requested.length < MIN_CODE_LENGTH) {
-    throw fail('invalid-argument', 'missingField', { field: 'code' });
+  // **手動指定のときだけ最小の強度を強制する（S1）。** 自動生成コードは
+  // 24 文字で十分に推測しにくいので対象外。指定コードは短くしうるぶん、
+  // 8 文字かつ英数字混在を必須にして総当たりに耐えさせる。
+  if (requested !== null) {
+    const verdict = validateManualCouponCode(requested);
+    if (!verdict.ok) {
+      throw new HttpsError('invalid-argument', manualCodeMessage(verdict.reason));
+    }
   }
   const code = requested ?? generateCouponCode();
   const codeHash = hashCouponCode(code);
@@ -203,72 +278,138 @@ export const redeemCoupon = onCall({ region: REGION }, async (request) => {
 
   const db = getFirestore();
   const nowMs = Date.now();
+  const guardRef = db.doc(couponGuardPath(uid));
 
-  const untilMs = await db.runTransaction(async (tx) => {
-    // --- 読み取りはすべて先に行う（Firestore のトランザクションの決まり） ---
-    const found = await tx.get(
-      db.collection(paths.coupons).where('codeHash', '==', codeHash).limit(1)
-    );
-    const couponDoc = found.docs[0] ?? null;
-
-    const redemptionRef = couponDoc
-      ? db.doc(paths.couponRedemption(couponDoc.id, uid))
-      : null;
-    const redemption = redemptionRef ? await tx.get(redemptionRef) : null;
-    // **プレミアムは本人だけの場所にある（config.ts の userPrivate）。**
-    // `users/{uid}` はログイン済みなら誰でも ID 指定で読めるため、期限を
-    // そこに置くと他の利用者にも見えていた。
-    const privateRef = db.doc(paths.userPrivate(uid));
-    const state = await tx.get(privateRef);
-
-    const data = couponDoc?.data();
-    const verdict = evaluateCouponRedemption({
-      coupon: data
-        ? {
-            disabled: data.disabled === true,
-            expiresAtMs: toMillis(data.expiresAt),
-            usedCount: Number(data.usedCount ?? 0),
-            maxUses: Number(data.maxUses ?? 0),
-          }
-        : null,
-      alreadyRedeemed: redemption?.exists === true,
+  // **総当たり対策：先にロックを確かめる（S1）。** 直近の窓で失敗を重ねた
+  // 相手は、クーポンの照合に進む前にここで断る。無駄な照合も避けられる。
+  const guard = readAttemptState((await guardRef.get()).data());
+  if (
+    isCouponRateLimited(guard, {
       nowMs,
-    });
-    if ('rejection' in verdict) {
-      // 見つからないときだけ not-found。ほかは「条件を満たしていない」。
-      throw fail(
-        verdict.rejection === 'couponNotFound' ? 'not-found' : 'failed-precondition',
-        verdict.rejection
+      maxFailures: REDEEM_MAX_FAILURES,
+      windowMs: REDEEM_FAILURE_WINDOW_MS,
+    })
+  ) {
+    throw new HttpsError(
+      'resource-exhausted',
+      'クーポンの引き換えに何度も失敗したため、しばらく受け付けられません。1 時間ほど待ってからもう一度お試しください。'
+    );
+  }
+
+  let untilMs: number;
+  try {
+    untilMs = await db.runTransaction(async (tx) => {
+      // --- 読み取りはすべて先に行う（Firestore のトランザクションの決まり） ---
+      const found = await tx.get(
+        db.collection(paths.coupons).where('codeHash', '==', codeHash).limit(1)
       );
-    }
+      const couponDoc = found.docs[0] ?? null;
 
-    const until = extendedPremiumUntil({
-      currentUntilMs: toMillis(state.data()?.premium?.until),
-      months: Number(data?.months ?? 0),
-      nowMs,
-    });
+      const redemptionRef = couponDoc
+        ? db.doc(paths.couponRedemption(couponDoc.id, uid))
+        : null;
+      const redemption = redemptionRef ? await tx.get(redemptionRef) : null;
+      // **プレミアムは本人だけの場所にある（config.ts の userPrivate）。**
+      // `users/{uid}` はログイン済みなら誰でも ID 指定で読めるため、期限を
+      // そこに置くと他の利用者にも見えていた。
+      const privateRef = db.doc(paths.userPrivate(uid));
+      const state = await tx.get(privateRef);
 
-    // --- ここから書き込み ---
-    tx.set(redemptionRef!, { redeemedAt: FieldValue.serverTimestamp() });
-    tx.update(couponDoc!.ref, { usedCount: FieldValue.increment(1) });
-    tx.set(
-      privateRef,
-      {
-        premium: {
-          until: Timestamp.fromMillis(until),
-          // どのクーポンで付いたかを残す（3.1 の追跡用）。
-          grantedBy: couponDoc!.id,
-          updatedAt: FieldValue.serverTimestamp(),
+      const data = couponDoc?.data();
+      const verdict = evaluateCouponRedemption({
+        coupon: data
+          ? {
+              disabled: data.disabled === true,
+              expiresAtMs: toMillis(data.expiresAt),
+              usedCount: Number(data.usedCount ?? 0),
+              maxUses: Number(data.maxUses ?? 0),
+            }
+          : null,
+        alreadyRedeemed: redemption?.exists === true,
+        nowMs,
+      });
+      if ('rejection' in verdict) {
+        // 見つからないときだけ not-found。ほかは「条件を満たしていない」。
+        throw fail(
+          verdict.rejection === 'couponNotFound' ? 'not-found' : 'failed-precondition',
+          verdict.rejection
+        );
+      }
+
+      const until = extendedPremiumUntil({
+        currentUntilMs: toMillis(state.data()?.premium?.until),
+        months: Number(data?.months ?? 0),
+        nowMs,
+      });
+
+      // --- ここから書き込み ---
+      tx.set(redemptionRef!, { redeemedAt: FieldValue.serverTimestamp() });
+      tx.update(couponDoc!.ref, { usedCount: FieldValue.increment(1) });
+      tx.set(
+        privateRef,
+        {
+          premium: {
+            until: Timestamp.fromMillis(until),
+            // どのクーポンで付いたかを残す（3.1 の追跡用）。
+            grantedBy: couponDoc!.id,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
         },
-      },
-      { merge: true }
-    );
+        { merge: true }
+      );
 
-    return until;
-  });
+      // **成功したら失敗の記録を消す（S1）。** 正しいコードを通せた相手は
+      // 総当たりではないので、次の引き換えを窓に巻き込まない。
+      tx.set(
+        guardRef,
+        { windowStartMs: null, failCount: 0, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+
+      return until;
+    });
+  } catch (err) {
+    // **失敗（コードの当て推量に効く拒否）だけを数える（S1）。** カウントの
+    // 更新はトランザクションで行い、同時に来た失敗でも取りこぼさない。
+    if (isRedeemFailure(err)) {
+      await db.runTransaction(async (tx) => {
+        const current = readAttemptState((await tx.get(guardRef)).data());
+        const next = nextCouponFailureState(current, {
+          nowMs,
+          windowMs: REDEEM_FAILURE_WINDOW_MS,
+        });
+        tx.set(
+          guardRef,
+          {
+            windowStartMs: next.windowStartMs,
+            failCount: next.failCount,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      });
+    }
+    throw err;
+  }
 
   return { premiumUntil: untilMs };
 });
+
+/**
+ * 手動指定コードが弱いときの、管理者向けの文（S1）。
+ *
+ * **`fail()` を使わない。** 画面が符号で出し分ける仕組み（errors.ts）に
+ * 新しい符号を足すと l10n まで揃える必要があるが、これは管理者だけが
+ * 見る発行画面のエラーなので、日本語の文をそのまま返すほうが軽い。
+ */
+function manualCodeMessage(reason: ManualCodeRejection): string {
+  switch (reason) {
+    case 'tooShort':
+      return `指定するクーポンコードは ${MANUAL_CODE_MIN_LENGTH} 文字以上にしてください。`;
+    case 'needsLetterAndDigit':
+      return '指定するクーポンコードには英字と数字の両方を含めてください。';
+  }
+}
 
 /**
  * 月数の検証（`monthsInvalid`）。

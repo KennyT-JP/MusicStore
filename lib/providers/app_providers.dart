@@ -94,6 +94,12 @@ final isSiteAdminProvider = FutureProvider<bool>((ref) async {
 });
 
 /// 未読の通知件数（仕様書 14.1）。
+///
+/// **上限 100 件までしか購読しない**（監査 第5回・群B）。通知は無期限に
+/// 溜まりうるため、未読を全件購読すると読み取りが件数に比例して増える。
+/// バッジは 99 を超えたら「99+」しか出さない（[AppShell] 参照）ので、
+/// 100 件まで数えれば「99+」を出すには足りる。100 件で頭打ちになった
+/// 数がそのまま「99+」として表示される。
 final unreadNotificationCountProvider = StreamProvider<int>((ref) {
   final user = ref.watch(firebaseUserProvider).value;
   if (user == null) return Stream.value(0);
@@ -101,6 +107,7 @@ final unreadNotificationCountProvider = StreamProvider<int>((ref) {
       .watch(firestoreProvider)
       .collection(FirestorePaths.userNotifications(user.uid))
       .where('isRead', isEqualTo: false)
+      .limit(100)
       .snapshots()
       .map((s) => s.docs.length);
 });

@@ -144,6 +144,14 @@ export interface SiteConfig {
   itemPurgeGraceDays: number;
   orphanFileGraceHours: number;
   siteAdminCount: number;
+  /**
+   * 既読の通知を消すまでの保持日数（監査 第5回・群B）。
+   *
+   * 通知は無期限に溜まる。既読かつこの日数を超えて古いものだけを
+   * 定期削除で消す。**未読は日数によらず残す**（見ていないものを
+   * 勝手に消さない）。
+   */
+  notificationRetentionDays: number;
 }
 
 // export は付けない。使うのは下の readSiteConfig だけで、
@@ -153,6 +161,7 @@ const defaultSiteConfig: SiteConfig = {
   itemPurgeGraceDays: 30,
   orphanFileGraceHours: 24,
   siteAdminCount: 0,
+  notificationRetentionDays: 90,
 };
 
 /**
@@ -173,6 +182,9 @@ export async function readSiteConfig(): Promise<SiteConfig> {
       defaultSiteConfig.orphanFileGraceHours,
     siteAdminCount:
       asNumber(data.siteAdminCount) ?? defaultSiteConfig.siteAdminCount,
+    notificationRetentionDays:
+      asNumber(data.notificationRetentionDays) ??
+      defaultSiteConfig.notificationRetentionDays,
   };
 }
 

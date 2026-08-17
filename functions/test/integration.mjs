@@ -1162,6 +1162,39 @@ if (!listId) {
   r = await call('listCouponRedemptions', { couponId: first.couponId }, freeUser.idToken);
   check('一般利用者は使った人を見られない', codeOf(r) === 'siteAdminOnly', codeOf(r));
 
+  // --- 手動指定コードの最小強度（S1 / 監査 第5回・群B） ---
+  // 総当たりのリスクは「管理者が作れる短い手動コード」に限られる。
+  // createCoupon は手動指定時のみ、最小 8 文字かつ英字と数字の両方を課す
+  // （invalid-argument = HTTP 400。details.code は載せないので状態で見る）。
+  r = await call('createCoupon', { code: 'AB12', months: 1, maxUses: 1 }, siteAdmin.idToken);
+  check('短すぎる手動コードは作れない（S1）', r.status === 400,
+        `status=${r.status}`);
+
+  r = await call('createCoupon', { code: 'ABCDEFGH', months: 1, maxUses: 1 }, siteAdmin.idToken);
+  check('数字を含まない手動コードは作れない（S1）', r.status === 400, `status=${r.status}`);
+
+  r = await call('createCoupon', { code: `Valid${stamp}`, months: 1, maxUses: 1 },
+                 siteAdmin.idToken);
+  check('8 文字以上で英数字混在なら手動コードを作れる（S1）',
+        r.status === 200 && typeof r.body?.result?.code === 'string',
+        `status=${r.status}`);
+
+  // --- 引き換え失敗のレート制限（S1） ---
+  // 失敗を続けても記録もペナルティも無いと、確認済みアカウント 1 つから
+  // 短い手動コードを総当たりできる。uid ごとに一定回数で締め出す
+  // （resource-exhausted = HTTP 429）。窓を過ぎれば自然に戻る。
+  {
+    const brute = await signUp('brute');
+    let lockedStatus = 0;
+    for (let i = 0; i < 12; i += 1) {
+      const rr = await call('redeemCoupon',
+                            { code: 'NOSUCHCODEBRUTEXXXXXXXXX' }, brute.idToken);
+      if (rr.status === 429) { lockedStatus = 429; break; }
+    }
+    check('引き換えの失敗を続けると総当たりが止められる（S1）', lockedStatus === 429,
+          `最後の状態=${lockedStatus}`);
+  }
+
   // --- 申請なしのリスト作成（4.2） ---
   const directName = `直接作成${stamp}`;
   r = await call('createListDirectly', { listName: directName }, premiumUser.idToken);
@@ -1495,6 +1528,47 @@ if (!listId) {
         check('掃除のあと、消した印が付く（次回の対象から外れる）',
               purged?.fields?.purgedAt !== undefined,
               JSON.stringify(purged?.fields?.purgeAt ?? null).slice(0, 60));
+      }
+
+      // ---------------------------------------------------------------------
+      // 通知の定期削除（P2・監査 第5回・群B）
+      //
+      // **既読かつ保持期間（既定 90 日）を過ぎた通知だけ**を消す。
+      // 未読は消さない（気づかないうちに消える事故を避ける）。最近の既読も
+      // 残す。上のファイル掃除と同じ入口（runPurgeNow）から動く。
+      // エミュレータは索引を強制しないので、本番の索引欠落はここでは
+      // 気づけない——索引は firestore.indexes.json に明示している。
+      // ---------------------------------------------------------------------
+      {
+        const notifBase = `users/${freeUser.localId}/notifications`;
+        const old = new Date(Date.now() - 100 * 86400000).toISOString();
+        const fresh = new Date().toISOString();
+        await setDoc(`${notifBase}/oldRead${stamp}`, {
+          type: { stringValue: 'itemAdded' },
+          isRead: { booleanValue: true },
+          createdAt: { timestampValue: old },
+        });
+        await setDoc(`${notifBase}/oldUnread${stamp}`, {
+          type: { stringValue: 'itemAdded' },
+          isRead: { booleanValue: false },
+          createdAt: { timestampValue: old },
+        });
+        await setDoc(`${notifBase}/recentRead${stamp}`, {
+          type: { stringValue: 'itemAdded' },
+          isRead: { booleanValue: true },
+          createdAt: { timestampValue: fresh },
+        });
+
+        r = await call('runPurgeNow', {}, siteAdmin.idToken);
+        check('掃除を動かせる（通知の検証用）', r.status === 200,
+              JSON.stringify(r.body).slice(0, 100));
+
+        check('既読で保持期間を過ぎた通知は消える（P2）',
+              (await doc(`${notifBase}/oldRead${stamp}`)) === null);
+        check('未読は保持期間を過ぎても残す（P2）',
+              (await doc(`${notifBase}/oldUnread${stamp}`)) !== null);
+        check('最近の既読は残す（P2）',
+              (await doc(`${notifBase}/recentRead${stamp}`)) !== null);
       }
 
       // **削除済みの項目には差し替えられない**（猶予の判定が二重になる）。

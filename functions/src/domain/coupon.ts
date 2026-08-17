@@ -64,6 +64,93 @@ export function hashCouponCode(code: string): string {
   return createHash('sha256').update(normalizeCouponCode(code)).digest('hex');
 }
 
+/**
+ * 手動指定コードの最小の長さ（監査 第5回・群B・S1）。
+ *
+ * **自動生成コード（24 文字）はこの制約の対象外。** 総当たりで当てられる
+ * リスクがあるのは、管理者が短く付けた手動指定コードだけ。ここを 8 文字
+ * かつ英数字混在に縛って、当てにくい最小の強度を担保する。
+ */
+export const MANUAL_CODE_MIN_LENGTH = 8;
+
+/** 手動指定コードが弱いときの理由。 */
+export type ManualCodeRejection = 'tooShort' | 'needsLetterAndDigit';
+
+/**
+ * 管理者が指定したクーポンコードが、最小の強度を満たすか（S1）。
+ *
+ * **`normalizeCouponCode` と同じ正規化を通してから測る。** 前後の空白を
+ * 詰めたあとの「実際に照合される文字列」で長さと文字種を見ないと、
+ * 末尾の空白で 8 文字に見せかけたコードを通してしまう。呼び出し側も
+ * すでに正規化しているので、ここで重ねて掛けても結果は変わらない。
+ *
+ * 条件は 2 つ:
+ *   - 最小 [MANUAL_CODE_MIN_LENGTH] 文字
+ *   - 英字と数字の両方を含む
+ */
+export function validateManualCouponCode(
+  code: string
+): { ok: true } | { ok: false; reason: ManualCodeRejection } {
+  const normalized = normalizeCouponCode(code);
+  if (normalized.length < MANUAL_CODE_MIN_LENGTH) {
+    return { ok: false, reason: 'tooShort' };
+  }
+  const hasLetter = /[A-Za-z]/.test(normalized);
+  const hasDigit = /[0-9]/.test(normalized);
+  if (!hasLetter || !hasDigit) {
+    return { ok: false, reason: 'needsLetterAndDigit' };
+  }
+  return { ok: true };
+}
+
+/**
+ * 引き換えの失敗回数（総当たり対策の窓／S1）。
+ *
+ * **判断だけをここに置く。** 実際の保存・ロックは callable/coupons.ts の
+ * 責務だが、「窓が過ぎたか」「閾値に達したか」という境界の判定は純関数に
+ * 切り出して単体テストする（evaluateCouponRedemption と同じ方針）。
+ */
+export interface CouponAttemptState {
+  /** いま数えている時間窓の開始時刻（ミリ秒）。記録が無ければ null。 */
+  windowStartMs: number | null;
+  /** その窓の中で数えた失敗の回数。 */
+  failCount: number;
+}
+
+/**
+ * いま一時ロック中か（S1）。
+ *
+ * **窓が過ぎていれば数えない。** 失敗の記録は消さずに残すが、窓の外に
+ * なった時点で「無かったもの」として扱う。これで概ね [windowMs] で
+ * 自然に回復する（別途の後片付けが要らない）。
+ */
+export function isCouponRateLimited(
+  state: CouponAttemptState,
+  params: { nowMs: number; maxFailures: number; windowMs: number }
+): boolean {
+  const { nowMs, maxFailures, windowMs } = params;
+  if (state.windowStartMs === null) return false;
+  if (nowMs - state.windowStartMs >= windowMs) return false;
+  return state.failCount >= maxFailures;
+}
+
+/**
+ * 失敗を 1 つ数えたあとの状態（S1）。
+ *
+ * **窓が切れていたら数え直す。** 昔の失敗をいつまでも引きずらないため、
+ * 窓の外なら開始時刻を今に置き換えて 1 から数える。窓の中なら足すだけ。
+ */
+export function nextCouponFailureState(
+  state: CouponAttemptState,
+  params: { nowMs: number; windowMs: number }
+): CouponAttemptState {
+  const { nowMs, windowMs } = params;
+  if (state.windowStartMs === null || nowMs - state.windowStartMs >= windowMs) {
+    return { windowStartMs: nowMs, failCount: 1 };
+  }
+  return { windowStartMs: state.windowStartMs, failCount: state.failCount + 1 };
+}
+
 /** 引き換えを断る理由。errors.ts の符号と同じ名前にしてある。 */
 export type CouponRejection =
   | 'couponNotFound'

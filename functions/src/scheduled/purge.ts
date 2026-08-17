@@ -52,11 +52,96 @@ export const purgeDeletedFiles = onSchedule(
 export async function runPurge(): Promise<{
   purgedItems: number;
   purgedOrphans: number;
+  purgedNotifications: number;
 }> {
   const config = await readSiteConfig();
   const purgedItems = await purgeExpiredItems();
   const purgedOrphans = await purgeOrphanFiles(config.orphanFileGraceHours);
-  return { purgedItems, purgedOrphans };
+  const purgedNotifications = await purgeExpiredNotifications(
+    config.notificationRetentionDays
+  );
+  return { purgedItems, purgedOrphans, purgedNotifications };
+}
+
+/** 1 日のミリ秒。保持日数の換算に使う。 */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * この通知を消してよいか（監査 第5回・群B）。
+ *
+ * **既読かつ保持日数を超えて古いものだけを消す。未読は日数によらず残す。**
+ * 取り返しのつかない削除なので、判断だけを単体で確かめられる純関数にする
+ * （domain/paths.ts の shouldDeleteOrphan と同じ考え方）。
+ *
+ * 境界は「超えたら消す」。保持日数ちょうど（= 90 日目）は残し、
+ * それより古いものを消す。
+ */
+export function shouldPurgeNotification(
+  isRead: boolean,
+  createdAtMs: number,
+  nowMs: number,
+  retentionDays: number
+): boolean {
+  // 見ていないものは勝手に消さない。
+  if (!isRead) return false;
+  // createdAt が壊れている（数値でない）ものは判断できないので残す。
+  if (!Number.isFinite(createdAtMs)) return false;
+  const cutoffMs = nowMs - retentionDays * DAY_MS;
+  return createdAtMs < cutoffMs;
+}
+
+/**
+ * 既読のまま保持日数を過ぎた通知を削除する（監査 第5回・群B）。
+ *
+ * **クエリは createdAt の範囲だけに絞る。** isRead を where に足すと
+ * 等価＋範囲の合成索引が要り、firestore.indexes.json に単一フィールド
+ * 索引を書くと配信が止まる落とし穴に触れる。createdAt 単体の範囲なら
+ * collectionGroup の自動索引で足りる。既読かどうかの絞り込みは
+ * 取得後にコード側（shouldPurgeNotification）で行う。**未読は消さない。**
+ *
+ * purgeExpiredItems と同じく 1 回の実行で MAX_ITEMS_PER_RUN 件までに
+ * 抑える。消し切れなくても次回の実行で続きを片づける。
+ */
+async function purgeExpiredNotifications(retentionDays: number): Promise<number> {
+  const db = getFirestore();
+  const nowMs = Date.now();
+  const cutoff = Timestamp.fromMillis(nowMs - retentionDays * DAY_MS);
+
+  const expired = await db
+    .collectionGroup('notifications')
+    .where('createdAt', '<', cutoff)
+    .limit(MAX_ITEMS_PER_RUN)
+    .get();
+
+  if (expired.empty) return 0;
+
+  let count = 0;
+
+  for (const doc of expired.docs) {
+    const data = doc.data();
+    const createdAt = data.createdAt;
+    const createdAtMs =
+      createdAt instanceof Timestamp ? createdAt.toMillis() : Number.NaN;
+
+    if (
+      !shouldPurgeNotification(data.isRead === true, createdAtMs, nowMs, retentionDays)
+    ) {
+      continue;
+    }
+
+    try {
+      await doc.ref.delete();
+      count++;
+    } catch (error) {
+      // 1 件の失敗で全体を止めない。次回の実行で再度拾われる。
+      logger.warn('通知の削除に失敗しました', {
+        path: doc.ref.path,
+        error,
+      });
+    }
+  }
+
+  return count;
 }
 
 /**

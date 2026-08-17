@@ -44,6 +44,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { acquireLock, releaseLock } from './deploy-lock.mjs';
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const isWindows = process.platform === 'win32';
 const REGION = 'asia-northeast1';
@@ -57,6 +59,7 @@ const wantsDebug = argv.includes('--debug');
 const skipBuild = argv.includes('--no-build');   // 失敗後のやり直し用
 const skipTests = argv.includes('--skip-tests'); // 依頼者が明示したときだけ
 const wantsAll = argv.includes('--all');         // 差分に関係なく全層
+const wantsForce = argv.includes('--force');     // 残留した多重起動ロックの強制解除（AP-76）
 const onlyOverride = argv.find((a) => a.startsWith('--only='))?.slice('--only='.length) ?? null;
 
 const ALL_LAYERS = ['firestore:rules', 'firestore:indexes', 'storage', 'functions', 'hosting'];
@@ -424,6 +427,41 @@ if (onlyOverride) {
   }
 }
 
+// -------------------------------------------------------------------------
+// 容量の「単位」を変える配信への注意（監査 第5回・群C・AP-46）
+//
+// 容量は **リストごと 1GB**（functions/src/config.ts の defaultQuotaBytes）と、
+// **人ごとの土台 2GB**（functions/src/domain/quota.ts の USER_DEFAULT_QUOTA_BYTES）で
+// 決まる。この「単位」や既定を変えると、リストを 3 つ以上持つ人など、
+// **昨日までアップロードできた人が今日からできなくなる**ことが起こり得る
+// （docs/PREMIUM-DESIGN.md／docs/AUDIT-CHECKLIST.md 観点 6）。影響者は
+// 本番の実データを数えないと分からない。ここでは配信を止めず、
+// 「数えたか」を確認する注意だけ出す（実行の有無までは検証できない）。
+//
+// 対象は git 差分で前回の配信（deploy/<環境> タグ）から変わったファイル。
+// タグが無い初回は差分の起点が無いので確認しない（次回以降タグが起点になる）。
+const QUOTA_SENSITIVE_FILES = [
+  'functions/src/config.ts',                     // defaultQuotaBytes（リストごと 1GB）
+  'functions/src/domain/quota.ts',               // USER_DEFAULT_QUOTA_BYTES・しきい値・自動拡張
+  'functions/src/callable/site_management.ts',   // setListQuota（90 行付近）／setUserQuota（149 行付近）
+];
+{
+  const hasQuotaBase = ((await capture('git', ['tag', '-l', deployTag])) ?? '').trim() !== '';
+  if (hasQuotaBase) {
+    const changed = ((await capture('git', ['diff', '--name-only', `${deployTag}..HEAD`])) ?? '')
+      .split('\n').map((l) => l.trim()).filter(Boolean);
+    const touched = QUOTA_SENSITIVE_FILES.filter((f) => changed.includes(f));
+    if (touched.length > 0) {
+      console.log('\n==> ⚠ 容量に関わるファイルが変更されています:');
+      for (const f of touched) console.log(`      ${f}`);
+      console.log('    容量の「単位」や既定を変えると、既存の利用者が使えなくなることがあります。');
+      console.log('    **本番の実データで、影響を受ける人を数えましたか？**');
+      console.log('      node scripts/check-quota-impact.mjs --project <本番のプロジェクト> --key <鍵.json>');
+      console.log('    （docs/PREMIUM-DESIGN.md／AUDIT 観点 6。数え漏れると、昨日までできた追加が止まります）');
+    }
+  }
+}
+
 // 4. このコミットは検証済みか。
 //    check.mjs が全部緑だったときの記録と突き合わせ、違えばその場で
 //    検証を回してから進む（テストしてから配信）。
@@ -451,6 +489,34 @@ const headTree = (await capture('git', ['show', '-s', '--format=%T', 'HEAD']))?.
     if (code !== 0) fail('検証が失敗しました。配信しません。');
   }
 }
+
+// -------------------------------------------------------------------------
+// 多重起動の防止（監査 第5回・群C・AP-76）
+//
+// ここから先はビルドと配信という重い処理で、build/web・.last-check.json・
+// git タグ deploy/<環境> を共有する。2 つ同時に走ると片方の中間生成物を
+// もう片方が配信しうる。**枝・作業ツリー・検証のガードをすべて通した後、
+// 実際に重い処理へ入る直前**でファイルロックを 1 本だけ握る（配信するものが
+// 無いときや --show-app-links のときは、この手前で終わっているのでロックは取らない）。
+//
+// 残留ロック（クラッシュ後）は持ち主 pid が消えていれば奪う。確実に
+// 止まっているのに残るときは --force で解除できる（deploy-lock.mjs）。
+const lockPath = join(root, 'build', '.deploy.lock');
+let lock;
+try {
+  lock = acquireLock(lockPath, { force: wantsForce });
+} catch (e) {
+  if (e.code === 'ELOCKED') {
+    fail(e.message,
+         `確実に止まっているなら ${isWindows ? 'scripts\\deploy.cmd' : './scripts/deploy.sh'}${wantsProd ? ' prod' : ''} --force で解除できます`);
+  }
+  throw e;
+}
+// **どの経路でも必ず外す。** このスクリプトは fail() と process.exit を
+// 多用するため finally では拾いきれない。exit フックに載せて確実に解放する
+// （releaseLock は同期なので exit ハンドラから呼べる）。
+process.on('exit', () => releaseLock(lock));
+console.log(`    多重起動ロックを取得しました（pid ${lock.pid}）`);
 
 // -------------------------------------------------------------------------
 // ビルド（Hosting を出すときだけ）

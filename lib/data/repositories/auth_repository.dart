@@ -9,6 +9,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../domain/apple_sign_in.dart';
 import '../../domain/display_name.dart';
+import '../../domain/sign_in_timeout.dart';
 import '../../domain/signup_locale.dart';
 import '../firestore_paths.dart';
 import '../models/app_user.dart';
@@ -84,9 +85,15 @@ class AuthRepository {
   Future<void> signInWithGoogle({required String languageCode}) async {
     final UserCredential credential;
     if (kIsWeb) {
-      // **Web の経路は 2026-08-16 以前のまま。** ここを触ると、
-      // いま動いている Web のログインを巻き添えにする。
-      credential = await _auth.signInWithPopup(GoogleAuthProvider());
+      // **呼ぶ API は 2026-08-16 以前のまま `signInWithPopup`。**
+      // 変えたのは待ち方だけ——ポップアップを放置されても永遠に待たない
+      // よう、上限（[kWebSignInTimeout]＝90 秒）をつける（監査 第5回・AP-12）。
+      // 超えたら [SignInTimeoutException] が飛び、呼び出し側の `_run` が
+      // 受けて `_busy` を解く。**上限は Web のポップアップにだけ付ける**
+      // （ネイティブや email/password は別経路で、ここは通らない）。
+      credential = await withSignInTimeout(
+        () => _auth.signInWithPopup(GoogleAuthProvider()),
+      );
     } else {
       final googleCredential = await _googleCredential();
       if (googleCredential == null) return; // やめた

@@ -70,6 +70,16 @@
         { "order": "DESCENDING", "queryScope": "COLLECTION" },
         { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
       ]
+    },
+    {
+      "//": "既読通知の定期削除（purgeExpiredNotifications）が collectionGroup('notifications') を createdAt の範囲で引くための索引（監査 第5回・群B・P2）。上の items/viewers と同じく、エミュレータは索引を強制しないため欠落に気づけない——本番では purge の実行がクエリの時点で失敗する。",
+      "collectionGroup": "notifications",
+      "fieldPath": "createdAt",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     }
   ]
 }
