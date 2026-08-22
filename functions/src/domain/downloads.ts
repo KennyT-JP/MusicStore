@@ -99,9 +99,9 @@ export interface ListMembership {
  * どちらが正しいかを読む側が毎回調べ直すことになる（domain/premium.ts）。
  *
  * **役割の段階（readOnly / superUser / listAdmin）は見ない。**
- * 論点 9 は「メンバーのみ（Read Only を含む）」なので、
- * members ドキュメントが有るかどうかだけで決まる。`hasAtLeast` を
- * 持ち込むと、サイト管理者が通って**落とした直後の再起動で消える**。
+ * 論点 9 は「メンバーのみ（Read Only を含む）」なので、一般利用者は
+ * members ドキュメントが有るかどうかだけで決まる。**サイト管理者だけは
+ * members が無くても通す**（仕様書 4.2。冒頭の説明）。
  */
 export function evaluateDownloadAccess(params: {
   /** `users/{uid}/private/state` の `premium.until`。無ければ null。 */
@@ -109,11 +109,11 @@ export function evaluateDownloadAccess(params: {
   /** サーバーの時刻。 */
   nowMs: number;
   /**
-   * 呼び出し元がサイト管理者か（仕様書 4.1 / 13.5）。
+   * 呼び出し元がサイト管理者か（仕様書 4.1 / 4.2 / 13.5）。
    *
-   * **`premiumActive` にだけ効く（実効プレミアム）。** 「メンバーか」の
-   * 判定には混ぜない——サイト管理者でも、そのリストのメンバーでなければ
-   * `notMember` を返す（冒頭の説明）。
+   * **`premiumActive` と「メンバーか」の両方に効く（実効プレミアム／
+   * 全リスト）。** サイト管理者なら、そのリストのメンバー登録が無くても
+   * `member` を返す（仕様書 4.2「全リストの項目を扱える」。冒頭の説明）。
    */
   isSiteAdmin: boolean;
   memberships: readonly ListMembership[];
