@@ -158,27 +158,30 @@ class Permissions {
   // オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.2）
   // ---------------------------------------------------------------------
 
-  /// ダウンロードできるか（docs/DOWNLOAD-DESIGN.md 論点 9・12・18）。
+  /// ダウンロードできるか（docs/DOWNLOAD-DESIGN.md 論点 9・12・仕様書 4.1/4.2）。
   ///
-  /// **メンバーのみ。Read Only は可。閲覧者（viewer）もサイト管理者も不可。**
+  /// **メンバー（Read Only を含む）、またはサイト管理者。** 閲覧者
+  /// （viewer）は不可。**サイト管理者は全リストで可**——仕様書 4.2
+  /// 「全リストの項目を扱える」に揃え、メンバー登録が無いリストでも落とせる
+  /// （2026-08-22。旧・論点 18「メンバーでなければ不可」を上書き）。
   ///
-  /// **[ListAccess.hasAtLeast] ではなく `role != null` を見る。**
-  /// サイト管理者はメンバー登録を持たないが、`effectiveRole` は
-  /// `listAdmin` を返す（role.dart:89-92）ので、`hasAtLeast` を使うと
-  /// サイト管理者が通る。**サーバー側（`verifyDownloadAccess`）は
-  /// `members` ドキュメントの存在だけで判定する**ので、通してしまうと
-  /// 「落とせるのに、次の起動で消される」ことになる。
-  /// **判定は 1 つだけにする（論点 18）。**
+  /// **`access.role != null || access.isSiteAdmin` で見る。** 閲覧者は
+  /// `role == null` かつ `isSiteAdmin == false` なので通らない。
+  /// **[ListAccess.canView] は使わない**——`canView` は
+  /// `effectiveRole != null || isViewer` なので（role.dart:99）閲覧者が
+  /// 通ってしまう（論点 9。共有リンクの先の人が端末に音源を残す経路を塞ぐ）。
   ///
-  /// **[ListAccess.canView] も使わない。** `canView` は
-  /// `effectiveRole != null || isViewer` なので（role.dart:99）、
-  /// **閲覧者が通る**（論点 9）。
+  /// **サーバー側（`verifyDownloadAccess`）も、サイト管理者なら
+  /// `members` が無くても `'member'` を返す**（`evaluateDownloadAccess` の
+  /// `isMember || isSiteAdmin`）ので、クライアントとサーバーで揃う。
   ///
-  /// **プレミアムが要る（論点 12・18）。** 切れたら false になり、
-  /// 端末のファイルは 4.5 の流れで削除される。
+  /// **[isPremium] には実効プレミアム（プレミアム有効 or サイト管理者／
+  /// 仕様書 4.1）を渡す。** 合成は呼び出し側の `canDownloadProvider`
+  /// （`isPremiumOrAdminProvider`）で行い、この純関数は渡された値をそのまま
+  /// 使う。切れたら false になり、端末のファイルは 4.5 の流れで削除される。
   static bool canDownload(ListAccess access, {required bool isPremium}) {
     if (!isPremium) return false;
-    return access.role != null;
+    return access.role != null || access.isSiteAdmin;
   }
 
   // ---------------------------------------------------------------------

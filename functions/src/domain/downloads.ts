@@ -21,18 +21,26 @@
  * 状態は戻り値（`premiumActive` / `'notMember'`）で表す。
  * 呼び出し側は「答えが返ったこと」と「その中身」を分けて扱える。
  *
- * ## **役割の判定は「メンバーであること」だけ**（論点 18 / 10 節の危険 8）
+ * ## **サイト管理者は「メンバーか」も「プレミアムか」も包含する**
+ * （仕様書 4.1 / 4.2。旧・論点 18 を 2026-08-22 に上書き）
  *
- * **サイト管理者の例外を作らない。** 初稿は `isSiteAdmin ||` を入れて
- * いたが廃止された。例外を 1 つ作ると判定が 2 つ（「メンバーか」と
- * 「サイト管理者か」）になり、クライアント側（`Permissions.canDownload`）と
- * 食い違ったときに**端末のファイルが消える**。
+ * 仕様書 4.1「上位の役割は下位の権限をすべて包含する」／4.2「サイト
+ * 管理者は全リストの項目を扱える」に揃え、**サイト管理者はプレミアム機能を
+ * すべて、全リストで使える**ことにした。この判定では 2 か所に効かせる。
  *
- * このファイルは `ListAccess` も `isSiteAdmin` も受け取らない。
- * **受け取らなければ、良かれと思って例外を足すこともできない。**
- * 見るのは `lists/{listId}/members/{uid}` が有るかどうかの 1 つだけ。
+ * - **プレミアムの軸**：`premiumActive` を「プレミアム有効 OR サイト管理者」。
+ * - **メンバーの軸**：`lists[listId]` を「members が有る OR サイト管理者」で
+ *   `'member'` にする。メンバー登録が無いリストでも、サイト管理者なら
+ *   `'member'` を返し、端末のファイルが保持される。
  *
- * サイト管理者が落としたいときは、そのリストにメンバーとして入る。
+ * 一般利用者の判定は変えない。**メンバーは `lists/{listId}/members/{uid}`
+ * の存在だけ**で決め、役割の段階（readOnly / superUser / listAdmin）は
+ * 見ない。閲覧者は members に居ないので通らない（論点 9）。
+ *
+ * 初稿は「サイト管理者もプレミアムが要る・メンバーでなければ不可・例外を
+ * 作らない」で、このファイルは `isSiteAdmin` を受け取らなかった
+ * （旧・論点 18）。上の決定で上書きした。クライアント側
+ * （`Permissions.canDownload` の `role != null || isSiteAdmin`）と揃う。
  */
 import { isPremiumActive } from './premium';
 
@@ -58,7 +66,7 @@ export type ListDownloadAccess = 'member' | 'notMember';
 /** [evaluateDownloadAccess] の答え。そのまま呼び出し側へ返す形（5.1）。 */
 export interface DownloadAccessVerdict {
   /**
-   * その時刻でプレミアムが有効か。
+   * その時刻で**実効プレミアム**か（プレミアム有効 OR サイト管理者）。
    *
    * **false は正常な答えである。** 例外ではない（このファイルの冒頭）。
    */
@@ -100,17 +108,28 @@ export function evaluateDownloadAccess(params: {
   premiumUntilMs: number | null | undefined;
   /** サーバーの時刻。 */
   nowMs: number;
+  /**
+   * 呼び出し元がサイト管理者か（仕様書 4.1 / 13.5）。
+   *
+   * **`premiumActive` にだけ効く（実効プレミアム）。** 「メンバーか」の
+   * 判定には混ぜない——サイト管理者でも、そのリストのメンバーでなければ
+   * `notMember` を返す（冒頭の説明）。
+   */
+  isSiteAdmin: boolean;
   memberships: readonly ListMembership[];
 }): DownloadAccessVerdict {
-  const { premiumUntilMs, nowMs, memberships } = params;
+  const { premiumUntilMs, nowMs, isSiteAdmin, memberships } = params;
 
   const lists: Record<string, ListDownloadAccess> = {};
   for (const { listId, isMember } of memberships) {
-    lists[listId] = isMember ? 'member' : 'notMember';
+    // メンバー登録が無いリストでも、サイト管理者なら 'member' を返す
+    // （仕様書 4.2「全リストの項目を扱える」／4.1 の包含。冒頭の説明）。
+    lists[listId] = isMember || isSiteAdmin ? 'member' : 'notMember';
   }
 
   return {
-    premiumActive: isPremiumActive(premiumUntilMs, nowMs),
+    // 実効プレミアム＝プレミアム有効 OR サイト管理者（仕様書 4.1）。
+    premiumActive: isPremiumActive(premiumUntilMs, nowMs) || isSiteAdmin,
     verifiedAt: nowMs,
     lists,
   };

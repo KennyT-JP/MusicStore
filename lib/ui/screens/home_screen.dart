@@ -92,11 +92,14 @@ class HomeScreen extends ConsumerWidget {
 
 /// リストを増やす導線（docs/PREMIUM-DESIGN.md 4.3）。
 ///
-/// - プレミアムの方 …… 「リストを作る」。その場で作れる
+/// - 実効プレミアム（プレミアム or サイト管理者）…… 「リストを作る」。その場で作れる
 /// - それ以外 …… いままでどおり「リスト作成を申請」
 ///
-/// **プレミアムかどうかが分かるまで、どちらも出さない。**
-/// 既定を「プレミアムでない」に倒すと、開いた直後の一瞬だけ
+/// **実効プレミアム（[isPremiumOrAdminProvider]）を見る。** サイト管理者は
+/// プレミアム機能をすべて持つ（仕様書 4.1）ので、申請ではなく作成を出す。
+///
+/// **資格が分かるまで、どちらも出さない。**
+/// 既定を「そうでない」に倒すと、開いた直後の一瞬だけ
 /// 申請の導線が出て、直後に別のボタンへ入れ替わる。押そうとした先が
 /// 変わるので、**押し間違いを誘う**（AUDIT-CHECKLIST 観点 2。
 /// ホームの「0件」と同じ、届く前に確定を出す形）。
@@ -106,7 +109,7 @@ class _NewListButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
-    final premium = ref.watch(isPremiumProvider);
+    final premium = ref.watch(isPremiumOrAdminProvider);
 
     return premium.when(
       loading: () => const SizedBox(

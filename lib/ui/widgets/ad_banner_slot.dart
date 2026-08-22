@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/ads.dart';
-import '../../providers/app_providers.dart' show isPremiumProvider;
+import '../../providers/app_providers.dart' show isPremiumOrAdminProvider;
 import 'ad_banner_box.dart';
 
 /// バナー広告の置き場所。**出す条件はここ1か所**（`config/ads.dart` の
@@ -13,10 +13,12 @@ import 'ad_banner_box.dart';
 /// Web・プレミアム・非対応プラットフォームでは**何も描かない**
 /// （`SizedBox.shrink()`）。
 ///
-/// プレミアムの判定は**既存の [isPremiumProvider] に相乗りする**。広告用に別の
-/// 判定を作ると、片方だけ直したときに「課金したのに広告が消えない」が起きる。
+/// 判定は**実効プレミアム [isPremiumOrAdminProvider] に相乗りする**
+/// （仕様書 4.1：サイト管理者はプレミアム機能をすべて持つ＝広告も出さない）。
+/// 広告用に別の判定を作ると、片方だけ直したときに「課金したのに広告が
+/// 消えない」が起きる。
 ///
-/// **[isPremiumProvider] は `AsyncValue<bool>`。** 「プレミアムでない」と
+/// **[isPremiumOrAdminProvider] は `AsyncValue<bool>`。** 「そうでない」と
 /// 「まだ分からない」を混ぜないため、`.when` で受ける（`providers/
 /// app_providers.dart` の注意書き）。
 ///
@@ -35,7 +37,7 @@ class AdBannerSlot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final platform = this.platform ?? currentAdPlatform;
     final show = ref
-        .watch(isPremiumProvider)
+        .watch(isPremiumOrAdminProvider)
         .when(
           loading: () => false,
           error: (_, _) => false,

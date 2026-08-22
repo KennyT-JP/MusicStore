@@ -14,7 +14,12 @@ import { normalizeListName } from '../domain/paths';
 import { isPremiumActive } from '../domain/premium';
 import { USER_DEFAULT_QUOTA_BYTES } from '../domain/quota';
 import { notifySafely, siteAdminUids } from '../notifications';
-import { requireSiteAdmin, requireString, requireUid } from './access';
+import {
+  isSiteAdminRequest,
+  requireSiteAdmin,
+  requireString,
+  requireUid,
+} from './access';
 import { fail } from '../errors';
 
 /**
@@ -238,7 +243,8 @@ export const submitListRequest = onCall({ region: REGION }, async (request) => {
 });
 
 /**
- * 申請なしでリストを作る（PREMIUM-DESIGN 4.2）。**プレミアムの人だけ。**
+ * 申請なしでリストを作る（PREMIUM-DESIGN 4.2）。
+ * **実効プレミアムの人だけ（プレミアム有効 or サイト管理者／仕様書 4.1）。**
  *
  * **承認（approveListRequest）と同じトランザクション・同じ名前の予約を通す。**
  * 行うのは 1〜5 で、申請の更新（6）だけを行わない。
@@ -268,13 +274,19 @@ export const createListDirectly = onCall({ region: REGION }, async (request) => 
     // **プレミアムの確認もトランザクションの中で行う。** 外で読むと、
     // 読んでから作るまでの間に期限が切れた場合に通ってしまう。
     // プレミアムの状態は本人だけの場所にある（config.ts の userPrivate）。
+    //
+    // **サイト管理者は実効プレミアムとして通す**（仕様書 4.1。旧方針では
+    // サイト管理者もプレミアムが要ったが、上位の役割は下位の権限をすべて
+    // 包含する方針へ上書きした）。クレームはトランザクションに依存しないので
+    // 外で判定してよい。
     const state = await tx.get(db.doc(paths.userPrivate(uid)));
     const until = state.data()?.premium?.until;
     if (
       !isPremiumActive(
         until instanceof Timestamp ? until.toMillis() : null,
         nowMs
-      )
+      ) &&
+      !isSiteAdminRequest(request)
     ) {
       // **符号を分ける。** 未ログインでもメール未確認でもなく、
       // 「契約が要る」ことが画面に伝わらないと導線を出せない。

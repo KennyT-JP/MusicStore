@@ -31,7 +31,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:music_list_app/config/ads.dart';
 import 'package:music_list_app/providers/app_providers.dart'
-    show isPremiumProvider;
+    show isPremiumOrAdminProvider;
 import 'package:music_list_app/ui/widgets/ad_banner_box.dart';
 import 'package:music_list_app/ui/widgets/ad_banner_slot.dart';
 
@@ -468,8 +468,10 @@ void main() {
     // ここで確かめるのは**枠を出すかどうかの判定**——[AdBannerSlot] が
     // プラットフォームとプレミアムに応じて [AdBannerBox] を出す／畳むこと。
 
-    /// [AdBannerSlot] を1枚だけ描く。プレミアム判定は既存の
-    /// `isPremiumProvider`（`AsyncValue<bool>`）を差し替える。
+    /// [AdBannerSlot] を1枚だけ描く。判定は**実効プレミアム**
+    /// `isPremiumOrAdminProvider`（`AsyncValue<bool>`）を差し替える。
+    /// サイト管理者かどうかの合成（プレミアム or サイト管理者）は上流の
+    /// プロバイダの責務なので、ここでは合成後の実効値を直接渡す。
     Future<void> pump(
       WidgetTester tester, {
       required AdPlatform platform,
@@ -477,7 +479,7 @@ void main() {
     }) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [isPremiumProvider.overrideWithValue(premium)],
+          overrides: [isPremiumOrAdminProvider.overrideWithValue(premium)],
           child: MaterialApp(
             home: Scaffold(body: AdBannerSlot(platform: platform)),
           ),
@@ -509,6 +511,17 @@ void main() {
     });
 
     testWidgets('プレミアムには出ない', (tester) async {
+      await pump(
+        tester,
+        platform: AdPlatform.android,
+        premium: const AsyncData(true),
+      );
+      expect(find.byType(AdBannerBox), findsNothing);
+    });
+
+    testWidgets('サイト管理者（実効プレミアム）には出ない（仕様書 4.1）', (tester) async {
+      // サイト管理者はプレミアム機能をすべて持つ＝広告も出さない。
+      // 上流で `プレミアム or サイト管理者` を合成した実効値（true）が届く。
       await pump(
         tester,
         platform: AdPlatform.android,

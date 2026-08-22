@@ -35,13 +35,17 @@
  * この形を崩していないことは `functions/test/downloads.test.ts` の
  * 静的な見張りが確かめている（本文に `premiumRequired` が現れないこと）。
  *
- * ## **サイト管理者の例外を作らない**（論点 18 / 10 節の危険 8）
+ * ## **サイト管理者は実効プレミアムとして扱う**（仕様書 4.1）
  *
- * **`isSiteAdminRequest` を import しないこと。** 判定は
- * 「`lists/{listId}/members/{uid}` が有るか」の 1 つだけである。
- * ここに `isSiteAdmin ||` を足すと判定が 2 つになり、クライアント側
- * （`Permissions.canDownload`）と食い違ったときに端末のファイルが消える。
- * サイト管理者は、落としたいリストにメンバーとして入る。
+ * 仕様書 4.1「上位の役割は下位の権限をすべて包含する」に揃え、
+ * **サイト管理者はプレミアム機能をすべて持つ**（2026-08-22。旧・論点 18 を
+ * 上書き）。ここでは `isSiteAdminRequest(request)` を `evaluateDownloadAccess`
+ * へ渡し、判定側で `premiumActive` に OR する（実効プレミアム）。
+ *
+ * **混ぜるのは「プレミアムか」だけ。** 「メンバーか」は
+ * `lists/{listId}/members/{uid}` の存在で決めるまま——サイト管理者でも、
+ * そのリストのメンバーでなければ `notMember` を返す。メンバーの軸は
+ * クライアント側（`Permissions.canDownload` の `role != null`）と揃っている。
  */
 import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
@@ -49,7 +53,7 @@ import { onCall } from 'firebase-functions/v2/https';
 import { REGION, paths } from '../config';
 import { evaluateDownloadAccess, parseDownloadListIds } from '../domain/downloads';
 import { fail } from '../errors';
-import { requireUid } from './access';
+import { isSiteAdminRequest, requireUid } from './access';
 
 export const verifyDownloadAccess = onCall({ region: REGION }, async (request) => {
   // ログイン・メール確認は自前で書かない（3.1／監査 S3）。
@@ -96,6 +100,8 @@ export const verifyDownloadAccess = onCall({ region: REGION }, async (request) =
   return evaluateDownloadAccess({
     premiumUntilMs: until instanceof Timestamp ? until.toMillis() : null,
     nowMs,
+    // 実効プレミアム＝プレミアム有効 OR サイト管理者（仕様書 4.1）。
+    isSiteAdmin: isSiteAdminRequest(request),
     memberships: listIds.map((listId, index) => ({
       listId,
       // **存在だけで決める。役割（role）は読まない**（論点 9・18）。

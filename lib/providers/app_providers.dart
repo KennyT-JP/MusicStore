@@ -569,6 +569,30 @@ final isPremiumProvider = Provider<AsyncValue<bool>>((ref) {
       .whenData((private) => PremiumPolicy.isActive(private?.premiumUntil));
 });
 
+/// 機能ゲート用の**実効プレミアム**（仕様書 4.1）。
+///
+/// **実効プレミアム＝プレミアム有効（[isPremiumProvider]）OR
+/// サイト管理者（[isSiteAdminProvider]）。** 仕様書 4.1「上位の役割は
+/// 下位の権限をすべて包含する」に揃え、サイト管理者はプレミアム機能
+/// （ダウンロード・広告非表示・申請なしのリスト作成）をすべて使える。
+///
+/// **契約状態そのものは [isPremiumProvider] が持つ**（設定画面の表示など）。
+/// こちらは機能を出し分けるためのゲート専用。両者を使い分ける。
+///
+/// **[isPremiumProvider] と同じ規約：届く前に false へ倒さない。**
+/// どちらかが読み込み中なら読み込み中、どちらかがエラーならエラー、
+/// 両方そろって初めて `premium || admin` を返す（`AsyncValue` を保つ）。
+final isPremiumOrAdminProvider = Provider<AsyncValue<bool>>((ref) {
+  final premium = ref.watch(isPremiumProvider);
+  final admin = ref.watch(isSiteAdminProvider);
+  return premium.when(
+    loading: () => const AsyncValue<bool>.loading(),
+    error: AsyncValue<bool>.error,
+    data: (isPremium) =>
+        admin.whenData((isSiteAdmin) => isPremium || isSiteAdmin),
+  );
+});
+
 /// クーポンの一覧（サイト管理者のみ／設計 5）。
 ///
 /// **Firestore からは読めない。** ルールで全面禁止にしてあり、

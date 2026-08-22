@@ -62,7 +62,10 @@ Widget _app({
     listAccessProvider(_listId).overrideWith((ref) => access),
     listStatsProvider(_listId).overrideWith((ref) => Stream.value(null)),
     listMembersProvider(_listId).overrideWith((ref) => Stream.value(const [])),
+    // 実効プレミアム（`isPremiumOrAdminProvider`）を premium で決めるため、
+    // サイト管理者の軸は false 固定にする（仕様書 4.1）。
     isPremiumProvider.overrideWithValue(premium),
+    isSiteAdminProvider.overrideWith((ref) => false),
     downloadsProvider.overrideWith(() => FakeDownloadsController(index)),
     audioPlayerHandleProvider.overrideWithValue(FakeAudioHandle()),
   ],
@@ -168,13 +171,15 @@ void main() {
     expect(find.text('このリストを端末に保存'), findsNothing);
   });
 
-  testWidgets('メンバーでないサイト管理者にも出さない（論点 18）', (tester) async {
+  testWidgets('メンバーでないサイト管理者にも出す（全リスト／仕様書 4.2）', (tester) async {
+    // サイト管理者は「全リストの項目を扱える」ので、参加していないリストでも
+    // 一括ダウンロードを出す（旧・論点 18 を上書き）。
     await tester.pumpWidget(
       _app(access: const ListAccess(isSiteAdmin: true, role: null)),
     );
     await tester.pumpAndSettle();
 
     await _openListMenu(tester);
-    expect(find.text('このリストを端末に保存'), findsNothing);
+    expect(find.text('このリストを端末に保存'), findsOneWidget);
   });
 }

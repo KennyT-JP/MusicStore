@@ -108,6 +108,9 @@ Widget _app({required bool downloadsSupported, required bool removed}) =>
           _listId,
         ).overrideWith((ref) => Stream.value(const [])),
         isPremiumProvider.overrideWithValue(const AsyncData(true)),
+        // 実効プレミアムはサイト管理者も含むが、ここでは premium 側で true を
+        // 与えるので管理者の軸は false 固定でよい（仕様書 4.1）。
+        isSiteAdminProvider.overrideWith((ref) => false),
         downloadsProvider.overrideWith(() => FakeDownloadsController()),
         audioPlayerHandleProvider.overrideWithValue(FakeAudioHandle()),
       ],

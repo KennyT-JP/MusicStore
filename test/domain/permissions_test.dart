@@ -349,16 +349,21 @@ void main() {
   // -----------------------------------------------------------------------
   // オフライン用ダウンロード（docs/DOWNLOAD-DESIGN.md 5.2 / 8.1）
   // -----------------------------------------------------------------------
-  group('ダウンロードの可否（DOWNLOAD-DESIGN 5.2・論点 9 / 12 / 18）', () {
+  group('ダウンロードの可否（DOWNLOAD-DESIGN 5.2・論点 9 / 12・仕様書 4.1）', () {
     const viewer = ListAccess(isSiteAdmin: false, role: null, isViewer: true);
 
-    // **サイト管理者でメンバーでもある人。** ここが 2 行に分かれるのが要点
-    // （8.1 の表）。「サイト管理者は不可」と読んで `!isSiteAdmin && …` と
-    // 書くと、この人が落ちる。**外すのは例外であって、その人ではない。**
+    // **サイト管理者でメンバーでもある人。** 役割を持つのでメンバーとして通る。
+    // 「サイト管理者は不可」と読んで `!isSiteAdmin && …` と書くと、この人が
+    // 落ちる。**外すのは例外であって、その人ではない。**
     const siteAdminMember = ListAccess(
       isSiteAdmin: true,
       role: ListRole.readOnly,
     );
+
+    // `canDownload` は純関数で、受け取る `isPremium` は呼び出し側
+    // （`canDownloadProvider`）が渡す**実効プレミアム**（プレミアム or
+    // サイト管理者／仕様書 4.1）。ここで固定するのは「メンバー軸」と
+    // 「渡された実効プレミアム」の 2 つで決まること。
 
     test('Read Only のメンバーはダウンロードできる（論点 9）', () {
       // 「メンバーのみ（Read Only を含む）」。ここを
@@ -383,39 +388,46 @@ void main() {
       expect(Permissions.canDownload(outsider, isPremium: true), isFalse);
     });
 
-    test('サイト管理者でメンバーではない人はできない（論点 18）', () {
-      // **`hasAtLeast(readOnly)` へ戻すと、この行だけが落ちる。**
-      // `ListAccess.siteAdmin()` は effectiveRole が listAdmin になるため。
-      //
-      // 通してしまうと、サーバー側（verifyDownloadAccess）は members の
-      // 存在だけで判定するので `notMember` を返し、
-      // **落とせたのに次の起動で端末から消える。**
+    test('サイト管理者はメンバーでなくてもできる（全リスト／仕様書 4.2）', () {
+      // **サイト管理者は「全リストの項目を扱える」（4.2）ので、メンバーで
+      // なくてもダウンロードできる。** メンバー軸も `|| access.isSiteAdmin` で
+      // 例外にした（サーバーの verifyDownloadAccess も全リストを `member` で
+      // 返す）。前提としてサイト管理者は effectiveRole が listAdmin。
       expect(
         siteAdmin.hasAtLeast(ListRole.readOnly),
         isTrue,
         reason: '前提：サイト管理者は effectiveRole が listAdmin になる',
       );
-      expect(Permissions.canDownload(siteAdmin, isPremium: true), isFalse);
+      expect(Permissions.canDownload(siteAdmin, isPremium: true), isTrue);
     });
 
-    test('サイト管理者でメンバーでもある人はできる（論点 18）', () {
+    test('サイト管理者でメンバーでもある人はできる（仕様書 4.1）', () {
       // 役割を持っているのでメンバーとして通る。
       // **行きすぎた修正（`!access.isSiteAdmin && …`）でこの行が落ちる。**
       expect(Permissions.canDownload(siteAdminMember, isPremium: true), isTrue);
     });
 
-    test('プレミアムが切れていたら、誰もできない（論点 12・18）', () {
-      // **「ダウンロードは機能であって資産ではない」**（2.1）。
-      // 失効したら機能が止まる。曲もリストも残る。
-      expect(Permissions.canDownload(readOnly, isPremium: false), isFalse);
-      expect(Permissions.canDownload(superUser, isPremium: false), isFalse);
-      expect(Permissions.canDownload(listAdmin, isPremium: false), isFalse);
-      expect(Permissions.canDownload(viewer, isPremium: false), isFalse);
-      // **サイト管理者にも例外を作らない**（論点 18）。
+    test('canDownload は isSiteAdmin からプレミアムを導き出さない（実効値は上流で合成）', () {
+      // **仕様書 4.1・旧・論点 18 を上書き。** サイト管理者は実効プレミアム
+      // 扱いになったが、その合成は 1 か所（`isPremiumOrAdminProvider`）に置く。
+      // **`canDownload` 自身は渡された `isPremium` を素直に使う**——ここで
+      // `|| access.isSiteAdmin` を足すと、プレミアムの判定が 2 か所になる。
+      // だから「サイト管理者メンバーでも、渡された実効値が false なら false」を
+      // 固定して、二重化を弾く。実際の運用では上流が true を渡すので落とせる。
       expect(
         Permissions.canDownload(siteAdminMember, isPremium: false),
         isFalse,
       );
+    });
+
+    test('実効プレミアムでなければ、メンバーでも落とせない（論点 12）', () {
+      // **「ダウンロードは機能であって資産ではない」**（2.1）。
+      // 実効プレミアム（プレミアム or サイト管理者）が無ければ機能は止まる。
+      // 曲もリストも残る。一般メンバーは契約が切れれば false が渡る。
+      expect(Permissions.canDownload(readOnly, isPremium: false), isFalse);
+      expect(Permissions.canDownload(superUser, isPremium: false), isFalse);
+      expect(Permissions.canDownload(listAdmin, isPremium: false), isFalse);
+      expect(Permissions.canDownload(viewer, isPremium: false), isFalse);
     });
   });
 }

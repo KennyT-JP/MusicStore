@@ -30,8 +30,9 @@ const member = [{ listId: 'listA', isMember: true }];
 const verdict = (
   premiumUntilMs: number | null,
   memberships = member,
-  nowMs = NOW
-) => evaluateDownloadAccess({ premiumUntilMs, nowMs, memberships });
+  nowMs = NOW,
+  isSiteAdmin = false
+) => evaluateDownloadAccess({ premiumUntilMs, nowMs, isSiteAdmin, memberships });
 
 describe('ダウンロードの権限（5.1）', () => {
   test('メンバーかつプレミアムなら許可（論点 9・12）', () => {
@@ -110,6 +111,36 @@ describe('プレミアム失効は正常応答で返す（危険 4）', () => {
   test('premium を持たない人も、例外ではなく false（PREMIUM-DESIGN 7）', () => {
     expect(verdict(null)).toEqual({
       premiumActive: false,
+      verifiedAt: NOW,
+      lists: { listA: 'member' },
+    });
+  });
+});
+
+/**
+ * サイト管理者は実効プレミアム（仕様書 4.1・旧・論点 18 を上書き）
+ *
+ * 「上位の役割は下位の権限をすべて包含する」に揃え、サイト管理者は
+ * プレミアム機能をすべて持つ。`premiumActive` に `isSiteAdmin` を OR する。
+ * **ただし混ぜるのは「プレミアムか」だけ**——「メンバーか」は別軸のまま。
+ */
+describe('サイト管理者は実効プレミアム（仕様書 4.1）', () => {
+  test('プレミアムを持たなくても premiumActive: true', () => {
+    expect(verdict(null, member, NOW, true).premiumActive).toBe(true);
+  });
+
+  test('期限が切れていても premiumActive: true', () => {
+    expect(verdict(NOW - DAY, member, NOW, true).premiumActive).toBe(true);
+  });
+
+  test('サイト管理者はメンバーでなくても member（全リスト／仕様書 4.2）', () => {
+    // サイト管理者は「全リストの項目を扱える」（4.2）ので、members に
+    // 居なくても member を返す。クライアントの Permissions.canDownload が
+    // `role != null || isSiteAdmin` を許すのと揃う。
+    expect(
+      verdict(null, [{ listId: 'listA', isMember: false }], NOW, true)
+    ).toEqual({
+      premiumActive: true,
       verifiedAt: NOW,
       lists: { listA: 'member' },
     });
@@ -253,13 +284,19 @@ describe('例外にしていないことの見張り（危険 4・8）', () => {
     expect([...domain.matchAll(/\bthrow\b/g)]).toHaveLength(0);
   });
 
-  test('サイト管理者の例外を作っていない（論点 18・危険 8）', () => {
-    // **`isSiteAdminRequest` を import しないこと**（5.1 の表）。
-    // 良かれと思って `isSiteAdmin ||` を戻すと判定が 2 つになり、
-    // クライアントと食い違ったときに端末のファイルが消える。
+  test('サイト管理者は実効プレミアムとして扱う（仕様書 4.1・旧・論点 18 を上書き）', () => {
+    // 「上位の役割は下位の権限をすべて包含する」に揃え、サイト管理者は
+    // プレミアム機能をすべて持つ方針へ上書きした（2026-08-22）。
+    // 呼び出し側は access.ts の isSiteAdminRequest を使い、ドメインは
+    // isSiteAdmin を受け取って premiumActive に OR する。
+    expect(callable).toContain('isSiteAdminRequest');
+    expect(domain).toContain('isSiteAdmin');
+
+    // **混ぜるのは「プレミアムか」だけ。** 「メンバーか」の判定には
+    // 役割の階層を持ち込まない（notMember は notMember のまま）。
+    // ここが崩れると、メンバーでないサイト管理者が member 扱いになり、
+    // クライアントと食い違って端末のファイルが消える。
     for (const source of [callable, domain]) {
-      expect(source).not.toContain('isSiteAdmin');
-      expect(source).not.toContain('siteAdmin');
       expect(source).not.toContain('hasAtLeast');
       expect(source).not.toContain('effectiveRole');
     }

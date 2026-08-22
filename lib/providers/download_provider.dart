@@ -338,10 +338,16 @@ class OnlineController extends Notifier<bool> {
 // 判定（domain を呼ぶだけ）
 // ---------------------------------------------------------------------------
 
-/// そのリストの曲を落とせるか（5.2・論点 9・12・18）。
+/// そのリストの曲を落とせるか（5.2・論点 9・12・仕様書 4.1）。
+///
+/// **プレミアムの軸には実効プレミアム（[isPremiumOrAdminProvider]）を使う。**
+/// サイト管理者はプレミアム機能をすべて持つ（仕様書 4.1）ので、
+/// `Permissions.canDownload` へは実効値を渡す。**「メンバーか」の軸は
+/// `Permissions.canDownload` 内の `role != null` のまま**——サイト管理者でも
+/// メンバーでないリストは落とせない（サーバーの `verifyDownloadAccess` と揃う）。
 ///
 /// **`AsyncValue` のまま返す**（`app_providers.dart` の `isPremiumProvider`
-/// と同じ理由）。届く前に false を確定させると、プレミアムの人に一瞬
+/// と同じ理由）。届く前に false を確定させると、資格のある人に一瞬
 /// 「ダウンロードできません」が見える。**読み込み中はどちらも出さないこと**
 /// （6.5）。
 final canDownloadProvider = Provider.family<AsyncValue<bool>, String>((
@@ -350,7 +356,7 @@ final canDownloadProvider = Provider.family<AsyncValue<bool>, String>((
 ) {
   final access = ref.watch(listAccessProvider(listId));
   return ref
-      .watch(isPremiumProvider)
+      .watch(isPremiumOrAdminProvider)
       .whenData(
         (isPremium) => Permissions.canDownload(access, isPremium: isPremium),
       );
@@ -359,11 +365,14 @@ final canDownloadProvider = Provider.family<AsyncValue<bool>, String>((
 /// 閲覧者にはボタンそのものを出さない（6.5）。
 ///
 /// **プレミアムを契約しても使えない**ので、押せるものを見せると
-/// 「契約したのに使えない」になる。サイト管理者でメンバーでない人も同じ
-/// （論点 18）——判定は `role != null` の 1 つだけ。
-final showsDownloadButtonProvider = Provider.family<bool, String>(
-  (ref, listId) => ref.watch(listAccessProvider(listId)).role != null,
-);
+/// 「契約したのに使えない」になる。判定は
+/// `role != null || isSiteAdmin`——**サイト管理者は全リストで落とせる**
+/// （仕様書 4.2。メンバーでないリストでもボタンを出す）。閲覧者は
+/// `role == null` かつ `isSiteAdmin == false` なので出ない。
+final showsDownloadButtonProvider = Provider.family<bool, String>((ref, listId) {
+  final access = ref.watch(listAccessProvider(listId));
+  return access.role != null || access.isSiteAdmin;
+});
 
 /// ダウンロード済み画面の上に出す帯（6.1・論点 21）。
 final offlineNoticeBandProvider = Provider<OfflineNoticeBand>((ref) {

@@ -6,17 +6,17 @@
 /// | --- | --- |
 /// | プレミアムでない人 | **薄く出す。** 押すと案内＋クーポン入力への導線（論点 19） |
 /// | 閲覧者（viewer） | **出さない**（論点 9） |
-/// | サイト管理者でメンバーではない人 | **出さない**（論点 18） |
+/// | サイト管理者 | **出す**（メンバーでなくても・全リスト／仕様書 4.2） |
 /// | 判定が届く前 | **どちらも出さない** |
 /// | Web で開いている人 | **出さない**（7 節の告知に置き換える） |
 ///
-/// **3 つの「出さない」は、守るものが違う。**
+/// **2 つの「出さない」は、守るものが違う。**
 ///
 /// | 行 | 何を防ぐか |
 /// | --- | --- |
 /// | 閲覧者に出さない | 契約しても使えないものを押させること |
-/// | メンバーでないサイト管理者に出さない | 落とせたのに次の起動で消えること（論点 18） |
 /// | プレミアムでない人には**出す** | **行きすぎた修正。** 「使えない人には出さない」と読んで隠すと、契約する理由が伝わらなくなる |
+/// | サイト管理者には**出す** | **行きすぎた修正。** 「メンバーでないと不可」と読んで隠すと、全リストを扱える権限（4.2）と食い違う |
 ///
 /// 判定そのもの（`Permissions.canDownload`）は
 /// `test/domain/permissions_test.dart` が固定している。ここで確かめるのは
@@ -85,7 +85,11 @@ Widget _wrap({
 }) => ProviderScope(
   overrides: [
     listAccessProvider(_listId).overrideWith((ref) => access),
+    // `premium` は実効プレミアム（`isPremiumOrAdminProvider`）に効かせる。
+    // サイト管理者の軸は listAccessProvider 側で与えるので、ここは false 固定
+    // にして「渡した premium がそのまま実効値になる」形にする（仕様書 4.1）。
     isPremiumProvider.overrideWithValue(premium),
+    isSiteAdminProvider.overrideWith((ref) => false),
     downloadsProvider.overrideWith(() => FakeDownloadsController(index)),
     audioDownloadSupportedProvider.overrideWithValue(downloadsSupported),
   ],
@@ -168,10 +172,10 @@ void main() {
       expect(find.byType(IconButton), findsNothing);
     });
 
-    testWidgets('サイト管理者でも、そのリストのメンバーでなければ出さない（論点 18）', (tester) async {
-      // 押せると、落とせたのに次の起動で消える——サーバーは
-      // `members` の存在だけで判定するため。
-      // **サイト管理者向けの案内も出さない**（メンバーとして入れば使える）。
+    testWidgets('サイト管理者はメンバーでなくても出す（全リスト／仕様書 4.2）', (tester) async {
+      // サイト管理者は「全リストの項目を扱える」ので、参加していないリストでも
+      // ダウンロードボタンを出す（旧・論点 18 を上書き）。サーバーの
+      // verifyDownloadAccess も全リストを `member` で返すため、落とした後も残る。
       await tester.pumpWidget(
         _wrap(
           access: const ListAccess(isSiteAdmin: true, role: null),
@@ -180,7 +184,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(IconButton), findsNothing);
+      expect(find.byType(IconButton), findsOneWidget);
     });
 
     testWidgets('サイト管理者でもメンバーなら出す（行きすぎた修正の見張り）', (tester) async {

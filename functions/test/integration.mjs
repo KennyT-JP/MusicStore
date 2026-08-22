@@ -1244,6 +1244,13 @@ if (!listId) {
   check('未ログインのときは signInRequired（premiumRequired と区別する）',
         codeOf(r) === 'signInRequired', codeOf(r));
 
+  // **サイト管理者は実効プレミアムで通る**（仕様書 4.1・旧・論点 18 を上書き）。
+  // 自分がプレミアムを契約していなくても、上位の役割が下位の権限を包含する。
+  r = await call('createListDirectly', { listName: `管理者直接${stamp}` },
+                 siteAdmin.idToken);
+  check('サイト管理者は申請なしで直接作成できる（実効プレミアム／仕様書 4.1）',
+        !!r.body?.result?.listId, JSON.stringify(r.body).slice(0, 120));
+
   // --- 期限が切れた人は作れない（D3） ---
   r = await call('extendPremium', { uid: premiumUser.localId, months: -12 },
                  siteAdmin.idToken);
@@ -1770,19 +1777,23 @@ if (!listId) {
         r.body?.error === undefined && r.body?.result?.premiumActive === true,
         JSON.stringify(r.body?.error ?? r.body?.result).slice(0, 120));
 
-  // --- サイト管理者でも、そのリストのメンバーでなければ不許可 ---
+  // --- サイト管理者は実効プレミアム。ただし「メンバーか」は別軸 ---
   //
-  // **論点 18・10 節の危険 8。初稿はここに例外を入れていた。**
-  // `isSiteAdmin ||` を足すと判定が 2 つになり、クライアント側と
-  // 食い違ったときに端末のファイルが消える。**例外が無いことを見張る。**
+  // **仕様書 4.1／4.2（旧・論点 18 を上書き）。** サイト管理者はプレミアム機能を
+  // すべて持つので `premiumActive` は true。**メンバー軸もサイト管理者は例外**で、
+  // 「全リストの項目を扱える」（4.2）に合わせ、members に居なくても `member` を
+  // 返す（クライアントの `role != null || isSiteAdmin` と揃う）。
   const adminMember = await doc(`lists/${listId}/members/${siteAdmin.localId}`);
   check('土台：サイト管理者は members に居ない（roles.ts の説明どおり）',
         adminMember === null || adminMember.fields === undefined,
         JSON.stringify(adminMember?.fields ?? null).slice(0, 60));
 
   r = await call('verifyDownloadAccess', { listIds: [listId] }, siteAdmin.idToken);
-  check('サイト管理者でも、メンバーでなければ notMember（論点 18）',
-        r.status === 200 && r.body?.result?.lists?.[listId] === 'notMember',
+  check('サイト管理者は premiumActive: true（実効プレミアム／仕様書 4.1）',
+        r.status === 200 && r.body?.result?.premiumActive === true,
+        JSON.stringify(r.body).slice(0, 160));
+  check('サイト管理者はメンバーでなくても member（全リストでダウンロード可／仕様書 4.2）',
+        r.body?.result?.lists?.[listId] === 'member',
         JSON.stringify(r.body).slice(0, 160));
 
   // --- プレミアムが切れたら不許可。**例外ではない**（危険 4） ---
