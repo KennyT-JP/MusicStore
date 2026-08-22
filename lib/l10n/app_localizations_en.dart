@@ -380,11 +380,11 @@ class AppL10nEn extends AppL10n {
   String get noListsYet => 'There are no lists yet.';
 
   @override
-  String get changeQuota => 'Change storage limit';
+  String get changeQuota => 'Change storage limit (display only)';
 
   @override
   String changeQuotaBody(Object name) {
-    return 'Enter the limit for \"$name\" in MB.';
+    return 'Enter the limit for \"$name\" in MB. This value is display only and does not affect whether uploads are allowed. The limit that actually applies is each user\'s total storage (Site admin → Users).';
   }
 
   @override
@@ -436,8 +436,12 @@ class AppL10nEn extends AppL10n {
   String get defaultQuotaLabel => 'Default storage limit for new lists';
 
   @override
+  String get perListDefaultQuotaLabel =>
+      'Default storage limit for new lists (display only)';
+
+  @override
   String get defaultQuotaHelp =>
-      'Default 1024 (1GB). Change existing lists from \"Lists and storage\".';
+      'Default 1024 (1GB). Change existing lists from \"Lists and storage\". This value is display only and does not affect whether uploads are allowed. The limit that actually applies is each user\'s total storage (Site admin → Users).';
 
   @override
   String get purgeGraceLabel => 'Days to keep deleted files';

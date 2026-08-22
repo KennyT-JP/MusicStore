@@ -34,7 +34,7 @@ List<File> _productionFiles() => filesUnder('lib')
     .map((e) => e.file)
     .toList();
 
-/// `//`・`///` のコメント行を取り除く。
+/// `//`・`///` のコメント行と `/* */` のブロックコメントを取り除く。
 ///
 /// **コメントに書いた名前は「呼び出し」ではない。** 以前はコメント行も
 /// そのまま数えていたため、実装を消してコメントに名前だけ残しても
@@ -52,8 +52,17 @@ List<File> _productionFiles() => filesUnder('lib')
 /// （docs/AUDIT-CHECKLIST.md 観点 4「前提が崩れると自動的に通る」）。
 /// `.gitattributes` が LF に統一しているとはいえ、
 /// 編集の仕方ひとつで CRLF は混ざる（2026-08-16 に実際に混ざった）。
+///
+/// **監査 第6回 B1: この helper 自身に単体テストが無かった。**
+/// 過去の 6 つの抜け道はすべて手当て済みだが、その手当てが将来退行しても
+/// 誰も気づけない状態だったため、下の `group('_stripComments…')` で
+/// 意地悪な入力を固定する。その過程で、`/* */` のブロックコメントは
+/// 元々まったく除去されていなかったことが分かったので、非貪欲・複数行
+/// 対応で合わせて除去するようにした（現状 `lib/` にブロックコメントは
+/// 無いため既存の走査結果への影響は無い）。
 String _stripComments(String source) => source
     .replaceAll('\r\n', '\n')
+    .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
     .split('\n')
     .map((line) => line.replaceFirst(RegExp(r'(?<!:)//.*$'), ''))
     .join('\n');
@@ -65,6 +74,77 @@ void main() {
     production = _stripComments(
       _productionFiles().map((f) => f.readAsStringSync()).join('\n'),
     );
+  });
+
+  group('_stripComments（コメント除去 helper 自身の検査／監査 第6回 B1）', () {
+    // 「見張りの見張り」不在の是正。ここより上のテストは、この helper が
+    // 正しく動くことを前提にしている。helper 自身が将来退行しても、
+    // ここが赤くならない限り誰も気づけない。
+
+    test('コメントだけに書いた名前は、除去後は見つからない', () {
+      const source = '''
+// oldMethod() はもう呼ばれていない
+void other() {}
+''';
+      // ストリップ前は文字列としてまだ含まれている＝素朴に検索すると
+      // 「使用あり」と誤判定してしまう、という抜け道そのものを示す。
+      expect(source.contains('oldMethod()'), isTrue);
+      // ストリップ後は消えている＝正しく「死蔵」に戻る。
+      expect(_stripComments(source).contains('oldMethod()'), isFalse);
+    });
+
+    test('行末コメント（`呼び出し(); // 説明`）も落ちる', () {
+      const source = 'realCall(); // fakeCall() は説明の中だけ';
+      final stripped = _stripComments(source);
+      expect(stripped.contains('realCall()'), isTrue);
+      expect(stripped.contains('fakeCall()'), isFalse);
+    });
+
+    test('CRLF 混じりでもコメントを落とせる', () {
+      // `.` が `\r` に一致しないための取りこぼしが、
+      // 2026-08-16 に実際に起きた（コメント参照）。
+      const source =
+          'realCall();\r\n// fakeCall() はコメントの中だけ\r\nother();';
+      final stripped = _stripComments(source);
+      expect(stripped.contains('realCall()'), isTrue);
+      expect(stripped.contains('other()'), isTrue);
+      expect(stripped.contains('fakeCall()'), isFalse);
+    });
+
+    test('URL の // はコメントとして落とさない（直前が `:`）', () {
+      const source = "final url = 'https://example.com/fakeCall';";
+      expect(_stripComments(source).contains('fakeCall'), isTrue);
+    });
+
+    test('`/* */` ブロックコメントの中の名前も落ちる', () {
+      const source = '/* fakeCall() は無効化中 */\nrealCall();';
+      final stripped = _stripComments(source);
+      expect(stripped.contains('realCall()'), isTrue);
+      expect(stripped.contains('fakeCall()'), isFalse);
+    });
+
+    test('複数行にまたがるブロックコメントも落ちる', () {
+      const source = '''
+/*
+ * fakeCall() はここに書いてあるだけで
+ * 本当は呼ばれていない
+ */
+realCall();
+''';
+      final stripped = _stripComments(source);
+      expect(stripped.contains('realCall()'), isTrue);
+      expect(stripped.contains('fakeCall()'), isFalse);
+    });
+
+    test('複数のブロックコメントを1つに巻き込まない（非貪欲）', () {
+      // `.*` を貪欲にすると、離れた 2 つの `/* */` の間の
+      // realCall() まで巻き添えで消えてしまう。
+      const source = '/* fakeA() */ realCall(); /* fakeB() */';
+      final stripped = _stripComments(source);
+      expect(stripped.contains('realCall()'), isTrue);
+      expect(stripped.contains('fakeA()'), isFalse);
+      expect(stripped.contains('fakeB()'), isFalse);
+    });
   });
 
   test('Permissions のメソッドはすべて本番から呼ばれている', () {

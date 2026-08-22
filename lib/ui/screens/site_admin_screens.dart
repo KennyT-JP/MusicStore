@@ -1829,7 +1829,13 @@ class _SiteAdminSettingsScreenState
               const SizedBox(height: 24),
               _SettingField(
                 controller: _quotaMb,
-                label: l10n.defaultQuotaLabel,
+                // **`defaultQuotaLabel` は使わない。** そちらは
+                // `_askNumber`（`setUserQuota` の入力欄）と共用のキーで、
+                // 実際に効く方の入力欄まで「表示専用」になってしまう
+                // （監査 第6回是正の作業中に判明。`premium_screens_test.dart`
+                // 「容量上限は『人ごとの合計』に効くと書いてある」が検出）。
+                // ここ（リストごとの既定値＝表示専用）専用のキーを使う。
+                label: l10n.perListDefaultQuotaLabel,
                 suffix: 'MB',
                 help: l10n.defaultQuotaHelp,
               ),

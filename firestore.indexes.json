@@ -29,6 +29,15 @@
         { "fieldPath": "requestedBy", "order": "ASCENDING" },
         { "fieldPath": "requestedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "//": "既読通知の定期削除（purgeExpiredNotifications）が collectionGroup('notifications') を isRead == true で絞ってから createdAt の範囲で引くための複合索引（監査 第6回・B2）。以前は createdAt の範囲だけで引き、既読・未読の判定は取得後にコード側で行っていたが、createdAt 昇順で返るため、cutoff より古い未読通知が limit 件以上溜まったユーザーがいると、毎回その未読分だけが返り続けて既読の古い通知に永久に到達できず削除が止まっていた。isRead を where に足したことで、この合成索引が要る。",
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "//fieldOverrides": "コレクショングループを単一フィールドで引くには、その範囲の索引を明示する必要がある（自動で作られるのはコレクション範囲のみ）。ホームの参加リスト一覧と自分の参加申請がこれに当たる。既定のコレクション範囲の索引も、上書きで消えないよう並べてある。",

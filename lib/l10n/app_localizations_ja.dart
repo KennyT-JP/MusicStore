@@ -365,11 +365,11 @@ class AppL10nJa extends AppL10n {
   String get noListsYet => 'リストはまだありません。';
 
   @override
-  String get changeQuota => '容量上限を変更';
+  String get changeQuota => '容量上限を変更（表示専用）';
 
   @override
   String changeQuotaBody(Object name) {
-    return '「$name」の上限を MB 単位で入力してください。';
+    return '「$name」の上限を MB 単位で入力してください。この値は表示用で、実際のアップロード可否には効きません。実際に効く上限は利用者ごとの合計容量です（サイト管理 → ユーザー管理）。';
   }
 
   @override
@@ -418,7 +418,11 @@ class AppL10nJa extends AppL10n {
   String get defaultQuotaLabel => '新規リストの容量上限';
 
   @override
-  String get defaultQuotaHelp => '初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。';
+  String get perListDefaultQuotaLabel => '新規リストの容量上限（表示専用）';
+
+  @override
+  String get defaultQuotaHelp =>
+      '初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。この値は表示用で、実際のアップロード可否には効きません。実際に効く上限は利用者ごとの合計容量です（サイト管理 → ユーザー管理）。';
 
   @override
   String get purgeGraceLabel => '削除ファイルの保持日数';

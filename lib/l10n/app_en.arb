@@ -129,8 +129,8 @@
     }
   },
   "noListsYet": "There are no lists yet.",
-  "changeQuota": "Change storage limit",
-  "changeQuotaBody": "Enter the limit for \"{name}\" in MB.",
+  "changeQuota": "Change storage limit (display only)",
+  "changeQuotaBody": "Enter the limit for \"{name}\" in MB. This value is display only and does not affect whether uploads are allowed. The limit that actually applies is each user's total storage (Site admin → Users).",
   "@changeQuotaBody": {
     "placeholders": {
       "name": {
@@ -176,7 +176,8 @@
   "siteAdminGranted": "They are now a site admin. The change applies after they sign in again.",
   "siteAdminRevoked": "They are no longer a site admin. The change applies after they sign in again.",
   "defaultQuotaLabel": "Default storage limit for new lists",
-  "defaultQuotaHelp": "Default 1024 (1GB). Change existing lists from \"Lists and storage\".",
+  "perListDefaultQuotaLabel": "Default storage limit for new lists (display only)",
+  "defaultQuotaHelp": "Default 1024 (1GB). Change existing lists from \"Lists and storage\". This value is display only and does not affect whether uploads are allowed. The limit that actually applies is each user's total storage (Site admin → Users).",
   "purgeGraceLabel": "Days to keep deleted files",
   "unitDays": "days",
   "purgeGraceHelp": "Default 30. List administrators can restore during this period, and the space stays used.",

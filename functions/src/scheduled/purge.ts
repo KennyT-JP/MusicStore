@@ -91,13 +91,26 @@ export function shouldPurgeNotification(
 }
 
 /**
- * 既読のまま保持日数を過ぎた通知を削除する（監査 第5回・群B）。
+ * 既読のまま保持日数を過ぎた通知を削除する（監査 第5回・群B、第6回・B2）。
  *
- * **クエリは createdAt の範囲だけに絞る。** isRead を where に足すと
- * 等価＋範囲の合成索引が要り、firestore.indexes.json に単一フィールド
- * 索引を書くと配信が止まる落とし穴に触れる。createdAt 単体の範囲なら
- * collectionGroup の自動索引で足りる。既読かどうかの絞り込みは
- * 取得後にコード側（shouldPurgeNotification）で行う。**未読は消さない。**
+ * **クエリの段階で isRead == true に絞ってから createdAt の範囲を引く。**
+ * 以前は createdAt の範囲だけで引き、既読かどうかは取得後にコード側
+ * （shouldPurgeNotification）で判定していた。しかし createdAt 昇順
+ * （暗黙）で最古の MAX_ITEMS_PER_RUN 件を返すため、あるユーザーに
+ * cutoff より古い未読通知が limit 件以上溜まると、毎回その未読分だけが
+ * 返り続け、それより新しい既読の通知には永久に到達できず削除が
+ * 止まっていた（監査 第6回・B2）。
+ *
+ * isRead の等価条件を足したことで、collectionGroup の合成索引
+ * （isRead ASC + createdAt ASC）が要る。firestore.indexes.json の
+ * indexes に宣言済み。**単一フィールドの索引をここに書くと配信が
+ * 止まる**（同ファイル冒頭の注記）が、これは等価＋範囲の合成条件なので
+ * 該当しない。
+ *
+ * 取得後の shouldPurgeNotification による判定は、クエリの絞り込みと
+ * 重複するが、安全側に倒してそのまま残す（isRead の型崩れや createdAt
+ * の欠損など、クエリだけでは拾いきれない異常値の最終防衛線）。
+ * **未読は消さない。**
  *
  * purgeExpiredItems と同じく 1 回の実行で MAX_ITEMS_PER_RUN 件までに
  * 抑える。消し切れなくても次回の実行で続きを片づける。
@@ -109,6 +122,7 @@ async function purgeExpiredNotifications(retentionDays: number): Promise<number>
 
   const expired = await db
     .collectionGroup('notifications')
+    .where('isRead', '==', true)
     .where('createdAt', '<', cutoff)
     .limit(MAX_ITEMS_PER_RUN)
     .get();

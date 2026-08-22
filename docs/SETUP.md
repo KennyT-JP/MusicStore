@@ -1048,15 +1048,16 @@ node scripts/build-manual.mjs
 >
 > 5 本を並列に走らせ、エミュレータの起動・後片付けまで行います
 > （約 3 分・別窓なし）。**配信の前にこれを通してください。**
+> 終わると件数のサマリが出ます。**それが正本です**（この文書には書き写しません）。
 > 以下は、個別に動かしたいときの説明です。
 
 ### 単体テスト
 
 ```sh
-flutter test      # 438 件
+flutter test
 dart analyze --fatal-infos   # 指摘 0 件が基準
 
-cd functions && npm test   # 122 件（サーバー側のドメインロジック・通知）
+cd functions && npm test   # サーバー側のドメインロジック・通知
 ```
 
 権限判定・容量上限・連番・共有リンク・リダイレクト判定・レスポンシブな外枠を検証します。Firebase に接続せず動くため、数秒で終わります。
@@ -1073,7 +1074,7 @@ cd functions && npm test   # 122 件（サーバー側のドメインロジッ�
 ```sh
 cd rules-test
 npm install
-npm test          # 191 件（Firestore 175 件・Storage 13 件・書き方の見張り 3 件。スキップなし）
+npm test          # Firestore・Storage・書き方の見張り。スキップなし
 ```
 
 Firestore ルールは全件エミュレータで検証できます。
@@ -1114,7 +1115,7 @@ Firestore ルールは全件エミュレータで検証できます。
 
 ### Cloud Functions の統合テスト
 
-エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます（193 件）。
+エミュレータ上で実際に関数を呼び出し、Firestore の状態を確かめます。
 
 ```sh
 cd functions && npm run test:integration

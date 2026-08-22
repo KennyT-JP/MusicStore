@@ -9,6 +9,7 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 
+import { scanSiteAdmins } from './callable/access';
 import { paths } from './config';
 
 /** 通知種別（仕様書 10.2）。 */
@@ -195,18 +196,10 @@ export async function siteAdminUids(): Promise<string[]> {
   // 全ユーザーを 1000 件ずつページ送りしており、利用者が増えるほど
   // 遅くなって、いずれ実行時間の上限に達する。しかも失敗は
   // notifySafely に飲まれるため、通知が静かに落ちるだけだった（監査 第2回）。
+  //
+  // 走査そのものは access.ts の scanSiteAdmins を再利用する。
+  // 無効化されたアカウント（disabled）を除く判定はそちらに 1 箇所だけ
+  // 持たせ、ここで別実装を持たない（監査 第6回 C1）。
   logger.info('サイト管理者の一覧が控えられていません。Auth を走査します');
-  const { getAuth } = await import('firebase-admin/auth');
-  const admins: string[] = [];
-  let pageToken: string | undefined;
-
-  do {
-    const page = await getAuth().listUsers(1000, pageToken);
-    for (const user of page.users) {
-      if (user.customClaims?.siteAdmin === true) admins.push(user.uid);
-    }
-    pageToken = page.pageToken;
-  } while (pageToken);
-
-  return admins;
+  return scanSiteAdmins();
 }

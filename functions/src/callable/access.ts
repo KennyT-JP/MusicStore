@@ -86,7 +86,7 @@ export async function requireListAdmin(
  * 昇格・降格・退会のときだけ呼び、結果は siteConfig に控える
  * （下の syncSiteAdminCount）。
  */
-async function scanSiteAdmins(): Promise<string[]> {
+export async function scanSiteAdmins(): Promise<string[]> {
   const uids: string[] = [];
   let pageToken: string | undefined;
   do {

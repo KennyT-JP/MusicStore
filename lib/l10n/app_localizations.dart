@@ -748,13 +748,13 @@ abstract class AppL10n {
   /// No description provided for @changeQuota.
   ///
   /// In ja, this message translates to:
-  /// **'容量上限を変更'**
+  /// **'容量上限を変更（表示専用）'**
   String get changeQuota;
 
   /// No description provided for @changeQuotaBody.
   ///
   /// In ja, this message translates to:
-  /// **'「{name}」の上限を MB 単位で入力してください。'**
+  /// **'「{name}」の上限を MB 単位で入力してください。この値は表示用で、実際のアップロード可否には効きません。実際に効く上限は利用者ごとの合計容量です（サイト管理 → ユーザー管理）。'**
   String changeQuotaBody(Object name);
 
   /// No description provided for @siteAdminCountSummary.
@@ -817,10 +817,16 @@ abstract class AppL10n {
   /// **'新規リストの容量上限'**
   String get defaultQuotaLabel;
 
+  /// No description provided for @perListDefaultQuotaLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'新規リストの容量上限（表示専用）'**
+  String get perListDefaultQuotaLabel;
+
   /// No description provided for @defaultQuotaHelp.
   ///
   /// In ja, this message translates to:
-  /// **'初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。'**
+  /// **'初期値 1024（1GB）。既存リストの上限は「リストと容量」から変更します。この値は表示用で、実際のアップロード可否には効きません。実際に効く上限は利用者ごとの合計容量です（サイト管理 → ユーザー管理）。'**
   String get defaultQuotaHelp;
 
   /// No description provided for @purgeGraceLabel.

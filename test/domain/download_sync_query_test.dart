@@ -198,8 +198,46 @@ void main() {
           'joinRequests.uid',
           'items.createdBy',
           'viewers.uid',
+          'notifications.createdAt',
         ]),
       );
     });
+
+    test(
+      'notifications の isRead+createdAt 複合索引を宣言している（監査 第6回・B2）',
+      () {
+        // purgeExpiredNotifications が
+        // where('isRead', '==', true).where('createdAt', '<', cutoff) で
+        // collectionGroup('notifications') を引くための複合索引。
+        // 未読の古い通知だけで limit 枠が占有され、既読の古い通知の削除が
+        // 永久に滞る問題への対応（監査 第6回・B2）。
+        final notificationIndexes = (declared['indexes'] as List)
+            .cast<Map<String, dynamic>>()
+            .where((index) => index['collectionGroup'] == 'notifications')
+            .where((index) => index['queryScope'] == 'COLLECTION_GROUP')
+            .toList();
+
+        final hasIsReadCreatedAtIndex = notificationIndexes.any((index) {
+          final fields = (index['fields'] as List)
+              .cast<Map<String, dynamic>>()
+              .map((f) => '${f['fieldPath']}:${f['order']}')
+              .toList();
+          return fields.length == 2 &&
+              fields[0] == 'isRead:ASCENDING' &&
+              fields[1] == 'createdAt:ASCENDING';
+        });
+
+        expect(
+          hasIsReadCreatedAtIndex,
+          isTrue,
+          reason:
+              'purgeExpiredNotifications が isRead == true と '
+              'createdAt < cutoff を合成で引くための複合索引が '
+              'firestore.indexes.json の indexes にありません。欠けたまま'
+              '配信すると、本番でこのクエリだけが実行時に失敗します'
+              '（監査 第6回・B2）。',
+        );
+      },
+    );
   });
 }

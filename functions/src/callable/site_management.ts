@@ -86,6 +86,11 @@ export const listSiteUsers = onCall({ region: REGION }, async (request) => {
  * リストごとの容量上限を設定する（仕様書 7.2）。
  *
  * 上限は meta/stats にあり、クライアントからは書けない。
+ *
+ * **表示専用（旧モデルの名残）。** アップロード可否は [setUserQuota] が書く
+ * 人ごとの合計でのみ判定する（domain/quota.ts）。この関数が書く値は
+ * `lib/ui/screens/site_admin_screens.dart` の注記のとおり画面表示にしか
+ * 使われない。
  */
 export const setListQuota = onCall({ region: REGION }, async (request) => {
   requireSiteAdmin(request);
@@ -307,11 +312,14 @@ export const addListMember = onCall({ region: REGION }, async (request) => {
  * **定期実行（毎日 4:00）と同じ中身を呼ぶ。** 別に書くと、手で試した
  * 結果が夜中に走るものの確認にならない。
  *
- * 用途は 2 つ。
+ * 用途は 1 つ。
  *
  *   - **通しの確認**（統合テスト）。定期実行そのものは自動テストから
  *     呼べないため、ここが唯一の「最後まで動かす」経路になる
- *   - 猶予を短くしたあと、すぐ空けたいとき
+ *
+ * **管理者向けの「すぐ空けたい」導線ではない。** lib/ に呼び出し口は無く、
+ * 用意する予定もない（監査 2026-08-22 C4）。運用で即時に空けたい場合は、
+ * 定期実行（毎日 4:00）を待つか、猶予期間の設定を変えて次回の実行を待つ。
  *
  * **消したファイルは戻せない。** 判断（何を消すか）は共有した実装が
  * 持ち、ここは入口だけ。

@@ -280,26 +280,31 @@ export const redeemCoupon = onCall({ region: REGION }, async (request) => {
   const nowMs = Date.now();
   const guardRef = db.doc(couponGuardPath(uid));
 
-  // **総当たり対策：先にロックを確かめる（S1）。** 直近の窓で失敗を重ねた
-  // 相手は、クーポンの照合に進む前にここで断る。無駄な照合も避けられる。
-  const guard = readAttemptState((await guardRef.get()).data());
-  if (
-    isCouponRateLimited(guard, {
-      nowMs,
-      maxFailures: REDEEM_MAX_FAILURES,
-      windowMs: REDEEM_FAILURE_WINDOW_MS,
-    })
-  ) {
-    throw new HttpsError(
-      'resource-exhausted',
-      'クーポンの引き換えに何度も失敗したため、しばらく受け付けられません。1 時間ほど待ってからもう一度お試しください。'
-    );
-  }
-
   let untilMs: number;
   try {
     untilMs = await db.runTransaction(async (tx) => {
       // --- 読み取りはすべて先に行う（Firestore のトランザクションの決まり） ---
+
+      // **総当たり対策：ロックの確認も同じトランザクションの中で行う
+      // （監査 第6回 C2）。** ここをトランザクションの外で読むと、同時に
+      // 来た複数の要求がそろって「まだロックされていない」を読んでしまい、
+      // 閾値を一瞬だけ超えて照合まで進めてしまう。失敗数の増加（この下の
+      // catch）と同じトランザクションに揃えることで、読み取りと判定が
+      // 直列化される。
+      const guard = readAttemptState((await tx.get(guardRef)).data());
+      if (
+        isCouponRateLimited(guard, {
+          nowMs,
+          maxFailures: REDEEM_MAX_FAILURES,
+          windowMs: REDEEM_FAILURE_WINDOW_MS,
+        })
+      ) {
+        throw new HttpsError(
+          'resource-exhausted',
+          'クーポンの引き換えに何度も失敗したため、しばらく受け付けられません。1 時間ほど待ってからもう一度お試しください。'
+        );
+      }
+
       const found = await tx.get(
         db.collection(paths.coupons).where('codeHash', '==', codeHash).limit(1)
       );
