@@ -37,33 +37,65 @@ abstract class AudioPlayerHandle {
 
 /// just_audio を使う実装。
 class JustAudioHandle implements AudioPlayerHandle {
-  JustAudioHandle([AudioPlayer? player]) : _player = player ?? AudioPlayer();
+  JustAudioHandle() {
+    _wireCompletion();
+  }
 
-  final AudioPlayer _player;
+  /// いま使っている再生器。**曲を切り替えるたびに作り直す**（下の注記）。
+  AudioPlayer _player = AudioPlayer();
+
   final _errors = StreamController<Object>.broadcast();
+
+  /// [onCompleted] は呼び出し側が 1 度だけ購読する（`PlaybackController.build`）。
+  /// **`_player` を作り直しても購読先が変わらないよう**、自前の
+  /// コントローラーを間に挟み、いまの `_player` からの「鳴り終わった」を
+  /// こちらへ中継する（[_wireCompletion]）。
+  final _completed = StreamController<void>.broadcast();
+  StreamSubscription<ProcessingState>? _completionSub;
 
   /// いま読み込んである URL。同じ曲を繰り返すときに読み直さない。
   String? _loaded;
 
   /// 操作の世代。**呼ぶたびに増やす。**
   ///
-  /// **`stop`/`pause` は、割り込むタイミングによって黙って何もしないことが
-  /// ある**（just_audio 本体）。`pause()` は「再生中でなければ何もしない」、
-  /// `seek()` は「読み込み中なら何もしない」。[playFrom] は `setUrl` の完了を
-  /// **待ってから** `_start()` を呼ぶため、その待っているあいだに停止を
-  /// 押すと——`pause`/`seek` はどちらも no-op になり、あとから `setUrl` が
-  /// 終わった瞬間に、止めたはずの曲が誰にも止められないまま鳴り始める。
-  ///
-  /// **`await` のあとで世代を確かめてから鳴らす。** 古い世代（＝待っている
-  /// あいだに、あとから来た `stop`/`pause`/別の曲の `playFrom` に割り込ま
-  /// れた）なら、`_start()` を呼ばずに終わる。just_audio 側の内部状態
-  /// （`playing` / `processingState`）に頼らず、こちらだけで確実に塞げる。
+  /// [playFrom] は `setUrl` の完了を**待ってから** `_start()` を呼ぶため、
+  /// その待っているあいだに別の操作（停止・別の曲の再生）が割り込むことが
+  /// ある。**`await` のあとで世代を確かめてから鳴らす。** 古い世代なら、
+  /// `_start()` を呼ばずに終わる。
   int _generation = 0;
+
+  void _wireCompletion() {
+    _completionSub?.cancel();
+    _completionSub = _player.processingStateStream
+        .where((state) => state == ProcessingState.completed)
+        .listen((_) {
+          if (!_completed.isClosed) _completed.add(null);
+        });
+  }
 
   @override
   Future<void> playFrom(String url) async {
     final generation = ++_generation;
     if (_loaded != url) {
+      // **別の曲へ切り替えるときは、`AudioPlayer` を作り直す。**
+      //
+      // just_audio_web（0.4.16）は 1 つの `<audio>` 要素を使い回し、
+      // 曲ごとの「直前の再生位置」を内部で覚えておいて `play()` のたびに
+      // その位置へ seek し直す作りになっている
+      // （`UriAudioSourcePlayer._resumePos`）。この内部状態は
+      // `AudioPlayerHandle` からは触れず、`pause`/`seek` の呼び出し順や
+      // タイミングによっては、**止めたはずの前の曲の位置や再生要求が、
+      // 新しい曲の読み込みに混ざる**（パッケージ内部の作りに起因。
+      // 依頼者の報告「1 曲目を再生→停止→別の曲を再生すると 1 曲目の
+      // 途中から再生される」で判明。世代カウンタだけでは塞げなかった）。
+      //
+      // **作り直せば、この内部状態を一切引き継がない。** 前の再生器は
+      // 使い終わったら破棄する（`<audio>` 要素ごと消える）。
+      final old = _player;
+      _player = AudioPlayer();
+      _wireCompletion();
+      unawaited(old.dispose());
+
       await _player.setUrl(url);
       _loaded = url;
     } else {
@@ -119,15 +151,16 @@ class JustAudioHandle implements AudioPlayerHandle {
   }
 
   @override
-  Stream<void> get onCompleted => _player.processingStateStream
-      .where((state) => state == ProcessingState.completed);
+  Stream<void> get onCompleted => _completed.stream;
 
   @override
   Stream<Object> get onError => _errors.stream;
 
   @override
   Future<void> dispose() async {
+    await _completionSub?.cancel();
     await _errors.close();
+    await _completed.close();
     await _player.dispose();
   }
 }
