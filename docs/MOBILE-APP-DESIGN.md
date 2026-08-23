@@ -1752,7 +1752,7 @@ Session Concierge が通知チャンネルの調査で踏んだ形です。
 | 項目 | 状況 |
 | --- | --- |
 | **`file_picker` のモバイル対応** | **Session Concierge は使っていません。** 画像は `image_picker` で選んで Storage に直接アップロードしています。**音源創庫のファイル選択が iOS / Android で動くかは、実機で確かめるまで分かりません** |
-| **`just_audio` のモバイル対応** | **同じく前例なし。** Android は ExoPlayer、iOS は AVFoundation を使うため、**Web の `setUrl` とは別の実装が動きます**（`lib/data/audio_player_handle.dart:51`） |
+| **`just_audio` のモバイル対応** | **同じく前例なし。** Android は ExoPlayer、iOS は AVFoundation を使うため、**Web の `setUrl` とは別の実装が動きます**（`lib/data/audio_player_handle.dart:99`） |
 | **端末へのファイル保存** | **Session Concierge には実装が 1 つもありません**（`path_provider` の import 0 件、`getApplicationDocumentsDirectory` 0 件、`dart:io` の import 0 件）。**キャッシュ設計・保存先ディレクトリの選び方について、学べるものはありません。** [DOWNLOAD-DESIGN.md](DOWNLOAD-DESIGN.md) は完全に新規設計です |
 | **ディープリンク（App Links / Universal Links）** | **今回の範囲に入りましたが、前例がありません**（5-8-2）。Session Concierge の `<intent-filter>` は LAUNCHER の 1 つだけで、`VIEW` / `BROWSABLE` / `autoVerify` の宣言はありません。**QR・共有 URL はブラウザで開かせる設計です。** `.well-known/` の配信も、entitlement も、`assetlinks.json` も、**すべて音源創庫が最初です** |
 | **フォントの同梱量** | Session Concierge は 1.35MB × 2、音源創庫は 2.36MB × 1。**同じ問題ですが数字が違います** |

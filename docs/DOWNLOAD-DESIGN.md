@@ -54,7 +54,7 @@
 | --- | --- |
 | ダウンロード | `lib/data/repositories/item_repository.dart:365-366` の `getDownloadURL()` **1 か所のみ**。`launchUrl(..., LaunchMode.externalApplication)` で URL を開くだけ |
 | 呼び出し元 | `lib/ui/widgets/item_external_action.dart:39-42`、`lib/ui/screens/item_detail_screen.dart:366-371`、`lib/providers/playback_provider.dart:29-31` |
-| 再生 | `just_audio ^0.10.6`。`lib/data/audio_player_handle.dart:51` の `_player.setUrl(url)` = **URL 再生** |
+| 再生 | `just_audio ^0.10.6`。`lib/data/audio_player_handle.dart:99` の `_player.setUrl(url)` = **URL 再生** |
 | 権限判定 | **ダウンロードにも再生にも判定が 1 つも無い。** `lib/domain/permissions.dart` に `canDownload` 相当は存在しない |
 | プレミアムが左右するもの | ①申請なしのリスト作成 ②容量の自動拡張の **2 つだけ**。ダウンロード・再生には無関係 |
 | `path_provider` | **直接依存ではない。** `just_audio` の推移依存として 2.1.6 が入っているだけ（`pubspec.lock:592-599`） |
