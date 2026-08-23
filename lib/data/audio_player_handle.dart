@@ -45,8 +45,24 @@ class JustAudioHandle implements AudioPlayerHandle {
   /// いま読み込んである URL。同じ曲を繰り返すときに読み直さない。
   String? _loaded;
 
+  /// 操作の世代。**呼ぶたびに増やす。**
+  ///
+  /// **`stop`/`pause` は、割り込むタイミングによって黙って何もしないことが
+  /// ある**（just_audio 本体）。`pause()` は「再生中でなければ何もしない」、
+  /// `seek()` は「読み込み中なら何もしない」。[playFrom] は `setUrl` の完了を
+  /// **待ってから** `_start()` を呼ぶため、その待っているあいだに停止を
+  /// 押すと——`pause`/`seek` はどちらも no-op になり、あとから `setUrl` が
+  /// 終わった瞬間に、止めたはずの曲が誰にも止められないまま鳴り始める。
+  ///
+  /// **`await` のあとで世代を確かめてから鳴らす。** 古い世代（＝待っている
+  /// あいだに、あとから来た `stop`/`pause`/別の曲の `playFrom` に割り込ま
+  /// れた）なら、`_start()` を呼ばずに終わる。just_audio 側の内部状態
+  /// （`playing` / `processingState`）に頼らず、こちらだけで確実に塞げる。
+  int _generation = 0;
+
   @override
   Future<void> playFrom(String url) async {
+    final generation = ++_generation;
     if (_loaded != url) {
       await _player.setUrl(url);
       _loaded = url;
@@ -54,11 +70,18 @@ class JustAudioHandle implements AudioPlayerHandle {
       // 同じ曲を先頭から。読み直さずに位置だけ戻す。
       await _player.seek(Duration.zero);
     }
+    // 待っているあいだに、あとから来た操作に割り込まれていないか。
+    if (generation != _generation) return;
     _start();
   }
 
   @override
-  Future<void> resume() async => _start();
+  Future<void> resume() async {
+    // 待っているあいだに割り込まれる経路はここには無いが、進行中の
+    // playFrom（読み込み待ち）をこの操作で上書きしたことにする。
+    _generation++;
+    _start();
+  }
 
   /// 鳴らし始める。
   ///
@@ -77,10 +100,17 @@ class JustAudioHandle implements AudioPlayerHandle {
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() {
+    // 進行中の playFrom（読み込み待ち）があれば、この操作で上書きする。
+    _generation++;
+    return _player.pause();
+  }
 
   @override
   Future<void> stop() async {
+    // 同上。**ここを増やさないと、読み込み中に押した停止が無効になる**
+    // （このクラスの `_generation` のコメント参照）。
+    _generation++;
     await _player.pause();
     // **止めるだけでなく先頭へ戻す（仕様 7）。**
     // just_audio の stop() は読み込みごと解放してしまい、次の再生で

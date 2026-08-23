@@ -363,4 +363,36 @@ void main() {
     expect(find.byIcon(Icons.play_arrow), findsOneWidget);
     expect(find.byIcon(Icons.stop), findsOneWidget);
   });
+
+  testWidgets('1 曲目を再生→停止→2 曲目を再生すると、正しい順で頼む（2026-08-23）', (
+    tester,
+  ) async {
+    // 依頼者の報告「1 曲目を再生→停止した後に別の曲を再生すると
+    // 1 曲目の途中から再生される」の切り分け。
+    //
+    // **ここで守るのはコントローラー側の呼び出し順序だけ。** 実際の
+    // バグは just_audio 本体（`JustAudioHandle`）側の競合にあり、
+    // `AudioPlayerHandle` を差し替えたこのテストでは再現できない
+    // （音を鳴らす部分はテストで確かめられないため、ここに閉じ込めて
+    // ある——`audio_player_handle.dart` 冒頭の注記）。
+    // このテストは「コントローラーが正しい相手・正しい順で頼んでいる」
+    // ことを固定し、そちらが原因ではないことを見張り続ける。
+    final handle = _FakeHandle();
+    await tester.pumpWidget(_app([_fileItem(1), _fileItem(2)], handle));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.play_arrow).first);
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+    // 停止後は 1・2 曲目とも play_arrow が出るので、2 曲目（後ろの行）を選ぶ。
+    await tester.tap(find.byIcon(Icons.play_arrow).at(1));
+    await tester.pump();
+
+    expect(handle.calls, [
+      'playFrom:https://example.com/lists/$_listId/items/item-1/take.mp3',
+      'stop',
+      'playFrom:https://example.com/lists/$_listId/items/item-2/take.mp3',
+    ]);
+  });
 }
