@@ -177,16 +177,30 @@ class PlaybackPolicy {
   /// 別の曲の再生ボタンを押したときは、鳴っていたほうは自然に止まる。
   /// 2 曲が同時に鳴ると何を聞いているのか分からなくなるため。
   static PlaybackTransition play(PlaybackState current, String itemId) {
-    final resumes = current.itemId == itemId &&
-        current.status == PlaybackStatus.paused;
+    final sameItem = current.itemId == itemId;
+    final resumes = sameItem && current.status == PlaybackStatus.paused;
 
     return PlaybackTransition(
-      // **resume は位置・長さを引き継ぐ。** 止めた位置から続けるので、
-      // プログレスバーもそこから動き出してよい。先頭から始めるときは
-      // 別の曲（または頭出し）なので、古い値を持ち越さない。
+      // **resume は位置・長さをそのまま引き継ぐ。** 止めた位置から
+      // 続けるので、プログレスバーもそこから動き出してよい。
+      //
+      // **先頭から始めるときも、同じ曲なら長さは引き継ぐ**（2026-08-25）。
+      // `JustAudioHandle` は同じ URL を読み直さない（`_loaded == url`）ため、
+      // `durationStream` が再び流れてくる保証がない。長さをここで null に
+      // 戻すと、2 回目以降の再生でバーが二度と出なくなる（依頼者の報告）。
+      // 位置だけは 0 に戻す（先頭からのため。null のままだと最初の
+      // ティックが届くまでバーの土台自体が出ない＝表示までの遅れになる）。
+      //
+      // 別の曲に切り替えるときは、どちらも新しい音源のものに
+      // 置き換わるまで持ち越さない。
       state: resumes
           ? current.copyWith(status: PlaybackStatus.playing)
-          : PlaybackState(itemId: itemId, status: PlaybackStatus.playing),
+          : PlaybackState(
+              itemId: itemId,
+              status: PlaybackStatus.playing,
+              position: Duration.zero,
+              duration: sameItem ? current.duration : null,
+            ),
       command: resumes
           ? PlaybackCommand.resume
           : PlaybackCommand.startFromBeginning,

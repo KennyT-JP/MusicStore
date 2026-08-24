@@ -749,10 +749,32 @@ class _PlaybackProgressState extends ConsumerState<_PlaybackProgress> {
     if (!playback.isActive(widget.itemId)) return const SizedBox.shrink();
 
     final duration = playback.duration;
-    // **長さが分かるまでは出さない。** 0 除算にもなるし、
-    // 動かないバーを見せても意味がない。
+    final position = playback.position ?? Duration.zero;
+
+    // **長さが分かるまでも、バーの土台は出す**（依頼者の指摘・2026-08-25）。
+    // 長さは Storage からの読み込みが終わるまで分からず、数秒かかることが
+    // ある。押した瞬間から何か出ている方が速く感じるため、長さが分かる
+    // までは不確定表示にし、分かり次第ドラッグできるバーへ切り替える。
+    // ドラッグ（シーク）はこの間はできない——動かす先の上限が分からないため。
     if (duration == null || duration <= Duration.zero) {
-      return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(2)),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formatPlaybackDuration(position),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      );
     }
 
     final maxMs = duration.inMilliseconds.toDouble();

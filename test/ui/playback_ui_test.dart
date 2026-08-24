@@ -420,7 +420,11 @@ void main() {
       expect(find.byType(Slider), findsNothing);
     });
 
-    testWidgets('再生しても、長さが分かるまでは出さない', (tester) async {
+    testWidgets('長さが分かるまでは、動かせるバーではなく不確定表示（2026-08-25）', (
+      tester,
+    ) async {
+      // **「押した瞬間から何か出ている」を優先する。** 長さの取得を
+      // 待たせず、土台（LinearProgressIndicator）だけ先に出す。
       final handle = _FakeHandle();
       await tester.pumpWidget(_app([_fileItem(1)], handle));
       await tester.pumpAndSettle();
@@ -431,6 +435,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(Slider), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
 
     testWidgets('長さが分かると、曲名の下にバーと時刻が出る', (tester) async {
@@ -483,6 +488,37 @@ void main() {
       await tester.pump();
 
       expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('停止した同じ曲をもう一度再生すると、バーがすぐ戻る（バグ修正・2026-08-25）', (
+      tester,
+    ) async {
+      // 依頼者の報告：一度再生→停止した後、同じ曲を再生し直すと
+      // プログレスバーが出なくなる。原因は「同じ URL は読み直さないため
+      // durationStream が再び流れない」——ここでは 2 回目に
+      // emitDuration を呼ばずに、長さが引き継がれることを確かめる。
+      final handle = _FakeHandle();
+      await tester.pumpWidget(_app([_fileItem(1)], handle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      handle.emitDuration(const Duration(minutes: 3));
+      handle.emitPosition(const Duration(seconds: 10));
+      await tester.pump();
+      expect(find.byType(Slider), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+      expect(find.byType(Slider), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+
+      // 2 回目の emitDuration は呼んでいないのに、バーが出る。
+      expect(find.byType(Slider), findsOneWidget);
+      expect(find.text('3:00'), findsOneWidget, reason: '長さを引き継いだ');
+      expect(find.text('0:00'), findsOneWidget, reason: '位置は先頭に戻る');
     });
   });
 }

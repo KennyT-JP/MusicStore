@@ -278,7 +278,7 @@ void main() {
       expect(result.state.duration, const Duration(minutes: 3));
     });
 
-    test('別の曲を先頭から始めると、古い位置・長さは持ち越さない', () {
+    test('別の曲を先頭から始めると、古い長さは持ち越さない。位置は0', () {
       const paused = PlaybackState(
         itemId: _a,
         status: PlaybackStatus.paused,
@@ -288,9 +288,30 @@ void main() {
 
       final result = PlaybackPolicy.play(paused, _b);
 
-      expect(result.state.position, isNull);
+      expect(result.state.position, Duration.zero);
       expect(result.state.duration, isNull);
     });
+
+    test(
+      '停止した同じ曲をもう一度再生すると、長さを引き継ぐ（バグ修正・2026-08-25）',
+      () {
+        // **`JustAudioHandle` は同じ URL を読み直さないため、
+        // `durationStream` が再び流れてくる保証がない。** 長さを
+        // ここで null に戻すと、2 回目の再生からバーが二度と
+        // 出なくなる（依頼者の報告）。
+        const stoppedAfterPlaying = PlaybackState(
+          itemId: _a,
+          status: PlaybackStatus.stopped,
+          position: Duration.zero,
+          duration: Duration(minutes: 3),
+        );
+
+        final result = PlaybackPolicy.play(stoppedAfterPlaying, _a);
+
+        expect(result.state.duration, const Duration(minutes: 3));
+        expect(result.state.position, Duration.zero, reason: '先頭からのため');
+      },
+    );
 
     test('停止すると、位置は 0 に戻る（先頭へ戻すため）', () {
       const playing = PlaybackState(
