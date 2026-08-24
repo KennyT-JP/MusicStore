@@ -52,12 +52,23 @@ enum PlaybackStatus {
 
 /// どの曲を、どういう状況で持っているか。
 class PlaybackState {
-  const PlaybackState({this.itemId, this.status = PlaybackStatus.stopped});
+  const PlaybackState({
+    this.itemId,
+    this.status = PlaybackStatus.stopped,
+    this.position,
+    this.duration,
+  });
 
   /// いま対象にしている項目。何も選んでいなければ null。
   final String? itemId;
 
   final PlaybackStatus status;
+
+  /// いま鳴っている位置（プログレスバー表示用）。分かるまでは null。
+  final Duration? position;
+
+  /// いま鳴らしている曲の長さ。読み込むまでは null。
+  final Duration? duration;
 
   /// その項目が、いま鳴っているか。
   bool isPlaying(String id) =>
@@ -73,11 +84,27 @@ class PlaybackState {
   /// 途中で止めたものを頭に戻す手段がなくなる。
   bool isActive(String id) => itemId == id && status != PlaybackStatus.stopped;
 
-  PlaybackState copyWith({String? itemId, PlaybackStatus? status}) =>
-      PlaybackState(
-        itemId: itemId ?? this.itemId,
-        status: status ?? this.status,
-      );
+  PlaybackState copyWith({
+    String? itemId,
+    PlaybackStatus? status,
+    Duration? position,
+    Duration? duration,
+  }) => PlaybackState(
+    itemId: itemId ?? this.itemId,
+    status: status ?? this.status,
+    position: position ?? this.position,
+    duration: duration ?? this.duration,
+  );
+}
+
+/// 秒数を `分:秒`（例 `1:38`）に整える。プログレスバーの時刻表示用。
+///
+/// 負値・null は呼び出し側の責務外——`Duration.zero` を渡すこと。
+String formatPlaybackDuration(Duration d) {
+  final totalSeconds = d.inSeconds;
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
 /// 再生ボタンを押したときに、音の側へ何を頼むか。
@@ -154,7 +181,12 @@ class PlaybackPolicy {
         current.status == PlaybackStatus.paused;
 
     return PlaybackTransition(
-      state: PlaybackState(itemId: itemId, status: PlaybackStatus.playing),
+      // **resume は位置・長さを引き継ぐ。** 止めた位置から続けるので、
+      // プログレスバーもそこから動き出してよい。先頭から始めるときは
+      // 別の曲（または頭出し）なので、古い値を持ち越さない。
+      state: resumes
+          ? current.copyWith(status: PlaybackStatus.playing)
+          : PlaybackState(itemId: itemId, status: PlaybackStatus.playing),
       command: resumes
           ? PlaybackCommand.resume
           : PlaybackCommand.startFromBeginning,
@@ -173,13 +205,19 @@ class PlaybackPolicy {
   /// **対象は残す。** 残しておかないと、停止した直後にその行から
   /// 再生ボタンが消えてしまう。
   static PlaybackTransition stop(PlaybackState current) => PlaybackTransition(
-    state: current.copyWith(status: PlaybackStatus.stopped),
+    // 先頭へ戻すので、プログレスバーの位置も 0 に戻す。
+    state: current.copyWith(
+      status: PlaybackStatus.stopped,
+      position: Duration.zero,
+    ),
     command: PlaybackCommand.stop,
   );
 
   /// 最後まで鳴り終わった。
   ///
   /// 停止を押したときと同じ扱いにする。もう一度押せば先頭から始まる。
-  static PlaybackState completed(PlaybackState current) =>
-      current.copyWith(status: PlaybackStatus.stopped);
+  static PlaybackState completed(PlaybackState current) => current.copyWith(
+    status: PlaybackStatus.stopped,
+    position: Duration.zero,
+  );
 }

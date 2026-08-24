@@ -123,6 +123,12 @@
          のツールが自動で足すが、release では足さない）。AdMob が広告を取りに
          行けるよう、ここで明示する。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- **広告ID（AD_ID）の使用を明示する。** 以前は play-services-ads の
+         マニフェストから自動でマージされていたが、Google 側の仕様変更で
+         明示しないと付かない場合がある。Play Console が「広告IDを使うと
+         申告されているのに、アクティブなアーティファクトのマニフェストに
+         この権限が無い」と警告したための追加（2026-08-23）。 -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

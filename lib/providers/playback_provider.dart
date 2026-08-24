@@ -72,6 +72,8 @@ final playbackProvider = NotifierProvider<PlaybackController, PlaybackState>(
 class PlaybackController extends Notifier<PlaybackState> {
   StreamSubscription<void>? _completion;
   StreamSubscription<Object>? _errors;
+  StreamSubscription<Duration>? _position;
+  StreamSubscription<Duration?>? _duration;
 
   /// 一度取り出した再生用の URL。
   ///
@@ -96,9 +98,21 @@ class PlaybackController extends Notifier<PlaybackState> {
       ref.read(playbackErrorProvider.notifier).report(error);
     });
 
+    // プログレスバー表示用（止まっているときの値は意味がないので無視）。
+    _position = handle.positionStream.listen((position) {
+      if (state.status == PlaybackStatus.stopped) return;
+      state = state.copyWith(position: position);
+    });
+    _duration = handle.durationStream.listen((duration) {
+      if (duration == null) return;
+      state = state.copyWith(duration: duration);
+    });
+
     ref.onDispose(() {
       _completion?.cancel();
       _errors?.cancel();
+      _position?.cancel();
+      _duration?.cancel();
     });
 
     return const PlaybackState();
@@ -194,5 +208,17 @@ class PlaybackController extends Notifier<PlaybackState> {
     final transition = PlaybackPolicy.stop(state);
     state = transition.state;
     await ref.read(audioPlayerHandleProvider).stop();
+  }
+
+  /// プログレスバーの操作で、その位置へ移動する。
+  ///
+  /// 鳴っている・一時停止しているときだけ意味がある（止まっていれば
+  /// バー自体を表示しないので、押しようがない）。
+  Future<void> seek(Duration position) async {
+    if (state.status == PlaybackStatus.stopped) return;
+    // すぐに数値表示へ反映する。実際の移動を待ってから更新すると、
+    // 指を離した瞬間にバーが一瞬戻って見える。
+    state = state.copyWith(position: position);
+    await ref.read(audioPlayerHandleProvider).seek(position);
   }
 }

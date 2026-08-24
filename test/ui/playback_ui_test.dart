@@ -26,9 +26,15 @@ const _listId = 'list-1';
 class _FakeHandle implements AudioPlayerHandle {
   final calls = <String>[];
   final _errors = StreamController<Object>.broadcast();
+  final _position = StreamController<Duration>.broadcast();
+  final _duration = StreamController<Duration?>.broadcast();
 
   /// 鳴らし始められなかったことにする（ブラウザが自動再生を拒んだ等）。
   void failToStart(Object error) => _errors.add(error);
+
+  /// プログレスバーのテスト用に、位置・長さを流す。
+  void emitPosition(Duration d) => _position.add(d);
+  void emitDuration(Duration d) => _duration.add(d);
 
   @override
   Future<void> playFrom(String url) async => calls.add('playFrom:$url');
@@ -47,6 +53,16 @@ class _FakeHandle implements AudioPlayerHandle {
 
   @override
   Stream<Object> get onError => _errors.stream;
+
+  @override
+  Stream<Duration> get positionStream => _position.stream;
+
+  @override
+  Stream<Duration?> get durationStream => _duration.stream;
+
+  @override
+  Future<void> seek(Duration position) async =>
+      calls.add('seek:${position.inMilliseconds}');
 
   @override
   Future<void> dispose() async => _errors.close();
@@ -394,5 +410,79 @@ void main() {
       'stop',
       'playFrom:https://example.com/lists/$_listId/items/item-2/take.mp3',
     ]);
+  });
+
+  group('プログレスバー（曲一覧・2026-08-24）', () {
+    testWidgets('止まっている行には出さない', (tester) async {
+      await tester.pumpWidget(_app([_fileItem(1)], _FakeHandle()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('再生しても、長さが分かるまでは出さない', (tester) async {
+      final handle = _FakeHandle();
+      await tester.pumpWidget(_app([_fileItem(1)], handle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      handle.emitPosition(const Duration(seconds: 3));
+      await tester.pump();
+
+      expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('長さが分かると、曲名の下にバーと時刻が出る', (tester) async {
+      final handle = _FakeHandle();
+      await tester.pumpWidget(_app([_fileItem(1)], handle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      handle.emitDuration(const Duration(minutes: 3, seconds: 45));
+      handle.emitPosition(const Duration(seconds: 30));
+      await tester.pump();
+
+      expect(find.byType(Slider), findsOneWidget);
+      expect(find.text('0:30'), findsOneWidget);
+      expect(find.text('3:45'), findsOneWidget);
+    });
+
+    testWidgets('バーを動かして指を離すと、その位置へシークを頼む', (tester) async {
+      final handle = _FakeHandle();
+      await tester.pumpWidget(_app([_fileItem(1)], handle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      handle.emitDuration(const Duration(minutes: 4));
+      handle.emitPosition(Duration.zero);
+      await tester.pump();
+
+      // 中央付近までドラッグ（値そのものより「シークが頼まれること」を確かめる）。
+      await tester.drag(find.byType(Slider), const Offset(100, 0));
+      await tester.pump();
+
+      expect(handle.calls.any((c) => c.startsWith('seek:')), isTrue);
+    });
+
+    testWidgets('停止すると、バーも消える', (tester) async {
+      final handle = _FakeHandle();
+      await tester.pumpWidget(_app([_fileItem(1)], handle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      handle.emitDuration(const Duration(minutes: 3));
+      handle.emitPosition(const Duration(seconds: 10));
+      await tester.pump();
+      expect(find.byType(Slider), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      expect(find.byType(Slider), findsNothing);
+    });
   });
 }

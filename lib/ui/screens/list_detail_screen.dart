@@ -604,7 +604,17 @@ class _ItemRow extends StatelessWidget {
         ],
       ),
       title: Text(item.displayLabel(), overflow: TextOverflow.ellipsis),
-      subtitle: Text(subtitle, overflow: TextOverflow.ellipsis),
+      // **プログレスバーは subtitle の列に足す（依頼者の指定・2026-08-24）。**
+      // leading／trailing の幅を避け、タイルの横幅いっぱいを使うため。
+      // 出すのは再生中・一時停止中の行だけ（_PlaybackProgress が判定する）。
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(subtitle, overflow: TextOverflow.ellipsis),
+          _PlaybackProgress(itemId: item.id),
+        ],
+      ),
       // **右に「外部で開く」を置く（6.4）。**
       // 種類が分かる印は、その操作のアイコンが兼ねる（ダウンロード／
       // 新しいタブ）。飾りのアイコンを別に並べると、押せるものと
@@ -705,6 +715,91 @@ class _PlaybackButtons extends ConsumerWidget {
             icon: const Icon(Icons.stop),
             onPressed: controller.stop,
           ),
+      ],
+    );
+  }
+}
+
+/// 再生位置のプログレスバー（依頼者の指定・2026-08-24）。
+///
+/// **再生中・一時停止中の行にだけ出す。** 止まっている行や、
+/// 他の曲を鳴らしている行には出さない（`isActive` で絞る）。
+///
+/// タップ即座の早送り・巻き戻し・ジャンプは、`Slider` の
+/// **ドラッグ中は見た目だけ動かし、指を離した時点でシークする**
+/// （`onChangeEnd`）。ドラッグ中に毎フレームシークすると、
+/// 再生位置の更新（`positionStream`）と取り合いになってバーが
+/// カクつくため。
+class _PlaybackProgress extends ConsumerStatefulWidget {
+  const _PlaybackProgress({required this.itemId});
+
+  final String itemId;
+
+  @override
+  ConsumerState<_PlaybackProgress> createState() => _PlaybackProgressState();
+}
+
+class _PlaybackProgressState extends ConsumerState<_PlaybackProgress> {
+  /// ドラッグ中だけ持つ、確定前の位置（ミリ秒）。
+  double? _dragValueMs;
+
+  @override
+  Widget build(BuildContext context) {
+    final playback = ref.watch(playbackProvider);
+    if (!playback.isActive(widget.itemId)) return const SizedBox.shrink();
+
+    final duration = playback.duration;
+    // **長さが分かるまでは出さない。** 0 除算にもなるし、
+    // 動かないバーを見せても意味がない。
+    if (duration == null || duration <= Duration.zero) {
+      return const SizedBox.shrink();
+    }
+
+    final maxMs = duration.inMilliseconds.toDouble();
+    final positionMs = (playback.position ?? Duration.zero)
+        .inMilliseconds
+        .toDouble();
+    final valueMs = (_dragValueMs ?? positionMs).clamp(0, maxMs).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 2,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+          ),
+          child: Slider(
+            min: 0,
+            max: maxMs,
+            value: valueMs,
+            onChanged: (v) => setState(() => _dragValueMs = v),
+            onChangeEnd: (v) {
+              setState(() => _dragValueMs = null);
+              ref
+                  .read(playbackProvider.notifier)
+                  .seek(Duration(milliseconds: v.round()));
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                formatPlaybackDuration(Duration(milliseconds: valueMs.round())),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Text(
+                formatPlaybackDuration(duration),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

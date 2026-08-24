@@ -38,6 +38,16 @@ class FakeAudioHandle implements AudioPlayerHandle {
   Stream<Object> get onError => _errors.stream;
 
   @override
+  Stream<Duration> get positionStream => const Stream.empty();
+
+  @override
+  Stream<Duration?> get durationStream => const Stream.empty();
+
+  @override
+  Future<void> seek(Duration position) async =>
+      calls.add('seek:${position.inMilliseconds}');
+
+  @override
   Future<void> dispose() async => _errors.close();
 }
 

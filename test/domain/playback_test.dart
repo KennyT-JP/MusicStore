@@ -259,4 +259,79 @@ void main() {
       );
     });
   });
+
+  // -----------------------------------------------------------------------
+  // 再生プログレスバー（曲一覧・2026-08-24）
+  // -----------------------------------------------------------------------
+  group('プログレスバー用の位置・長さ', () {
+    test('一時停止から再生すると、位置・長さを引き継ぐ', () {
+      const paused = PlaybackState(
+        itemId: _a,
+        status: PlaybackStatus.paused,
+        position: Duration(seconds: 42),
+        duration: Duration(minutes: 3),
+      );
+
+      final result = PlaybackPolicy.play(paused, _a);
+
+      expect(result.state.position, const Duration(seconds: 42));
+      expect(result.state.duration, const Duration(minutes: 3));
+    });
+
+    test('別の曲を先頭から始めると、古い位置・長さは持ち越さない', () {
+      const paused = PlaybackState(
+        itemId: _a,
+        status: PlaybackStatus.paused,
+        position: Duration(seconds: 42),
+        duration: Duration(minutes: 3),
+      );
+
+      final result = PlaybackPolicy.play(paused, _b);
+
+      expect(result.state.position, isNull);
+      expect(result.state.duration, isNull);
+    });
+
+    test('停止すると、位置は 0 に戻る（先頭へ戻すため）', () {
+      const playing = PlaybackState(
+        itemId: _a,
+        status: PlaybackStatus.playing,
+        position: Duration(seconds: 90),
+        duration: Duration(minutes: 3),
+      );
+
+      final result = PlaybackPolicy.stop(playing);
+
+      expect(result.state.position, Duration.zero);
+    });
+
+    test('最後まで鳴り終わっても、位置は 0 に戻る', () {
+      const playing = PlaybackState(
+        itemId: _a,
+        status: PlaybackStatus.playing,
+        position: Duration(seconds: 90),
+        duration: Duration(minutes: 3),
+      );
+
+      expect(PlaybackPolicy.completed(playing).position, Duration.zero);
+    });
+  });
+
+  group('formatPlaybackDuration（時刻表示）', () {
+    test('1分未満は 0:xx', () {
+      expect(formatPlaybackDuration(const Duration(seconds: 5)), '0:05');
+    });
+
+    test('分:秒（秒は2桁）', () {
+      expect(formatPlaybackDuration(const Duration(seconds: 98)), '1:38');
+    });
+
+    test('ちょうど0秒', () {
+      expect(formatPlaybackDuration(Duration.zero), '0:00');
+    });
+
+    test('1時間を超えても分がそのまま増える（時では区切らない）', () {
+      expect(formatPlaybackDuration(const Duration(minutes: 65)), '65:00');
+    });
+  });
 }

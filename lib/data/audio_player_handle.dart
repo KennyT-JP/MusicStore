@@ -32,13 +32,22 @@ abstract class AudioPlayerHandle {
   /// 失敗はこちらへ流す。
   Stream<Object> get onError;
 
+  /// いま鳴っている位置（プログレスバー表示用）。
+  Stream<Duration> get positionStream;
+
+  /// いま鳴らしている曲の長さ。読み込むまでは null。
+  Stream<Duration?> get durationStream;
+
+  /// 指定した位置へ移動する（プログレスバーの操作）。
+  Future<void> seek(Duration position);
+
   Future<void> dispose();
 }
 
 /// just_audio を使う実装。
 class JustAudioHandle implements AudioPlayerHandle {
   JustAudioHandle() {
-    _wireCompletion();
+    _wireStreams();
   }
 
   /// いま使っている再生器。**曲を切り替えるたびに作り直す**（下の注記）。
@@ -46,12 +55,16 @@ class JustAudioHandle implements AudioPlayerHandle {
 
   final _errors = StreamController<Object>.broadcast();
 
-  /// [onCompleted] は呼び出し側が 1 度だけ購読する（`PlaybackController.build`）。
-  /// **`_player` を作り直しても購読先が変わらないよう**、自前の
-  /// コントローラーを間に挟み、いまの `_player` からの「鳴り終わった」を
-  /// こちらへ中継する（[_wireCompletion]）。
+  /// [onCompleted]・[positionStream]・[durationStream] は呼び出し側が
+  /// 1 度だけ購読する（`PlaybackController.build`）。**`_player` を
+  /// 作り直しても購読先が変わらないよう**、自前のコントローラーを間に挟み、
+  /// いまの `_player` からの値をこちらへ中継する（[_wireStreams]）。
   final _completed = StreamController<void>.broadcast();
+  final _position = StreamController<Duration>.broadcast();
+  final _duration = StreamController<Duration?>.broadcast();
   StreamSubscription<ProcessingState>? _completionSub;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration?>? _durationSub;
 
   /// いま読み込んである URL。同じ曲を繰り返すときに読み直さない。
   String? _loaded;
@@ -64,13 +77,23 @@ class JustAudioHandle implements AudioPlayerHandle {
   /// `_start()` を呼ばずに終わる。
   int _generation = 0;
 
-  void _wireCompletion() {
+  void _wireStreams() {
     _completionSub?.cancel();
     _completionSub = _player.processingStateStream
         .where((state) => state == ProcessingState.completed)
         .listen((_) {
           if (!_completed.isClosed) _completed.add(null);
         });
+
+    _positionSub?.cancel();
+    _positionSub = _player.positionStream.listen((position) {
+      if (!_position.isClosed) _position.add(position);
+    });
+
+    _durationSub?.cancel();
+    _durationSub = _player.durationStream.listen((duration) {
+      if (!_duration.isClosed) _duration.add(duration);
+    });
   }
 
   @override
@@ -93,7 +116,7 @@ class JustAudioHandle implements AudioPlayerHandle {
       // 使い終わったら破棄する（`<audio>` 要素ごと消える）。
       final old = _player;
       _player = AudioPlayer();
-      _wireCompletion();
+      _wireStreams();
       unawaited(old.dispose());
 
       await _player.setUrl(url);
@@ -157,10 +180,23 @@ class JustAudioHandle implements AudioPlayerHandle {
   Stream<Object> get onError => _errors.stream;
 
   @override
+  Stream<Duration> get positionStream => _position.stream;
+
+  @override
+  Stream<Duration?> get durationStream => _duration.stream;
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
   Future<void> dispose() async {
     await _completionSub?.cancel();
+    await _positionSub?.cancel();
+    await _durationSub?.cancel();
     await _errors.close();
     await _completed.close();
+    await _position.close();
+    await _duration.close();
     await _player.dispose();
   }
 }
