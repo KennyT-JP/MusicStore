@@ -2687,6 +2687,20 @@ Play Console が「広告IDを使うと申告されているが、アクティ�
 - **Android**：`versionCode` を 4 に上げて AAB をビルド済み
   （`build/app/outputs/bundle/prodRelease/app-prod-release.aab`）。
   **Play Console への手動アップロードが必要。**
-- **iOS**：コードは `main` に反映済みだが、iOS のビルドは Codemagic
-  （クラウド macOS）任せで、**push での自動トリガーは組んでいない。**
-  Codemagic のダッシュボードから手動でビルドを開始する必要がある。
+- **iOS**：コードは `main` に反映済み。Android・iOS とも依頼者が
+  手動で対応（AAB は Play Console へアップロード、iOS は Codemagic の
+  画面からビルドを実施）。
+
+### 3. iOS を `main` への push で自動ビルドするよう変更
+
+上記のとおり iOS は手動起動のままだったが、依頼者から
+「Codemagic は push したら自動ビルドできるか」と質問があり、
+**`main` への push で自動的に走るよう `codemagic.yaml` に `triggering`
+を追加した。**「push のたびに都度選べるようにしたい」という要望には、
+Codemagic 標準の**コミットメッセージ `[skip ci]`**（そのビルドだけ
+飛ばす機能）で対応する運用にすると回答し、了承を得た。
+
+- 対象は `main` のみ（`dev` は含めない）
+- `submit_to_testflight: false` のままなので、自動で出るのは内部
+  テスター（最大 100 人）まで
+- 運用ルールは `CLAUDE.md`・`MOBILE-APP-DESIGN.md` 5-11-5b に記録

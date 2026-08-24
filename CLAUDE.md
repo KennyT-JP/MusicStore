@@ -87,6 +87,21 @@ dev    ← **検証環境（staging）専用。** 検証環境への配信はこ
 - `functions/.env*` はコミットするので、秘密の値を書かない
   （秘密は `firebase functions:secrets:set` で Secret Manager へ）
 
+## iOS は `main` への push で自動ビルドされる（2026-08-24 の指示）
+
+**`main` へ push すると、Codemagic が自動で iOS ビルドを始めます**
+（`codemagic.yaml` の `ios-release` ワークフロー、`triggering`）。
+TestFlight の内部テスターへは自動で出ます（`submit_to_testflight: false`
+なので外部テスト・App Store 提出は今も手動）。
+
+**そのpushだけビルドを止めたいとき**は、コミットメッセージに
+`[skip ci]` を含めてください（Codemagic 標準の機能）。ドキュメントだけの
+修正など、iOS のビルド時間を使う必要がないコミットで使います。
+
+- 対象は `main` のみ。`dev` への push では走りません
+- ビルド分数を消費するので、**むやみに `[skip ci]` を外さない**
+  （毎回自動で消費してよいコストかは依頼者の判断）
+
 ## エミュレータのプロジェクト ID
 
 エミュレータは必ず `demo-musiclist`（架空のプロジェクト）で起動する。
