@@ -2640,3 +2640,53 @@ pub cache から `just_audio_web-0.4.16` のソースを直接読んだ。
 だったので、`pub cache` のソースを実際に読んだ。公開 API のドキュメント
 だけを読んでいたら、`_resumePos` という内部フィールドの存在には
 気づけなかった。
+
+## 2026-08-24 — Android の広告ID権限、一覧の再生プログレスバー
+
+### 1. Google Play Console の警告（広告ID・AD_ID）
+
+Play Console が「広告IDを使うと申告されているが、アクティブな
+アーティファクトのマニフェストに `com.google.android.gms.permission.AD_ID`
+権限が無い」と警告。以前は `play-services-ads` が自動でマニフェストへ
+足していたが、Google 側の仕様変更で明示が要る場合がある。
+`android/app/src/main/AndroidManifest.xml` に権限を1行追加して対応。
+
+**あわせて `versionCode` の上げ忘れで一度アップロードを弾かれた**
+（「バージョン コード 2 はすでに使用されています」）。以前も同じ問題が
+あったとのことで、**ビルドのたびに `pubspec.yaml` の `+N` を上げる**運用に
+した（[memory: android-bump-versioncode-each-build]）。
+
+### 2. 一覧の各行に再生プログレスバー（依頼者の発案）
+
+**仕様：** 曲をタップ（再生）すると、曲名の下・行の横幅いっぱいに
+プログレスバーが出る。再生に合わせて動き、ドラッグで早送り・巻き戻し・
+任意位置へのジャンプができる。画面イメージを Imagine で先に見せ、
+「停止ボタンが無い」の指摘で修正してから実装に入った（詳細は
+`MusicListApp_Spec.md` 8.1）。
+
+**実装：** `AudioPlayerHandle` に `positionStream` / `durationStream` /
+`seek()` を追加（`just_audio` は曲切り替えのたびに `AudioPlayer` を
+作り直す作りなので、`onCompleted` と同じ中継の形で配線）。
+`PlaybackState` に `position` / `duration` を追加し、
+`list_detail_screen.dart` の `_ItemTile` の `subtitle` を `Column` にして
+`_PlaybackProgress` を追加。Web・Android・iOS 共通の1画面なので、
+追加のファイルは不要だった。
+
+検証環境（`music-storage-dev`）へ配信し確認してもらったところ、
+**2 件の報告**があった。
+
+| 報告 | 原因 | 対応 |
+| --- | --- | --- |
+| 同じ曲を停止→再生し直すと、バーが二度と出ない | `JustAudioHandle` は同じ URL を読み直さないため `durationStream` が再び流れない。`PlaybackPolicy.play` が「先頭から始める」たびに `duration` を無条件で `null` に戻していた | 同じ曲なら `duration` を引き継ぐよう修正。`position` は 0 に明示的に戻す |
+| 最初の再生でバーが出るまで数秒かかる | 曲の長さ（Storage からの読み込み）が分かるまでバー自体を出していなかった | 長さが分かる前も、不確定表示（`LinearProgressIndicator`）＋経過時間だけ先に出し、分かり次第ドラッグできるバーへ切り替えるようにした |
+
+修正後、再度検証環境で確認いただいてから `main` へマージし、本番へ配信。
+
+**残っている作業（依頼者への申し送り）：**
+
+- **Android**：`versionCode` を 4 に上げて AAB をビルド済み
+  （`build/app/outputs/bundle/prodRelease/app-prod-release.aab`）。
+  **Play Console への手動アップロードが必要。**
+- **iOS**：コードは `main` に反映済みだが、iOS のビルドは Codemagic
+  （クラウド macOS）任せで、**push での自動トリガーは組んでいない。**
+  Codemagic のダッシュボードから手動でビルドを開始する必要がある。
