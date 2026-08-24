@@ -70,6 +70,29 @@ workflows:
     # 60 分あれば、初回に依存の取得から走っても足りる。
     max_build_duration: 60
 
+    # **`main` への push で自動的に走る**（依頼者の指示・2026-08-24）。
+    #
+    # 以前は Codemagic の画面から手動で「Start new build」を押す運用
+    # だったが、Android・Web と同じ「push すれば反映される」流れに揃えた。
+    #
+    # **「都度選べるようにしたい」への対応：** Codemagic には push ごとに
+    # 選ばせる仕組みは無い（CI は基本、自動起動か手動起動のどちらか）。
+    # その代わり Codemagic 標準の「コミットメッセージに `[skip ci]` を
+    # 含めるとそのビルドを飛ばす」機能で、**個別の push だけ自動起動を
+    # 止められる。** 例：ドキュメントだけの修正で iOS のビルド分数を
+    # 使いたくないとき、コミットメッセージに `[skip ci]` を含める。
+    #
+    # `dev` は含めない。検証環境（Web）と同じ位置づけにするなら
+    # 別途 workflow を増やす必要があり、いまは要求されていない。
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: false
+
     integrations:
       # **Codemagic の画面で付けた登録名と一字一句同じにすること。**
       # 違うと「integration not found」でビルドが始まらない。
